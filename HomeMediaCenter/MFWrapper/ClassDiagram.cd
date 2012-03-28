@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="MFAsyncCallback" Collapsed="true">
+    <Position X="1.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAAAAAoBAAAAAAAAAAAAAAAgAAAAAAAgBAIAAA=</HashCode>
+      <FileName>MFAsyncCallback.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MFAsyncObject&lt;T&gt;" Collapsed="true">
+    <Position X="5.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAACAAABAAAAAAAAAAAAAAIgAAAAAAAABAIAAA=</HashCode>
+      <FileName>MFAsyncObject.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MFStream">
+    <Position X="7" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAACAAgQRAASDAAECAAgIgAEgAAAAAABABGIQQA=</HashCode>
+      <FileName>MFStream.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ReadAsyncCallback" Collapsed="true">
+    <Position X="0.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAACAAAIAAAAAAAAAAAAAAAAABAAAAAACAAAAAA=</HashCode>
+      <FileName>ReadAsyncCallback.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WriteAsyncCallback" Collapsed="true">
+    <Position X="2.75" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAAAMAAAAAAAAAAAAAAAQABAAAAAAAAAAAAA=</HashCode>
+      <FileName>WriteAsyncCallback.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="TimestampInfo">
+    <Position X="5.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAAQAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>MFEncoder.h</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
