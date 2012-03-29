@@ -59,7 +59,7 @@ namespace DSWrapper
 		if (extension == "wma" || extension == "wmv" || extension == "asf")
 		{
 			//Pre windows media format treba specialny reader/demultiplexed
-			pin_ptr<const wchar_t> pFilePath = PtrToStringChars(uri->AbsoluteUri);
+			pin_ptr<const wchar_t> pFilePath = PtrToStringChars(uri->LocalPath);
 
 			CHECK_HR(hr = CoCreateInstance(CLSID_WMAsfReader, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&demuxFilter));
 			CHECK_HR(hr = demuxFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
