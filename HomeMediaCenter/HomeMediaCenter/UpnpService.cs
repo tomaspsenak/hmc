@@ -213,7 +213,10 @@ namespace HomeMediaCenter
             else
             {
                 sid = "uuid:" + Guid.NewGuid();
-                Uri uri = new Uri(request.Headers["CALLBACK"].TrimStart('<').TrimEnd('>'));
+                string callback = request.Headers["CALLBACK"];
+                int startIdx = callback.IndexOf('<') + 1;
+                int endIdx = callback.IndexOf('>', startIdx);
+                Uri uri = new Uri(callback.Substring(startIdx, endIdx - startIdx));
 
                 new SendEventDel(SendEvent).BeginInvoke(sid, uri, null, null);
             }
