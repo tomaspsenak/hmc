@@ -565,7 +565,7 @@ namespace HomeMediaCenterGUI
                     parameters["height"] = res[1];
                 }
 
-                if (this.keepAspectCheckBox.Enabled)
+                if (this.keepAspectCheckBox.Checked)
                     parameters["keepaspect"] = string.Empty;
 
                 if (this.fpsComboBox.SelectedIndex > 0)

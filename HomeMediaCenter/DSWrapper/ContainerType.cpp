@@ -408,7 +408,7 @@ namespace DSWrapper
 		if (this->m_vidBitrate > 0)
 			CHECK_HR(hr = webmEnc->SetTargetBitrate(this->m_vidBitrate));
 
-		if (this->m_percentQuality < 30)
+		if (this->m_percentQuality < 51)
 		{
 			CHECK_HR(hr = webmEnc->SetDeadline(kDeadlineRealtime));
 		}
