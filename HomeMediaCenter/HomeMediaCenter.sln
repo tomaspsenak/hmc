@@ -85,7 +85,6 @@ Global
 		{D30C4F19-00E3-45DE-8741-5BF2EEA5631C}.Release|x64.ActiveCfg = Release
 		{D30C4F19-00E3-45DE-8741-5BF2EEA5631C}.Release|x64.Build.0 = Release
 		{D30C4F19-00E3-45DE-8741-5BF2EEA5631C}.Release|x86.ActiveCfg = Release
-		{D30C4F19-00E3-45DE-8741-5BF2EEA5631C}.Release|x86.Build.0 = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

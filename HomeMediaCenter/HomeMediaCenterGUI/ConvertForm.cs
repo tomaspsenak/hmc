@@ -19,7 +19,7 @@ namespace HomeMediaCenterGUI
         public ConvertForm(EncoderBuilder builder, string outputPath)
         {
             this.builder = builder;
-            FileStream outputStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+            FileStream outputStream = new FileStream(outputPath, FileMode.Create);
             this.convertDel = new Action<Stream, Action<double>>(builder.StartEncode);
 
             InitializeComponent();
