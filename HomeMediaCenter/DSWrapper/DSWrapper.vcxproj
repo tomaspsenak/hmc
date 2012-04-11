@@ -187,6 +187,7 @@
     <ClInclude Include="DibHelper.h" />
     <ClInclude Include="DSBufferedStream.h" />
     <ClInclude Include="DSException.h" />
+    <ClInclude Include="DSPlayer.h" />
     <ClInclude Include="DSWrapper.h" />
     <ClInclude Include="Enums.h" />
     <ClInclude Include="FileWriterFilter.h" />
@@ -199,6 +200,8 @@
     <ClInclude Include="PinInfoItem.h" />
     <ClInclude Include="ProgressChangeEventArgs.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SourceFilter.h" />
+    <ClInclude Include="SourcePin.h" />
     <ClInclude Include="Stdafx.h" />
     <ClInclude Include="vp8encoderidl.h" />
     <ClInclude Include="WMSinkWriter.h" />
@@ -211,11 +214,14 @@
     <ClCompile Include="DesktopSourcePin.cpp" />
     <ClCompile Include="DibHelper.cpp" />
     <ClCompile Include="DSBufferedStream.cpp" />
+    <ClCompile Include="DSPlayer.cpp" />
     <ClCompile Include="DSWrapper.cpp" />
     <ClCompile Include="FileWriterFilter.cpp" />
     <ClCompile Include="FileWriterPin.cpp" />
     <ClCompile Include="FramerateFilter.cpp" />
     <ClCompile Include="InputType.cpp" />
+    <ClCompile Include="SourceFilter.cpp" />
+    <ClCompile Include="SourcePin.cpp" />
     <ClCompile Include="Stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

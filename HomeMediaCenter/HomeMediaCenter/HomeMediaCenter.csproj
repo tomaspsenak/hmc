@@ -129,6 +129,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SsdpServer.cs" />
+    <Compile Include="UDPStream.cs" />
     <Compile Include="UpnpControlPoint.cs" />
     <Compile Include="UpnpDevice.cs" />
     <Compile Include="UpnpServer.cs" />
