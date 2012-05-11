@@ -7,11 +7,30 @@
 
 namespace DSWrapper 
 {
-	DSPlayer::DSPlayer(void)
+	DSPlayer::DSPlayer(IMediaControl * mediaControl, System::IO::Stream ^ stream) : m_mediaControl(mediaControl), m_stream(stream)
 	{
 	}
 
-	void DSPlayer::PlayMPEG2_TS(System::IO::Stream ^ stream, System::Boolean video, System::Boolean audio)
+	DSPlayer::~DSPlayer(void)
+	{
+		Dispose(TRUE);
+		System::GC::SuppressFinalize(this);
+	}
+
+	DSPlayer::!DSPlayer(void)
+	{
+		Dispose(FALSE);
+	}
+
+	void DSPlayer::Dispose(BOOL disposing)
+	{
+		this->m_stream->Close();
+		this->m_mediaControl->Stop();
+		pin_ptr<IMediaControl*> mediaControl = &this->m_mediaControl;
+		SafeRelease<IMediaControl>(mediaControl);
+	}
+
+	DSPlayer ^ DSPlayer::PlayMPEG2_TS(System::IO::Stream ^ stream, System::Boolean video, System::Boolean audio)
 	{
 		HRESULT hr = S_OK;
 		ULONG pid;
@@ -21,6 +40,7 @@ namespace DSWrapper
 		IMediaControl * mediaControl = NULL;
 		IMediaEvent * mediaEvent = NULL;
 		IBaseFilter * filter = NULL;
+		IBaseFilter * renderer = NULL;
 
 		IMpeg2Demultiplexer * pDemux;
 		IMPEG2PIDMap * pPidMap;
@@ -85,10 +105,17 @@ namespace DSWrapper
 			CHECK_HR(hr = pDemux->CreateOutputPin(&mt, L"Video Pin", &outputPin));
 			CHECK_HR(hr = outputPin->QueryInterface(__uuidof(IMPEG2PIDMap), (void**)&pPidMap));
 			CHECK_HR(hr = pPidMap->MapPID(1, &pid, MEDIA_ELEMENTARY_STREAM));
-			CHECK_HR(hr = graphBuilder->Render(outputPin));
+
+			CHECK_HR(hr = CoCreateInstance(CLSID_VideoMixingRenderer, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&renderer));
+			CHECK_SUCCEED(hr = graphBuilder->AddFilter(renderer, NULL));
+			inputPin = DSEncoder::GetFirstPin(renderer, PINDIR_INPUT);
+			SAFE_RELEASE(renderer);
+
+			CHECK_SUCCEED(hr = graphBuilder->Connect(outputPin, inputPin));
+			SAFE_RELEASE(outputPin);
+			SAFE_RELEASE(inputPin);
 
 			SAFE_RELEASE(pPidMap);
-			SAFE_RELEASE(outputPin);
 			FreeMediaType(mt);
 		}
 
@@ -111,40 +138,19 @@ namespace DSWrapper
 			CHECK_HR(hr = pDemux->CreateOutputPin(&mt, L"Audio Pin", &outputPin));
 			CHECK_HR(hr = outputPin->QueryInterface(__uuidof(IMPEG2PIDMap), (void**)&pPidMap));
 			CHECK_HR(hr = pPidMap->MapPID(2, &pid, MEDIA_ELEMENTARY_STREAM));
-			CHECK_HR(hr = graphBuilder->Render(outputPin));
+			
+			CHECK_HR(hr = CoCreateInstance(CLSID_DSoundRender, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&renderer));
+			CHECK_SUCCEED(hr = graphBuilder->AddFilter(renderer, NULL));
+			inputPin = DSEncoder::GetFirstPin(renderer, PINDIR_INPUT);
+			SAFE_RELEASE(renderer);
+
+			CHECK_SUCCEED(hr = graphBuilder->Connect(outputPin, inputPin));
 		}
 		
 		//Spustenie prehravania
 		CHECK_SUCCEED(hr = mediaControl->Run());
 
-		long evCode;
-		LONG_PTR param1, param2;
-		BOOL continuePlay = TRUE;
-
-		while (continuePlay)
-		{
-			if (mediaEvent->GetEvent(&evCode, &param1, &param2, 1000) == S_OK)
-			{
-				switch(evCode) 
-				{ 
-					case EC_COMPLETE:
-					case EC_USERABORT:
-						continuePlay = FALSE;
-					case EC_ERRORABORT:
-					case EC_ERRORABORTEX:
-						hr = param1;
-						mediaEvent->FreeEventParams(evCode, param1, param2);
-						goto done;
-					default: break;
-				}
-				CHECK_HR(hr = mediaEvent->FreeEventParams(evCode, param1, param2));
-			}
-		}
-
 	done:
-
-		if (mediaControl != NULL)
-			mediaControl->Stop();
 
 		SAFE_RELEASE(pDemux);
 		SAFE_RELEASE(pPidMap);
@@ -156,8 +162,14 @@ namespace DSWrapper
 
 		SAFE_RELEASE(graphBuilder);
 		SAFE_RELEASE(filterGraph);
-		SAFE_RELEASE(mediaControl);
 		SAFE_RELEASE(mediaEvent);
 		SAFE_RELEASE(filter);
+		SAFE_RELEASE(renderer);
+
+		if (hr >= 0)
+			return gcnew DSPlayer(mediaControl, stream);
+		
+		SAFE_RELEASE(mediaControl);
+		return nullptr;
 	}
 }

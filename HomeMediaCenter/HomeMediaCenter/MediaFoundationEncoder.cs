@@ -11,9 +11,10 @@ namespace HomeMediaCenter
     {
         private enum MFCodec { WMV3, MPEG4 }
 
-        private Dictionary<string, string> parameters;
         private MFEncoder encoder;
         private MFCodec codec;
+
+        protected MediaFoundationEncoder() { }
 
         public static MediaFoundationEncoder TryCreate(Dictionary<string, string> parameters)
         {
@@ -35,8 +36,12 @@ namespace HomeMediaCenter
             {
                 case MFCodec.MPEG4: return "video/mp4";
                 case MFCodec.WMV3: return "video/x-ms-wmv";
+                default: return string.Empty;
             }
+        }
 
+        public override string GetDlnaType()
+        {
             return string.Empty;
         }
 
@@ -55,11 +60,8 @@ namespace HomeMediaCenter
 
                 enc.SetInput(parameters["source"]);
 
-                uint setVideo = 1, setAudio = 1;
-                if (parameters.ContainsKey("video"))
-                    setVideo = uint.Parse(parameters["video"]);
-                if (parameters.ContainsKey("audio"))
-                    setAudio = uint.Parse(parameters["audio"]);
+                uint setVideo = this.video.HasValue ? this.video.Value : 1;
+                uint setAudio = this.audio.HasValue ? this.audio.Value : 1;
 
                 //Nastavenie video a zvukovej stopy
                 VideoStream video = null;
@@ -97,23 +99,23 @@ namespace HomeMediaCenter
 
                 //Zistenie sirky a vysky, povodna hodnota ak nezadane
                 uint width = 0, height = 0;
-                if (parameters.ContainsKey("width"))
-                    width = uint.Parse(parameters["width"]);
+                if (this.width.HasValue)
+                    width = this.width.Value;
                 else if (video != null)
                     width = video.Width;
-                if (parameters.ContainsKey("height"))
-                    height = uint.Parse(parameters["height"]);
+                if (this.height.HasValue)
+                    height = this.height.Value;
                 else if (video != null)
                     height = video.Height;
 
                 //Zistenie bitrate pre audio a vide, povodna hodnota ak nezadane
                 uint vidBitrate = 0, audBitrate = 0;
-                if (parameters.ContainsKey("vidbitrate"))
-                    vidBitrate = uint.Parse(parameters["vidbitrate"]) * 1000;
+                if (this.vidBitrate.HasValue)
+                    vidBitrate = this.vidBitrate.Value * 1000;
                 else if (video != null)
                     vidBitrate = video.Bitrate;
-                if (parameters.ContainsKey("audbitrate"))
-                    audBitrate = uint.Parse(parameters["audbitrate"]) * 1000;
+                if (this.audBitrate.HasValue)
+                    audBitrate = this.audBitrate.Value * 1000;
                 else if (audio != null)
                     audBitrate = audio.Bitrate;
 

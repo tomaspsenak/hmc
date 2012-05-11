@@ -66,6 +66,17 @@ namespace HomeMediaCenter
             if (filterSet == null || filterSet.Contains("dc:date"))
                 writer.WriteElementString("dc", "date", null, this.date.ToString("yyyy-MM-dd"));
 
+            if (filterSet == null || filterSet.Contains("upnp:icon"))
+                writer.WriteElementString("upnp", "icon", null, host + "/encode/image?id=" + Id + "&codec=jpeg&width=160&height=160&keepaspect");
+
+            if (filterSet == null || filterSet.Contains("upnp:albumArtURI"))
+            {
+                writer.WriteStartElement("upnp", "albumArtURI", null);
+                writer.WriteAttributeString("dlna", "profileID", "urn:schemas-dlna-org:metadata-1-0/", "JPEG_TN");
+                writer.WriteValue(host + "/encode/image?id=" + Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteEndElement();
+            }
+
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
                 if (settings.ImageNativeFile)
@@ -83,15 +94,15 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (MediaSettingsImage sett in settings.ImageEncode)
+                foreach (EncoderBuilder sett in settings.ImageEncode)
                 {
                     writer.WriteStartElement("res");
 
                     if (sett.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", sett.Mime, settings.ImageEncodeFeature));
-                    writer.WriteValue(host + "/encode/image?id=" + Id + sett.QueryString);
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.ImageEncodeFeature));
+                    writer.WriteValue(host + "/encode/image?id=" + Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }
             }

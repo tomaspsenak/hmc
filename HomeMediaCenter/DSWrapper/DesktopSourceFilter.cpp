@@ -7,8 +7,8 @@ DesktopSourceFilter::DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr, UINT32 f
 	this->m_signaled[0] = FALSE;
 	this->m_signaled[1] = FALSE;
 
-	this->m_syncEvent[0] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, TEXT("DSFSyncEvent0")); 
-	this->m_syncEvent[1] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, TEXT("DSFSyncEvent1")); 
+	this->m_syncEvent[0] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, NULL); 
+	this->m_syncEvent[1] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, NULL); 
 	if (this->m_syncEvent[0] == NULL || this->m_syncEvent[1] == NULL)
 	{
 		*phr = E_OUTOFMEMORY;
@@ -22,7 +22,6 @@ DesktopSourceFilter::DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr, UINT32 f
 		return;
 	}
 
-	this->m_sourcePin->AddRef();
 	if (*phr != S_OK)
 		return;
 
@@ -33,13 +32,15 @@ DesktopSourceFilter::DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr, UINT32 f
 		return;
 	}
 
-	this->m_sourceAudioPin->AddRef();
+	//Nie je potrebne davat AddRef objektu DesktopSourcePin a DesktopSourceAudioPin, vsetko sa deleguje na DesktopSourceFilter
 }
 
 DesktopSourceFilter::~DesktopSourceFilter(void)
 {
-	SAFE_RELEASE(this->m_sourcePin);
-	SAFE_RELEASE(this->m_sourceAudioPin);
+	if (this->m_sourcePin != NULL)
+		delete this->m_sourcePin;
+	if (this->m_sourceAudioPin != NULL)
+		delete this->m_sourceAudioPin;
 	CloseHandle(this->m_syncEvent[0]);
 	CloseHandle(this->m_syncEvent[1]);
 }

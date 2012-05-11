@@ -11,13 +11,15 @@ namespace HomeMediaCenterGUI
         private string extension;
         private string paramName;
         private bool isDirectShow;
+        private bool isTransportStream;
 
-        public ContainerItem(string name, string extension, string paramName, bool isDirectShow)
+        public ContainerItem(string name, string extension, string paramName, bool isDirectShow, bool isTransportStream)
         {
             this.name = name;
             this.extension = extension;
             this.paramName = paramName;
             this.isDirectShow = isDirectShow;
+            this.isTransportStream = isTransportStream;
         }
 
         public string Extension
@@ -28,6 +30,11 @@ namespace HomeMediaCenterGUI
         public string ParamName
         {
             get { return this.paramName; }
+        }
+
+        public bool IsTransportStream
+        {
+            get { return this.isTransportStream; }
         }
 
         public bool IsDirectShow
@@ -43,31 +50,31 @@ namespace HomeMediaCenterGUI
 
     public class ContainerMP4 : ContainerItem
     {
-        public ContainerMP4() : base("MP4 - H264, AAC", ".mp4", "MPEG4", false) { }
+        public ContainerMP4() : base("MP4 - H264, AAC", ".mp4", "MPEG4", false, false) { }
     }
 
     public class ContainerWMV3: ContainerItem
     {
-        public ContainerWMV3() : base("WMV - WMV3, VMA9", ".wmv", "WMV3", false) { }
+        public ContainerWMV3() : base("WMV - WMV3, VMA9", ".wmv", "WMV3", false, false) { }
     }
 
     public class ContainerMPEG_PS : ContainerItem
     {
-        public ContainerMPEG_PS() : base("MPEG2_PS", ".mpeg", "MPEG2_PS", true) { }
+        public ContainerMPEG_PS() : base("MPEG2_PS", ".mpeg", "MPEG2_PS", true, false) { }
     }
 
     public class ContainerMPEG_TS : ContainerItem
     {
-        public ContainerMPEG_TS() : base("MPEG2_TS", ".mpeg", "MPEG2_TS", true) { }
+        public ContainerMPEG_TS() : base("MPEG2_TS", ".mpeg", "MPEG2_TS", true, true) { }
     }
 
     public class ContainerWEBM : ContainerItem
     {
-        public ContainerWEBM() : base("WebM - VP8, Vorbis", ".webm", "WEBM", true) { }
+        public ContainerWEBM() : base("WebM - VP8, Vorbis", ".webm", "WEBM", true, false) { }
     }
 
     public class ContainerWMV2 : ContainerItem
     {
-        public ContainerWMV2() : base("WMV - WMV2, VMA8", ".wmv", "WMV2", true) { }
+        public ContainerWMV2() : base("WMV - WMV2, VMA8", ".wmv", "WMV2", true, false) { }
     }
 }

@@ -27,9 +27,6 @@
     <ClInclude Include="FileWriterFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileWriterPin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DSException.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -87,7 +84,10 @@
     <ClInclude Include="SourceFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SourcePin.h">
+    <ClInclude Include="SinkFilterGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SinkSourceFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -99,9 +99,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FileWriterPin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FileWriterFilter.cpp">
@@ -140,7 +137,10 @@
     <ClCompile Include="SourceFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SourcePin.cpp">
+    <ClCompile Include="SinkFilterGraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SinkSourceFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

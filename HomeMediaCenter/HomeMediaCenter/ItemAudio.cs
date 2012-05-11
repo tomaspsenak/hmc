@@ -116,7 +116,7 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (MediaSettingsAudio sett in settings.AudioEncode)
+                foreach (EncoderBuilder sett in settings.AudioEncode)
                 {
                     writer.WriteStartElement("res");
 
@@ -126,8 +126,8 @@ namespace HomeMediaCenter
                     if (sett.AudBitrate != null && (filterSet == null || filterSet.Contains("res@bitrate")))
                         writer.WriteAttributeString("bitrate", sett.AudBitrate);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", sett.Mime, settings.VideoEncodeFeature));
-                    writer.WriteValue(host + "/encode/audio?id=" + Id + sett.QueryString);
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.VideoEncodeFeature));
+                    writer.WriteValue(host + "/encode/audio?id=" + Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }
             }

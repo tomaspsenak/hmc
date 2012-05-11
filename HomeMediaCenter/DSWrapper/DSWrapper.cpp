@@ -148,6 +148,7 @@ namespace DSWrapper
 		IGraphBuilder * graphBuilder = NULL;
 		IFilterGraph * filterGraph = NULL;
 		IBaseFilter * sourceFilter = NULL;
+		IAMGraphStreams * graphStreams = NULL;
 
 		if (inputType == nullptr)
 			CHECK_HR(hr = E_INVALIDARG);
@@ -155,6 +156,9 @@ namespace DSWrapper
 		//Vytvorenie zakladnych objektov
 		CHECK_HR(hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graphBuilder));
 		CHECK_HR(hr = graphBuilder->QueryInterface(IID_IFilterGraph, (void **)&filterGraph));
+		CHECK_HR(hr = graphBuilder->QueryInterface(IID_IAMGraphStreams, (void **)&graphStreams));
+		//Nastavenie synchronizacie pre live sources
+		graphStreams->SyncUsingStreamOffset(TRUE);
 
 		CHECK_HR(hr = inputType->GetInputFilter(&sourceFilter));
 		
@@ -180,6 +184,7 @@ namespace DSWrapper
 		SAFE_RELEASE(graphBuilder);
 		SAFE_RELEASE(filterGraph);
 		SAFE_RELEASE(sourceFilter);
+		SAFE_RELEASE(graphStreams);
 
 		if(hr != S_OK)
 			throw gcnew DSException(L"Unable to initialize input", hr);

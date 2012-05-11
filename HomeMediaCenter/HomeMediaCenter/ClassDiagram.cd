@@ -135,14 +135,6 @@
   </Class>
   <Class Name="HomeMediaCenter.ItemContainer" Collapsed="true">
     <Position X="8.75" Y="1.75" Width="1.5" />
-    <NestedTypes>
-      <Class Name="HomeMediaCenter.ItemContainer.PathMime" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>ItemContainer.cs</NewMemberFileName>
-        </TypeIdentifier>
-        <Lollipop Position="0.2" />
-      </Class>
-    </NestedTypes>
     <AssociationLine Name="childs" Type="HomeMediaCenter.Item" FixedFromPoint="true" FixedToPoint="true">
       <Path>
         <Point X="9.938" Y="1.75" />
@@ -173,25 +165,64 @@
     </TypeIdentifier>
   </Class>
   <Class Name="HomeMediaCenter.ItemManager" Collapsed="true">
-    <Position X="10.25" Y="6" Width="1.5" />
-    <NestedTypes>
-      <Class Name="HomeMediaCenter.ItemManager.Dir" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>ItemManager.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Class>
-    </NestedTypes>
+    <Position X="7.75" Y="8" Width="1.5" />
+    <AssociationLine Name="mimeTypes" Type="HomeMediaCenter.HttpMimeDictionary" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.25" Y="8.312" />
+        <Point X="12.375" Y="8.312" />
+        <Point X="12.375" Y="2.844" />
+        <Point X="12.75" Y="2.844" />
+      </Path>
+    </AssociationLine>
+    <AssociationLine Name="imageItem" Type="HomeMediaCenter.ItemContainer" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.25" Y="8.312" />
+        <Point X="9.5" Y="8.312" />
+        <Point X="9.5" Y="3.941" />
+        <Point X="8.5" Y="3.941" />
+        <Point X="8.5" Y="2.816" />
+        <Point X="9.094" Y="2.816" />
+        <Point X="9.094" Y="2.441" />
+      </Path>
+    </AssociationLine>
+    <AssociationLine Name="videoItem" Type="HomeMediaCenter.ItemContainer" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.25" Y="8.312" />
+        <Point X="10.5" Y="8.312" />
+        <Point X="10.5" Y="2.816" />
+        <Point X="9.906" Y="2.816" />
+        <Point X="9.906" Y="2.441" />
+      </Path>
+    </AssociationLine>
+    <AssociationLine Name="streamItem" Type="HomeMediaCenter.ItemContainer" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.25" Y="8.312" />
+        <Point X="9.5" Y="8.312" />
+        <Point X="9.5" Y="3.941" />
+        <Point X="8.5" Y="3.941" />
+        <Point X="8.5" Y="2.816" />
+        <Point X="8.891" Y="2.816" />
+        <Point X="8.891" Y="2.441" />
+      </Path>
+    </AssociationLine>
+    <AssociationLine Name="settings" Type="HomeMediaCenter.MediaSettings" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="9.25" Y="8.312" />
+        <Point X="14" Y="8.312" />
+        <Point X="14" Y="7.562" />
+      </Path>
+    </AssociationLine>
     <TypeIdentifier>
       <HashCode>sAIQAAEIkAYAAQAAAKQEBAARwACgAABUAICAQgCgAAE=</HashCode>
       <FileName>ItemManager.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
+      <Field Name="mimeTypes" />
       <Field Name="audioItem" />
       <Field Name="imageItem" />
       <Field Name="videoItem" />
       <Field Name="streamItem" />
       <Field Name="settings" />
-      <Field Name="mimeTypes" />
     </ShowAsAssociation>
   </Class>
   <Class Name="HomeMediaCenter.ItemVideo" Collapsed="true">
@@ -239,15 +270,20 @@
     <Position X="5.75" Y="8.75" Width="1.5" />
     <AssociationLine Name="itemManager" Type="HomeMediaCenter.ItemManager" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
       <Path>
-        <Point X="7.25" Y="8.812" />
-        <Point X="10.625" Y="8.812" />
-        <Point X="10.625" Y="6.562" />
+        <Point X="7.25" Y="9.125" />
+        <Point X="8.562" Y="9.125" />
+        <Point X="8.562" Y="8.562" />
       </Path>
+      <MemberNameLabel ManuallyPlaced="true" ManuallySized="true">
+        <Position X="-0.046" Y="0.643" Height="0.182" Width="1.141" />
+      </MemberNameLabel>
     </AssociationLine>
-    <AssociationLine Name="controlPoint" Type="HomeMediaCenter.UpnpControlPoint" FixedToPoint="true">
+    <AssociationLine Name="controlPoint" Type="HomeMediaCenter.UpnpControlPoint" FixedFromPoint="true" FixedToPoint="true">
       <Path>
-        <Point X="7.25" Y="9.312" />
-        <Point X="8.75" Y="9.312" />
+        <Point X="7.25" Y="9.25" />
+        <Point X="7.625" Y="9.25" />
+        <Point X="7.625" Y="9.312" />
+        <Point X="10.25" Y="9.312" />
       </Path>
     </AssociationLine>
     <TypeIdentifier>
@@ -310,7 +346,7 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="HomeMediaCenter.UpnpControlPoint" Collapsed="true">
-    <Position X="8.75" Y="9" Width="1.5" />
+    <Position X="10.25" Y="9" Width="1.5" />
     <TypeIdentifier>
       <HashCode>EAAAAAAAAABAAAAAAAAAAAAAAgAAAEAAoAAAgAAAAEA=</HashCode>
       <FileName>UpnpControlPoint.cs</FileName>
@@ -324,10 +360,23 @@
         <Point X="3.25" Y="7.812" />
       </Path>
     </AssociationLine>
+    <AssociationLine Name="server" Type="HomeMediaCenter.UpnpServer" FixedFromPoint="true" FixedToPoint="true">
+      <Path>
+        <Point X="5.75" Y="7.625" />
+        <Point X="4.625" Y="7.625" />
+        <Point X="4.625" Y="6.812" />
+      </Path>
+      <MemberNameLabel ManuallyPlaced="true">
+        <Position X="0.1" Y="0.362" />
+      </MemberNameLabel>
+    </AssociationLine>
     <TypeIdentifier>
       <HashCode>4AAgEAAIECEAAAAAAAAAAACAAEAgAFAAKAAQAoAAIQI=</HashCode>
       <FileName>UpnpDevice.cs</FileName>
     </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="server" />
+    </ShowAsAssociation>
     <ShowAsCollectionAssociation>
       <Field Name="services" />
     </ShowAsCollectionAssociation>
@@ -366,13 +415,6 @@
   </Class>
   <Class Name="HomeMediaCenter.UpnpService" Collapsed="true">
     <Position X="1.75" Y="7.5" Width="1.5" />
-    <NestedTypes>
-      <Delegate Name="HomeMediaCenter.UpnpService.SendEventDel" Collapsed="true">
-        <TypeIdentifier>
-          <NewMemberFileName>UpnpService.cs</NewMemberFileName>
-        </TypeIdentifier>
-      </Delegate>
-    </NestedTypes>
     <AssociationLine Name="server" Type="HomeMediaCenter.UpnpServer" ManuallyRouted="true" FixedFromPoint="true" FixedToPoint="true">
       <Path>
         <Point X="2.5" Y="7.5" />

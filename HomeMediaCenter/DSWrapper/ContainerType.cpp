@@ -224,7 +224,9 @@ namespace DSWrapper
 
 		FileWriterFilter * writer = NULL;
 
-		writer = new FileWriterFilter(NULL, &hr, outputStream);
+		//Vytvorenie writer-a s nastavenim pozadovaneho subtype pre writer
+		//Napr.: rozne pre MPEG2_TS a MPEG2_PS
+		writer = new FileWriterFilter(NULL, &hr, outputStream, GetSubtype());
 
 		if (writer == NULL)
 			hr = E_OUTOFMEMORY;
@@ -233,10 +235,6 @@ namespace DSWrapper
 		CHECK_HR(hr);
 
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(writer, NULL));
-
-		//Nastavenie pozadovaneho subtype pre writer
-		//Napr.: rozne pre MPEG2_TS a MPEG2_PS
-		writer->SetInputSubtype(GetSubtype());
 
 		*writerFilter = writer;
 		writer = NULL;
@@ -489,7 +487,7 @@ namespace DSWrapper
 		try { bufStream = gcnew DSBufferedStream(outputStream, 131072); }
 		catch (System::OutOfMemoryException ^) { CHECK_HR(hr = E_OUTOFMEMORY); }
 		
-		writer = new FileWriterFilter(NULL, &hr, bufStream);
+		writer = new FileWriterFilter(NULL, &hr, bufStream, GetSubtype());
 		if (writer == NULL)
 			hr = E_OUTOFMEMORY;
 		else
@@ -497,8 +495,6 @@ namespace DSWrapper
 		CHECK_HR(hr);
 
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(writer, NULL));
-
-		writer->SetInputSubtype(GetSubtype());
 
 		*writerFilter = writer;
 		writer = NULL;

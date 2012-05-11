@@ -19,8 +19,18 @@ namespace HomeMediaCenterGUI
         public ConvertForm(EncoderBuilder builder, string outputPath)
         {
             this.builder = builder;
-            FileStream outputStream = new FileStream(outputPath, FileMode.Create);
             this.convertDel = new Action<Stream, Action<double>>(builder.StartEncode);
+
+            Stream outputStream;
+            if (outputPath.StartsWith("Multicast "))
+            {
+                string[] param = outputPath.Substring(10).Split(':', ' ');
+                outputStream = new UDPStream(System.Net.IPAddress.Parse(param[0]), System.Net.IPAddress.Parse(param[2]), int.Parse(param[3]));
+            }
+            else
+            {
+                outputStream = new FileStream(outputPath, FileMode.Create);
+            }
 
             InitializeComponent();
             this.cancelButton.Text = LanguageResource.Cancel;
