@@ -19,11 +19,11 @@ namespace HomeMediaCenter
                 manager.RemoveItem(item);
             this.childs.Clear();
 
-            foreach (MediaSettingsVideo sett in settings.VideoStreamEncode)
+            foreach (EncoderBuilder sett in settings.VideoStreamEncode)
             {
                 manager.AddItem(new ItemVideoStream(this, "desktop", "Desktop", sett));
 
-                foreach (string webcam in DSWrapper.WebcamInput.GetWebcamNames())
+                foreach (string webcam in DSWrapper.WebcamInput.GetVideoInputNames())
                 {
                     manager.AddItem(new ItemVideoStream(this, "webcam_" + webcam, webcam, sett));
                 }

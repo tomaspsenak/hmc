@@ -109,7 +109,7 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (MediaSettingsVideo sett in settings.VideoEncode)
+                foreach (EncoderBuilder sett in settings.VideoEncode)
                 {
                     writer.WriteStartElement("res");
 
@@ -122,8 +122,8 @@ namespace HomeMediaCenter
                     if (sett.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", sett.Mime, settings.VideoEncodeFeature));
-                    writer.WriteValue(host + "/encode/video?id=" + Id + sett.QueryString);
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.VideoEncodeFeature));
+                    writer.WriteValue(host + "/encode/video?id=" + Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }
             }

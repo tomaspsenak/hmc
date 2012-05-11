@@ -99,8 +99,8 @@
             this.resolutionComboBox = new System.Windows.Forms.ComboBox();
             this.keepAspectCheckBox = new System.Windows.Forms.CheckBox();
             this.outputGroupBox = new System.Windows.Forms.GroupBox();
+            this.outputTextBox = new System.Windows.Forms.ComboBox();
             this.browseOutputButton = new System.Windows.Forms.Button();
-            this.outputTextBox = new System.Windows.Forms.TextBox();
             this.inputGroupBox = new System.Windows.Forms.GroupBox();
             this.browseInputButton = new System.Windows.Forms.Button();
             this.inputTextBox = new System.Windows.Forms.ComboBox();
@@ -913,7 +913,7 @@
             this.resolutionComboBox.Items.AddRange(new object[] {
             "Same as source",
             "1920x1080",
-            "1280x576",
+            "1280x768",
             "720x576",
             "640x480",
             "320x240"});
@@ -936,14 +936,27 @@
             // 
             this.outputGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputGroupBox.Controls.Add(this.browseOutputButton);
             this.outputGroupBox.Controls.Add(this.outputTextBox);
+            this.outputGroupBox.Controls.Add(this.browseOutputButton);
             this.outputGroupBox.Location = new System.Drawing.Point(3, 114);
             this.outputGroupBox.Name = "outputGroupBox";
             this.outputGroupBox.Size = new System.Drawing.Size(583, 50);
             this.outputGroupBox.TabIndex = 2;
             this.outputGroupBox.TabStop = false;
             this.outputGroupBox.Text = "Output";
+            // 
+            // outputTextBox
+            // 
+            this.outputTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.outputTextBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.outputTextBox.FormattingEnabled = true;
+            this.outputTextBox.Items.AddRange(new object[] {
+            ".."});
+            this.outputTextBox.Location = new System.Drawing.Point(6, 18);
+            this.outputTextBox.Name = "outputTextBox";
+            this.outputTextBox.Size = new System.Drawing.Size(490, 21);
+            this.outputTextBox.TabIndex = 3;
             // 
             // browseOutputButton
             // 
@@ -955,16 +968,6 @@
             this.browseOutputButton.Text = "Browse";
             this.browseOutputButton.UseVisualStyleBackColor = true;
             this.browseOutputButton.Click += new System.EventHandler(this.browseOutputButton_Click);
-            // 
-            // outputTextBox
-            // 
-            this.outputTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputTextBox.Location = new System.Drawing.Point(6, 19);
-            this.outputTextBox.Name = "outputTextBox";
-            this.outputTextBox.ReadOnly = true;
-            this.outputTextBox.Size = new System.Drawing.Size(490, 20);
-            this.outputTextBox.TabIndex = 0;
             // 
             // inputGroupBox
             // 
@@ -1159,7 +1162,6 @@
             this.resolutionGroupBox.ResumeLayout(false);
             this.resolutionGroupBox.PerformLayout();
             this.outputGroupBox.ResumeLayout(false);
-            this.outputGroupBox.PerformLayout();
             this.inputGroupBox.ResumeLayout(false);
             this.containerGroupBox.ResumeLayout(false);
             this.aboutTabPage.ResumeLayout(false);
@@ -1235,7 +1237,6 @@
         private System.Windows.Forms.Button browseInputButton;
         private System.Windows.Forms.ComboBox inputTextBox;
         private System.Windows.Forms.Button browseOutputButton;
-        private System.Windows.Forms.TextBox outputTextBox;
         private System.Windows.Forms.GroupBox resolutionGroupBox;
         private System.Windows.Forms.GroupBox othersGroupBox;
         private System.Windows.Forms.CheckBox subtitlesIntCheckBox;
@@ -1255,6 +1256,7 @@
         private System.Windows.Forms.TabPage aboutTabPage;
         private System.Windows.Forms.Label aboutLabel;
         private System.Windows.Forms.LinkLabel settingsLinkLabel;
+        private System.Windows.Forms.ComboBox outputTextBox;
     }
 }
 

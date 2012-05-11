@@ -12,9 +12,10 @@ namespace HomeMediaCenter
     {
         private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, WEBM, WEBM_TS, WMV2, WMV3A2 }
 
-        private Dictionary<string, string> parameters;
         private DSEncoder encoder;
         private DSCodec codec;
+
+        protected DirectShowEncoder() { }
 
         public static DirectShowEncoder TryCreate(Dictionary<string, string> parameters)
         {
@@ -32,20 +33,31 @@ namespace HomeMediaCenter
 
         public override string GetMime()
         {
-            bool onlyAudio = this.parameters.ContainsKey("video") && this.parameters["video"] == "0";
             switch (this.codec)
             {
-                case DSCodec.MPEG2_PS: return onlyAudio ? "audio/mpeg" : "video/mpeg";
+                case DSCodec.MPEG2_PS: return (this.video.HasValue && this.video.Value == 0) ? "audio/mpeg" : "video/mpeg";
                 case DSCodec.MPEG2_TS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_PS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_TS: goto case DSCodec.MPEG2_PS;
-                case DSCodec.WEBM: return onlyAudio ? "audio/webm" : "video/webm";
+                case DSCodec.WEBM: return (this.video.HasValue && this.video.Value == 0) ? "audio/webm" : "video/webm";
                 case DSCodec.WEBM_TS: goto case DSCodec.WEBM;
-                case DSCodec.WMV2: return onlyAudio ? "audio/x-ms-wma" : "video/x-ms-wmv";
+                case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "audio/x-ms-wma" : "video/x-ms-wmv";
                 case DSCodec.WMV3A2: goto case DSCodec.WMV2;
+                default: return string.Empty;
             }
+        }
 
-            return string.Empty;
+        public override string GetDlnaType()
+        {
+            switch (this.codec)
+            {
+                case DSCodec.MPEG2_PS: return (this.video.HasValue && this.video.Value == 0) ? string.Empty : "DLNA.ORG_PN=MPEG_PS_PAL;";
+                case DSCodec.MPEG2_TS: return (this.video.HasValue && this.video.Value == 0) ? string.Empty : "DLNA.ORG_PN=MPEG_TS_SD_EU_ISO;";
+                case DSCodec.MPEG2LAYER1_PS: goto case DSCodec.MPEG2_PS;
+                case DSCodec.MPEG2LAYER1_TS: goto case DSCodec.MPEG2_TS;
+                case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "DLNA.ORG_PN=WMABASE;" : "DLNA.ORG_PN=WMVMED_BASE;";
+                default: return string.Empty;
+            }
         }
 
         public override void StopEncode()
@@ -74,9 +86,9 @@ namespace HomeMediaCenter
                     //Zdroj je webkamera
                     string[] webcamParam = parameters["source"].Split(new char[] { '_' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     if (webcamParam.Length == 1)
-                        enc.SetInput(InputType.Webcam(WebcamInput.GetWebcamNames().First()));
+                        enc.SetInput(InputType.Webcam(WebcamInput.GetVideoInputNames().FirstOrDefault(), WebcamInput.GetAudioInputNames().FirstOrDefault()));
                     else
-                        enc.SetInput(InputType.Webcam(webcamParam[1]));
+                        enc.SetInput(InputType.Webcam(webcamParam[1], WebcamInput.GetAudioInputNames().FirstOrDefault()));
                 }
                 else
                 {
@@ -87,11 +99,8 @@ namespace HomeMediaCenter
                     enc.SetInput(parameters["source"], reqSeeking);
                 }
 
-                uint setVideo = 1, setAudio = 1;
-                if (parameters.ContainsKey("video"))
-                    setVideo = uint.Parse(parameters["video"]);
-                if (parameters.ContainsKey("audio"))
-                    setAudio = uint.Parse(parameters["audio"]);
+                uint setVideo = this.video.HasValue ? this.video.Value : 1;
+                uint setAudio = this.audio.HasValue ? this.audio.Value : 1;
 
                 //Nastavenie video a zvukovej stopy
                 uint actVideo = 1, actAudio = 1;
@@ -120,18 +129,12 @@ namespace HomeMediaCenter
                 }
 
                 //Zistenie sirky a vysky, povodna hodnota ak nezadane
-                uint width = 0, height = 0;
-                if (parameters.ContainsKey("width"))
-                    width = uint.Parse(parameters["width"]);
-                if (parameters.ContainsKey("height"))
-                    height = uint.Parse(parameters["height"]);
+                uint width = this.width.HasValue ? this.width.Value : 0;
+                uint height = this.height.HasValue ? this.height.Value : 0;
 
                 //Zistenie bitrate pre audio a vide, povodna hodnota ak nezadane
-                uint vidBitrate = 0, audBitrate = 0;
-                if (parameters.ContainsKey("vidbitrate"))
-                    vidBitrate = uint.Parse(parameters["vidbitrate"]);
-                if (parameters.ContainsKey("audbitrate"))
-                    audBitrate = uint.Parse(parameters["audbitrate"]);
+                uint vidBitrate = this.vidBitrate.HasValue ? this.vidBitrate.Value : 0;
+                uint audBitrate = this.audBitrate.HasValue ? this.audBitrate.Value : 0;
 
                 //Zistenie kvality videa
                 uint quality = 50;
@@ -202,22 +205,7 @@ namespace HomeMediaCenter
                 //Nastavenie vystupu
                 enc.SetOutput(output, container, startTime, endTime);
 
-                for (int i = 0; ; i++)
-                {
-                    try 
-                    { 
-                        enc.StartEncode();
-                        break;
-                    }
-                    catch (DSException ex)
-                    {
-                        //chyba -2147023446 znamena ze webkamera uz je pouzivana, pocka sa dany cas a pokusi sa spustit znova
-                        if (ex.Result != -2147023446 || i == 3)
-                            throw;
-                        else
-                            Thread.Sleep(3000);
-                    }
-                }
+                enc.StartEncode();
             }
         }
 

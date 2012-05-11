@@ -353,20 +353,20 @@ namespace HomeMediaCenterGUI
 
                 this.audioNativeCheck.Checked = settings.AudioNativeFile;
                 this.audioParamCombo.Items.Clear();
-                this.audioParamCombo.Items.AddRange(settings.AudioEncode.Select(a => a.QueryString).ToArray());
+                this.audioParamCombo.Items.AddRange(settings.AudioEncode.Select(a => a.GetParamString()).ToArray());
                 this.audioParamCombo.SelectedItem = this.audioParamCombo.Items.Cast<string>().FirstOrDefault();
 
                 this.imageNativeCheck.Checked = settings.ImageNativeFile;
                 this.imageParamCombo.Items.Clear();
-                this.imageParamCombo.Items.AddRange(settings.ImageEncode.Select(a => a.QueryString).ToArray());
+                this.imageParamCombo.Items.AddRange(settings.ImageEncode.Select(a => a.GetParamString()).ToArray());
                 this.imageParamCombo.SelectedItem = this.imageParamCombo.Items.Cast<string>().FirstOrDefault();
 
                 this.videoNativeCheck.Checked = settings.VideoNativeFile;
                 this.videoParamCombo.Items.Clear();
-                this.videoParamCombo.Items.AddRange(settings.VideoEncode.Select(a => a.QueryString).ToArray());
+                this.videoParamCombo.Items.AddRange(settings.VideoEncode.Select(a => a.GetParamString()).ToArray());
                 this.videoParamCombo.SelectedItem = this.videoParamCombo.Items.Cast<string>().FirstOrDefault();
                 this.videoStreamParamCombo.Items.Clear();
-                this.videoStreamParamCombo.Items.AddRange(settings.VideoStreamEncode.Select(a => a.QueryString).ToArray());
+                this.videoStreamParamCombo.Items.AddRange(settings.VideoStreamEncode.Select(a => a.GetParamString()).ToArray());
                 this.videoStreamParamCombo.SelectedItem = this.videoStreamParamCombo.Items.Cast<string>().FirstOrDefault();
             }
             else if (this.mainTabControl.SelectedTab == this.converterTabPage)
@@ -396,14 +396,14 @@ namespace HomeMediaCenterGUI
             MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
 
             settings.AudioNativeFile = this.audioNativeCheck.Checked;
-            settings.AudioEncode = this.audioParamCombo.Items.Cast<string>().Select(a => MediaSettingsAudio.Create(a)).ToList();
+            settings.AudioEncode = this.audioParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
 
             settings.ImageNativeFile = this.imageNativeCheck.Checked;
-            settings.ImageEncode = this.imageParamCombo.Items.Cast<string>().Select(a => MediaSettingsImage.Create(a)).ToList();
+            settings.ImageEncode = this.imageParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
 
             settings.VideoNativeFile = this.videoNativeCheck.Checked;
-            settings.VideoEncode = this.videoParamCombo.Items.Cast<string>().Select(a => MediaSettingsVideo.Create(a)).ToList();
-            settings.VideoStreamEncode = this.videoStreamParamCombo.Items.Cast<string>().Select(a => MediaSettingsVideo.Create(a)).ToList();
+            settings.VideoEncode = this.videoParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
+            settings.VideoStreamEncode = this.videoStreamParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
         }
 
         private void audioParamRemoveButton_Click(object sender, EventArgs e)
@@ -445,7 +445,7 @@ namespace HomeMediaCenterGUI
 
             if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                try { this.audioParamCombo.Items.Add(MediaSettingsAudio.Create(form.QueryString).QueryString); }
+                try { this.audioParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -460,7 +460,7 @@ namespace HomeMediaCenterGUI
 
             if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                try { this.imageParamCombo.Items.Add(MediaSettingsImage.Create(form.QueryString).QueryString); }
+                try { this.imageParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -475,7 +475,7 @@ namespace HomeMediaCenterGUI
 
             if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                try { this.videoParamCombo.Items.Add(MediaSettingsVideo.Create(form.QueryString).QueryString); }
+                try { this.videoParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -490,7 +490,7 @@ namespace HomeMediaCenterGUI
 
             if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                try { this.videoStreamParamCombo.Items.Add(MediaSettingsVideo.Create(form.QueryString).QueryString); }
+                try { this.videoStreamParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -505,7 +505,8 @@ namespace HomeMediaCenterGUI
             sd.Filter = sd.DefaultExt.TrimStart('.') + "|" + sd.DefaultExt;
             if (sd.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                this.outputTextBox.Text = sd.FileName;
+                this.outputTextBox.Items[0] = sd.FileName;
+                this.outputTextBox.SelectedIndex = 0;
             }
         }
 
@@ -524,22 +525,34 @@ namespace HomeMediaCenterGUI
         {
             ContainerItem item = (ContainerItem)this.containerComboBox.SelectedItem;
 
-            int index = this.outputTextBox.Text.LastIndexOf('.');
-            if (index > 0)
-                this.outputTextBox.Text = this.outputTextBox.Text.Substring(0, index) + item.Extension;
+            if (this.outputTextBox.SelectedIndex == 0 && ((string)this.outputTextBox.SelectedItem) != "..")
+            {
+                int index = ((string)this.outputTextBox.SelectedItem).LastIndexOf('.');
+                if (index > 0)
+                    this.outputTextBox.Items[0] = ((string)this.outputTextBox.SelectedItem).Substring(0, index) + item.Extension;
+            }
 
             this.keepAspectCheckBox.Enabled = item.IsDirectShow;
             this.subtitlesIntCheckBox.Enabled = item.IsDirectShow;
 
             while (this.inputTextBox.Items.Count > 1)
                 this.inputTextBox.Items.RemoveAt(1);
+            while (this.outputTextBox.Items.Count > 1)
+                this.outputTextBox.Items.RemoveAt(1);
 
             this.inputTextBox.SelectedIndex = 0;
+            this.outputTextBox.SelectedIndex = 0;
 
             if (item.IsDirectShow)
             {
                 this.inputTextBox.Items.Add("Desktop");
-                this.inputTextBox.Items.AddRange(DSWrapper.WebcamInput.GetWebcamNames().Select(a => "Webcam_" + a).ToArray());
+                this.inputTextBox.Items.AddRange(DSWrapper.WebcamInput.GetVideoInputNames().Select(a => "Webcam_" + a).ToArray());
+            }
+
+            if (item.IsTransportStream)
+            {
+                foreach (IPAddress address in Dns.GetHostAddresses(Dns.GetHostName()).Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork))
+                    this.outputTextBox.Items.Add(string.Format("Multicast {0} - 239.255.255.251:12346", address));
             }
         }
 

@@ -3,13 +3,17 @@
 #if !defined(INPUTTYPE_DSWRAPPER_INCLUDED)
 #define INPUTTYPE_DSWRAPPER_INCLUDED
 
+#include "SinkFilterGraph.h"
+
 namespace DSWrapper 
 {
+	ref class InputDictionary;
+
 	public ref class InputType abstract
 	{
 		public:		static InputType ^ Desktop(UINT32 fps);
 
-					static InputType ^ Webcam(System::String ^ camName);
+					static InputType ^ Webcam(System::String ^ videoName, System::String ^ audioName);
 
 		internal:	InputType(void) { }
 
@@ -27,13 +31,40 @@ namespace DSWrapper
 
 	public ref class WebcamInput : InputType
 	{
-		public:		static System::Collections::Generic::List<System::String^> ^ GetWebcamNames(void);
+		public:		static System::Collections::Generic::List<System::String^> ^ GetVideoInputNames(void)
+					{
+						return GetInputDeviceNames(CLSID_VideoInputDeviceCategory);
+					}
 
-		internal:	WebcamInput(System::String ^ camName) : InputType(), m_camName(camName) { }
+					static System::Collections::Generic::List<System::String^> ^ GetAudioInputNames(void)
+					{
+						return GetInputDeviceNames(CLSID_AudioInputDeviceCategory);
+					}
+
+		internal:	WebcamInput(System::String ^ videoName, System::String ^ audioName) : InputType(), m_videoName(videoName), m_audioName(audioName) { }
 
 					virtual HRESULT GetInputFilter(IBaseFilter ** inputFilter) override;
 
-		private:	System::String ^ m_camName;
+		private:	static System::Collections::Generic::List<System::String^> ^ GetInputDeviceNames(REFCLSID category);
+					static IBaseFilter * GetInputDevice(System::String ^ name, REFCLSID category);
+
+					System::String ^ m_videoName;
+					System::String ^ m_audioName;
+	};
+
+	private ref class InputDictionary : public System::Collections::Generic::Dictionary<System::String ^, System::IntPtr> { };
+
+	public class InputDictionaryHelper
+	{
+		public:		InputDictionaryHelper(void);
+					~InputDictionaryHelper(void);
+
+					InputDictionary ^ GetDictionary(void)
+					{
+						return this->m_dictionary;
+					}
+
+		private:	gcroot<InputDictionary ^> m_dictionary;
 	};
 }
 

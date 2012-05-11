@@ -14,21 +14,19 @@ namespace HomeMediaCenter
         private readonly DateTime date;
         private readonly string bitrate;
         private readonly string resolution;
-        private readonly uint width;
-        private readonly uint height;
         private readonly string queryString;
+        private readonly string dlnaType;
 
-        public ItemVideoStream(ItemContainer parent, string path, string title, MediaSettingsVideo settings)
-            : base(string.Format("{0} {1} {2}kBps", title, settings.Resolution, settings.VidBitrate), parent)
+        public ItemVideoStream(ItemContainer parent, string path, string title, EncoderBuilder settings)
+            : base(string.Format("{0} {1} {2}kBps {3}", title, settings.Resolution, settings.VidBitrate, settings.Audio), parent)
         {
             this.path = path;
-            this.mime = settings.Mime;
+            this.mime = settings.GetMime();
             this.date = DateTime.Now;
             this.bitrate = settings.VidBitrate;
             this.resolution = settings.Resolution;
-            this.width = settings.Width;
-            this.height = settings.Height;
-            this.queryString = settings.QueryString;
+            this.queryString = settings.GetParamString();
+            this.dlnaType = settings.GetDlnaType();
         }
 
         public override DateTime Date
@@ -80,7 +78,7 @@ namespace HomeMediaCenter
                 if (this.resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                     writer.WriteAttributeString("resolution", this.resolution);
 
-                writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", this.mime, settings.VideoEncodeFeature));
+                writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", this.mime, this.dlnaType, settings.VideoEncodeFeature));
                 writer.WriteValue(host + "/encode/video?id=" + Id + this.queryString);
                 writer.WriteEndElement();
             }

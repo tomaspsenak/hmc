@@ -21,7 +21,7 @@ namespace HomeMediaCenter
             this.deviceType = "urn:schemas-upnp-org:device:MediaServer:1";
             this.manufacturer = "Tomáš Pšenák";
             this.modelName = "Home Media Center Server";
-            this.modelNumber = "1.0";
+            this.modelNumber = "1.1";
             this.serialNumber = this.udn.ToString();
 
             this.services.Add(new ConnectionManagerService(this, this.server));
@@ -82,18 +82,22 @@ namespace HomeMediaCenter
                     XmlDocument xmlReader = new XmlDocument();
                     xmlReader.Load(file);
 
+                    XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/@ModelNumber");
+                    if (node == null || node.Value != this.modelNumber)
+                        return;
+
                     Guid udn;
-                    XmlNode udnNode = xmlReader.SelectSingleNode("/HomeMediaCenter/Udn");
-                    if (udnNode != null && Guid.TryParse(udnNode.InnerText, out udn))
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/Udn");
+                    if (node != null && Guid.TryParse(node.InnerText, out udn))
                     {
                         this.udn = udn;
                         this.serialNumber = udn.ToString();
                     }
 
-                    udnNode = xmlReader.SelectSingleNode("/HomeMediaCenter/FriendlyName");
-                    if (udnNode != null)
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/FriendlyName");
+                    if (node != null)
                     {
-                        this.friendlyName = udnNode.InnerText;
+                        this.friendlyName = node.InnerText;
                     }
 
                     this.server.LoadSettings(xmlReader);
@@ -112,6 +116,7 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartElement("HomeMediaCenter");
                 xmlWriter.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instance");
                 xmlWriter.WriteAttributeString("xmlns", "xsd", null, "http://www.w3.org/2001/XMLSchema");
+                xmlWriter.WriteAttributeString("ModelNumber", this.modelNumber);
 
                 xmlWriter.WriteElementString("Udn", this.udn.ToString());
                 xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
@@ -131,6 +136,21 @@ namespace HomeMediaCenter
         {
             descWriter.WriteElementString("presentationURL", "/web/page.html?id=0");
             descWriter.WriteElementString("dlna", "X_DLNADOC", "urn:schemas-dlna-org:device-1-0", "DMS-1.50");
+
+            descWriter.WriteStartElement("iconList");
+
+            foreach (string size in new[] { "120", "48", "32" })
+            {
+                descWriter.WriteStartElement("icon");
+                descWriter.WriteElementString("mimetype", "image/jpeg");
+                descWriter.WriteElementString("width", size);
+                descWriter.WriteElementString("height", size);
+                descWriter.WriteElementString("depth", "24");
+                descWriter.WriteElementString("url", string.Format("/web/images/htmllogo.png?codec=jpeg&width={0}&height={0}", size));
+                descWriter.WriteEndElement();
+            }
+
+            descWriter.WriteEndElement();
         }
 
         private void GetFile(HttpRequest request)
@@ -272,8 +292,6 @@ namespace HomeMediaCenter
                 throw new HttpException(404, "Unknown source");
             
             EncoderBuilder builder = EncoderBuilder.GetEncoder(request.UrlParams);
-            if (builder == null)
-                throw new HttpException(400, "Unknown codec");
 
             response.AddHreader(HttpHeader.ContentType, builder.GetMime());
             response.AddHreader(HttpHeader.AcceptRanges, "none");
@@ -636,12 +654,12 @@ namespace HomeMediaCenter
 
         private void GetWebGif(HttpRequest request)
         {
-            SendResource(request, "image/gif");
+            SendResource(request, "image/gif", request.UrlParams.ContainsKey("codec"));
         }
 
         private void GetWebPng(HttpRequest request)
         {
-            SendResource(request, "image/png");
+            SendResource(request, "image/png", request.UrlParams.ContainsKey("codec"));
         }
 
         private void GetWebJavascript(HttpRequest request)
@@ -654,19 +672,38 @@ namespace HomeMediaCenter
             SendResource(request, "application/x-silverlight-app");
         }
 
-        private void SendResource(HttpRequest request, string mime)
+        private void SendResource(HttpRequest request, string mime, bool encode = false)
         {
             HttpResponse response = new HttpResponse(request);
 
             string name = request.Url.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
 
-            using (Stream styleStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("HomeMediaCenter.Resources." + name))
+            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("HomeMediaCenter.Resources." + name))
             {
-                response.AddHreader(HttpHeader.ContentLength, styleStream.Length.ToString());
-                response.AddHreader(HttpHeader.ContentType, mime);
-                response.SendHeaders();
+                if (encode)
+                {
+                    EncoderBuilder builder = EncoderBuilder.GetEncoder(request.UrlParams);
 
-                styleStream.CopyTo(request.Socket.GetStream());
+                    using (MemoryStream memStream = new MemoryStream())
+                    {
+                        builder.StartEncode(resourceStream, memStream);
+
+                        response.AddHreader(HttpHeader.ContentLength, memStream.Length.ToString());
+                        response.AddHreader(HttpHeader.ContentType, builder.GetMime());
+                        response.SendHeaders();
+
+                        memStream.Position = 0;
+                        memStream.CopyTo(request.Socket.GetStream());
+                    }
+                }
+                else
+                {
+                    response.AddHreader(HttpHeader.ContentLength, resourceStream.Length.ToString());
+                    response.AddHreader(HttpHeader.ContentType, mime);
+                    response.SendHeaders();
+
+                    resourceStream.CopyTo(request.Socket.GetStream());
+                }
             }
         }
 
