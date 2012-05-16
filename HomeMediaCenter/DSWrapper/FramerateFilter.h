@@ -16,15 +16,12 @@ private class FramerateFilter : public CTransformFilter
 				HRESULT CompleteConnect(PIN_DIRECTION direction, IPin * pReceivePin);
 				HRESULT Receive(IMediaSample * pSample);
 
-	private:	HRESULT InitFrameArray(REFERENCE_TIME frameLength);
-
-				BYTE * m_frameArray;
-				UINT32 m_originFps;
+	private:	UINT32 m_fpsModSum;
+				const UINT32 m_fpsMod;
 				const UINT32 m_fps;
-				DWORD m_iFrameNumber;
-				DWORD m_iTransformFrame;
 				const REFERENCE_TIME m_rtFrameLength;
 				REFERENCE_TIME m_rtOriginFrameLength;
+				REFERENCE_TIME m_rtLastFrame;
 };
 
 #endif //FRAMERATEFILTER_DSWRAPPER_INCLUDED

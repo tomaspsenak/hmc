@@ -26,7 +26,7 @@ namespace HomeMediaCenter
         private string videoEncodeFeature = "DLNA.ORG_OP=10;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private string videoStreamFeature = "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private List<EncoderBuilder> videoEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576") };
+            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25") };
         private List<EncoderBuilder> videoStreamEncode = new List<EncoderBuilder>() { 
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576"), 
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768"),
