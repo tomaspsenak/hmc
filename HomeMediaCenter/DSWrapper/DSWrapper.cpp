@@ -279,7 +279,7 @@ namespace DSWrapper
 						this->m_continueEncode = FALSE;
 					case EC_ERRORABORT:
 					case EC_ERRORABORTEX:
-						hr = param1;
+						hr = (HRESULT)param1;
 						mediaEvent->FreeEventParams(evCode, param1, param2);
 						goto done;
 					default: break;
