@@ -31,7 +31,7 @@ namespace DSWrapper
 					static System::Boolean IsWMVInstalled(void);
 					static System::Boolean IsFFDSHOWInstalled(void);
 
-		internal:	virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin) = 0;
+		internal:	virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) = 0;
 
 					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter);
 
@@ -42,7 +42,7 @@ namespace DSWrapper
 						m_vidBitrate(vidBitrate), m_percentQuality(percentQuality), m_fps(fps), m_intSubtitles(intSubtitles), m_intSubtitlesPath(intSubtitlesPath),
 						m_keepAspectRatio(keepAspectRatio) { }
 
-		protected:	HRESULT ConfigureDecoder(IGraphBuilder * graphBuilder, IPin ** pVideoPin, IPin ** pAudioPin);
+		protected:	HRESULT ConfigureDecoder(IGraphBuilder * graphBuilder, IPin ** pVideoPin, IPin ** pAudioPin, IPin ** pSubtitlePin);
 			
 					UINT32 m_fps;
 					UINT32 m_width;
@@ -62,7 +62,7 @@ namespace DSWrapper
 						ContainerType(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), 
 						m_scanType(scanType), m_mpaLayer(mpaLayer), m_audBitrate(audBitrate) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
 
 					virtual GUID GetSubtype() override { return MEDIASUBTYPE_MPEG2_PROGRAM; }
 
@@ -86,7 +86,7 @@ namespace DSWrapper
 						System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate) : ContainerType(width, height, bitrateMode, vidBitrate, percentQuality, 
 						fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
 
 					virtual GUID GetSubtype() override { return CLSID_WebmOut; }
 
@@ -108,7 +108,7 @@ namespace DSWrapper
 						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, UINT32 audBitrate) : ContainerType(width, height, BitrateMode::CBR, vidBitrate, 
 						percentQuality, fps, intSubtitles, intSubtitlesPath, FALSE), m_audBitrate(audBitrate), m_videoSubtype(videoSubtype) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
 
 					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter) override;
 

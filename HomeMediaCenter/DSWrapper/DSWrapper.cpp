@@ -5,6 +5,16 @@
 #pragma warning(disable : 4995)
 #include <list>
 
+//Struktura pre titulky integrovane v kontajneri
+struct SUBTITLEINFO 
+{
+	DWORD dwOffset; // size of the structure/pointer to codec init data
+	CHAR IsoLang[4]; // three letter lang code + terminating zero
+	WCHAR TrackName[256];
+};
+DEFINE_GUID(MEDIATYPE_Subtitle, 0xE487EB08, 0x6B26, 0x4be9, 0x9D, 0xD3, 0x99, 0x34, 0x34, 0xD3, 0x13, 0xFD);
+DEFINE_GUID(SubtitleInfo, 0xA33D2F7D, 0x96BC, 0x4337, 0xB2, 0x3B, 0xA8, 0xB9, 0xFB, 0xC2, 0x95, 0xE9);
+
 namespace DSWrapper 
 {
 	DSEncoder::DSEncoder(void) : m_filterGraph(NULL), m_outputStream(nullptr), m_sourceFilter(NULL), m_demuxFilter(NULL), m_containerType(nullptr),
@@ -227,6 +237,7 @@ namespace DSWrapper
 
 		IPin * videoPin = NULL;
 		IPin * audioPin = NULL;
+		IPin * subtitlePin = NULL;
 		IPin * writerPin = NULL;
 
 		CHECK_HR(hr = (this->m_outputStream == nullptr) ? E_FAIL : S_OK);
@@ -241,14 +252,14 @@ namespace DSWrapper
 		
 		//Vycisti graf a zisti audio a video pin podla nastavenia a demultiplexora
 		CHECK_HR(hr = ClearGraph());
-		CHECK_HR(hr = GetSourcePins(&videoPin, &audioPin));
+		CHECK_HR(hr = GetSourcePins(&videoPin, &audioPin, &subtitlePin));
 
 		//Ziska writerFilter podla kontajnera, prida ho do grafu a zisti jeho vstupny pin
 		CHECK_HR(hr = this->m_containerType->GetWriter(this->m_outputStream, graphBuilder, &writerFilter));
 		writerPin = GetFirstPin(writerFilter, PINDIR_INPUT);
 
 		//Nastavi spojenie decoder -> coder -> muxer -> writer
-		CHECK_HR(hr = this->m_containerType->ConfigureContainer(graphBuilder, videoPin, audioPin, writerPin));
+		CHECK_HR(hr = this->m_containerType->ConfigureContainer(graphBuilder, videoPin, audioPin, subtitlePin, writerPin));
 
 		long evCode;
 		LONG_PTR param1, param2;
@@ -315,6 +326,7 @@ namespace DSWrapper
 		SAFE_RELEASE(mediaSeeking);
 
 		SAFE_RELEASE(writerPin);
+		SAFE_RELEASE(subtitlePin);
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
 
@@ -347,7 +359,7 @@ namespace DSWrapper
 		this->ProgressChange(this, arg);
 	}
 
-	HRESULT DSEncoder::GetSourcePins(IPin ** videoPin, IPin ** audioPin)
+	HRESULT DSEncoder::GetSourcePins(IPin ** videoPin, IPin ** audioPin, IPin ** subtitlePin)
 	{
 		HRESULT hr = S_OK;
 		DWORD pinIdx = 0;
@@ -381,6 +393,11 @@ namespace DSWrapper
 				else if (item->MediaType == PinMediaType::Audio && (*audioPin) == NULL)
 				{
 					*audioPin = retPin;
+					retPin = NULL;
+				}
+				else if (item->MediaType == PinMediaType::Subtitle && (*subtitlePin) == NULL)
+				{
+					*subtitlePin = retPin;
 					retPin = NULL;
 				}
 			}
@@ -617,9 +634,24 @@ namespace DSWrapper
 						break;
 
 					if (mediaType->majortype == MEDIATYPE_Video)
+					{
 						item = gcnew PinInfoItem(pinIdx, connPin != NULL, PinMediaType::Video);
+					}
 					else if (mediaType->majortype == MEDIATYPE_Audio)
+					{
 						item = gcnew PinInfoItem(pinIdx, connPin != NULL, PinMediaType::Audio);
+					}
+					else if (mediaType->majortype == MEDIATYPE_Subtitle)
+					{
+						System::String ^ langName = System::String::Empty;
+						if (mediaType->formattype == SubtitleInfo)
+						{
+							SUBTITLEINFO * info = (SUBTITLEINFO *)mediaType->pbFormat;
+							langName = System::Runtime::InteropServices::Marshal::PtrToStringAnsi(static_cast<System::IntPtr>(info->IsoLang));
+						}
+
+						item = gcnew PinSubtitleItem(pinIdx, connPin != NULL, langName);
+					}
 
 					DeleteMediaType(mediaType);
 					mediaType = NULL;

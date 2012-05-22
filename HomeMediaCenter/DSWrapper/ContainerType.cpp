@@ -108,7 +108,7 @@ namespace DSWrapper
 		return hr == S_OK;
 	}
 
-	HRESULT ContainerType::ConfigureDecoder(IGraphBuilder * graphBuilder, IPin ** pVideoPin, IPin ** pAudioPin)
+	HRESULT ContainerType::ConfigureDecoder(IGraphBuilder * graphBuilder, IPin ** pVideoPin, IPin ** pAudioPin, IPin ** pSubtitlePin)
 	{
 		HRESULT hr = S_OK;
 
@@ -135,6 +135,14 @@ namespace DSWrapper
 			tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
 			CHECK_SUCCEED(hr = graphBuilder->Connect(*pVideoPin, tempPin));
 			SAFE_RELEASE(tempPin);
+
+			if ((*pSubtitlePin) != NULL)
+			{
+				//Napojenie pinu s titulkami ak je aktivovany v demultiplexore
+				tempPin = DSEncoder::GetPin(ffVideoDecoder, PINDIR_INPUT, 1);
+				CHECK_SUCCEED(hr = graphBuilder->Connect(*pSubtitlePin, tempPin));
+				SAFE_RELEASE(tempPin);
+			}
 
 			//Nezobrazuj tray ikonu
 			CHECK_HR(hr = ffVideoConfig->putParam(IDFF_trayIcon, 0));
@@ -246,7 +254,7 @@ namespace DSWrapper
 		return hr;
 	}
 
-	HRESULT ContainerMPEG2_PS::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin)
+	HRESULT ContainerMPEG2_PS::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin)
 	{
 		HRESULT hr = S_OK;
 		ULONG vValCount = 0;
@@ -260,6 +268,7 @@ namespace DSWrapper
 		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
 		SAFE_ADDREF(videoPin);
 		SAFE_ADDREF(audioPin);
+		SAFE_ADDREF(subtitlePin);
 
 		VariantInit(&variant);
 		variant.vt = VT_UI4;
@@ -329,7 +338,7 @@ namespace DSWrapper
 			CHECK_HR(hr = codecApi->SetValue(&CODECAPI_AVEncAudioMeanBitRate, &variant));
 		}
 
-		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin));
+		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
 
 		if (videoPin != NULL)
 		{
@@ -364,11 +373,12 @@ namespace DSWrapper
 
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
+		SAFE_RELEASE(subtitlePin);
 		
 		return hr;
 	}
 
-	HRESULT ContainerWEBM::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin)
+	HRESULT ContainerWEBM::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin)
 	{
 		HRESULT hr = S_OK;
 
@@ -383,6 +393,7 @@ namespace DSWrapper
 		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
 		SAFE_ADDREF(videoPin);
 		SAFE_ADDREF(audioPin);
+		SAFE_ADDREF(subtitlePin);
 
 		CHECK_HR(hr = CoCreateInstance(CLSID_WebmVideo, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmVideoFilter));
 		CHECK_HR(hr = CoCreateInstance(CLSID_VorbisEncodeFilter, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmAudioFilter));
@@ -424,7 +435,7 @@ namespace DSWrapper
 		if (this->m_audBitrate != 0)
 			CHECK_HR(hr = webmAudio->setBitrateQualityMode(this->m_audBitrate));
 
-		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin));
+		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
 
 		if (videoPin != NULL)
 		{
@@ -472,6 +483,7 @@ namespace DSWrapper
 
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
+		SAFE_RELEASE(subtitlePin);
 		
 		return hr;
 	}
@@ -506,7 +518,7 @@ namespace DSWrapper
 		return hr;
 	}
 
-	HRESULT ContainerWMV::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * writerPin)
+	HRESULT ContainerWMV::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin)
 	{
 		HRESULT hr = S_OK;
 
@@ -527,6 +539,7 @@ namespace DSWrapper
 		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
 		SAFE_ADDREF(videoPin);
 		SAFE_ADDREF(audioPin);
+		SAFE_ADDREF(subtitlePin);
 
 		CHECK_HR(hr = writerPin->QueryPinInfo(&pinInfo));
 		CHECK_HR(hr = pinInfo.pFilter->QueryInterface(IID_IConfigAsfWriter, (void **)&config));
@@ -607,7 +620,7 @@ namespace DSWrapper
 		//Konfiguracia ffmpeg bez nastavenia vysky a sirky a fps
 		UINT32 width = this->m_width, height = this->m_height, fps = this->m_fps;
 		this->m_width = this->m_height = this->m_fps = 0;
-		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin));
+		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
 		this->m_width = width;
 		this->m_height = height;
 		this->m_fps = fps;
@@ -640,6 +653,7 @@ namespace DSWrapper
 
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
+		SAFE_RELEASE(subtitlePin);
 		
 		return hr;
 	}

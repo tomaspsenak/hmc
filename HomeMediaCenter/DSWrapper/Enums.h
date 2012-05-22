@@ -7,7 +7,7 @@ namespace DSWrapper
 {
 	public enum class PinMediaType
 	{
-		Audio, Video, Unknown
+		Audio, Video, Subtitle, Unknown
 	};
 
 	public enum class ScanType

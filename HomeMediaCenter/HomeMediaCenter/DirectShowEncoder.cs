@@ -102,6 +102,16 @@ namespace HomeMediaCenter
                 uint setVideo = this.video.HasValue ? this.video.Value : 1;
                 uint setAudio = this.audio.HasValue ? this.audio.Value : 1;
 
+                //Integrovanie titulkov, ak nie je zadany nazov - automaticka detekcia
+                //Ak je zadany nazov - nastav prislusny subor
+                string subPath = null;
+                bool subtitles = parameters.ContainsKey("subtitles");
+                if (subtitles)
+                {
+                    if (parameters["subtitles"] != string.Empty)
+                        subPath = parameters["subtitles"];
+                }
+
                 //Nastavenie video a zvukovej stopy
                 uint actVideo = 1, actAudio = 1;
                 foreach (PinInfoItem item in enc.SourcePins)
@@ -121,6 +131,19 @@ namespace HomeMediaCenter
                         else
                             item.IsSelected = false;
                         actAudio++;
+                    }
+                    else if (item.MediaType == PinMediaType.Subtitle)
+                    {
+                        string lang = ((PinSubtitleItem)item).LangName;
+                        if (string.Compare(lang, subPath, true) == 0)
+                        {
+                            subPath = null;
+                            item.IsSelected = true;
+                        }
+                        else
+                        {
+                            item.IsSelected = false;
+                        }
                     }
                     else
                     {
@@ -152,16 +175,6 @@ namespace HomeMediaCenter
 
                 //Zistenie ci zachovat pomer stran pri zmene rozlisenia
                 bool keepAspect = parameters.ContainsKey("keepaspect");
-
-                //Integrovanie titulkov, ak nie je zadany nazov - automaticka detekcia
-                //Ak je zadany nazov - nastav prislusny subor
-                string subPath = null;
-                bool subtitles = parameters.ContainsKey("subtitles");
-                if (subtitles)
-                {
-                    if (parameters["subtitles"] != string.Empty)
-                        subPath = parameters["subtitles"];
-                }
 
                 ContainerType container = null;
                 switch (this.codec)
