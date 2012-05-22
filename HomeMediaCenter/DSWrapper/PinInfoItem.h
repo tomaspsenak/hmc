@@ -37,6 +37,24 @@ namespace DSWrapper
 					BOOL m_selected;
 					DWORD m_index;
 	};
+
+	public ref class PinSubtitleItem : public PinInfoItem
+	{
+		public:		property System::String^ LangName
+					{
+						System::String^ get() { return m_langName; }
+					}
+			
+					virtual System::String^ ToString(void) override
+					{
+						return System::String::Format(L"{0} - {1}", PinInfoItem::ToString(), m_langName);
+					}
+
+		internal:	PinSubtitleItem(DWORD index, BOOL selected, System::String^ langName) : 
+						PinInfoItem(index, selected, PinMediaType::Subtitle), m_langName(langName)  { };
+
+		private:	System::String^ m_langName;
+	};
 }
 
 #endif //PININFOITEM_DSWRAPPER_INCLUDED

@@ -47,7 +47,7 @@ namespace DSWrapper
 
 		private:	void OnProgressChange(ProgressChangeEventArgs ^ arg);
 					HRESULT FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking);
-					HRESULT GetSourcePins(IPin ** videoPin, IPin ** audioPin);
+					HRESULT GetSourcePins(IPin ** videoPin, IPin ** audioPin, IPin ** subtitlePin);
 					HRESULT ClearGraph(void);
 
 					System::Collections::Generic::List<PinInfoItem^>^ m_sourcePins;
