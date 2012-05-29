@@ -4,6 +4,8 @@
 #define DESKTOPSOURCEAUDIOPIN_DSWRAPPER_INCLUDED
 
 #include <Audioclient.h>
+#include <mmdeviceapi.h>
+#include "DesktopSilenceGenerator.h"
 
 private class DesktopSourceAudioPin  : public CSourceStream
 {
@@ -24,14 +26,16 @@ private class DesktopSourceAudioPin  : public CSourceStream
 
 				HRESULT OnThreadDestroy(void);
 
-	private:	DWORD m_iFrameNumber;
+	private:	REFERENCE_TIME m_rtLastFrame;
 				const REFERENCE_TIME m_rtFrameLength;
+				IMMDevice * m_device;
 				IAudioClient * m_audioClient;
 				IAudioCaptureClient * m_captureClient;
-				WORD m_blockAlign;
-				DWORD m_nextTick;
+				PlaySilenceArgs m_silenceArgs;
 				CCritSec m_cSharedState;
-				DWORD m_lastSync;
+				WORD m_blockAlign;
+				BYTE * m_buffer;
+				DWORD m_cBufferData;
 };
 
 #endif //DESKTOPSOURCEAUDIOPIN_DSWRAPPER_INCLUDED

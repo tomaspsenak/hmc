@@ -608,5 +608,14 @@ namespace HomeMediaCenterGUI
             }
             catch { }
         }
+
+        private void homepageLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start("http://hmc.codeplex.com");
+            }
+            catch { }
+        }
     }
 }

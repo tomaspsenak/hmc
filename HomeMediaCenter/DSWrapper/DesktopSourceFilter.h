@@ -6,23 +6,26 @@
 #include "DesktopSourcePin.h"
 #include "DesktopSourceAudioPin.h"
 
-private class DesktopSourceFilter : public CSource
+private class DesktopSourceFilter : public CSource, public IAMFilterMiscFlags
 {
 	public:		DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr, UINT32 fps);
 				~DesktopSourceFilter(void);
 
-				void SyncPins(DWORD index);
+				DECLARE_IUNKNOWN
+				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
+
+				void SyncPins(DWORD index, REFERENCE_TIME & rtSyncTime);
+				//IAMFilterMiscFlags
+				ULONG STDMETHODCALLTYPE GetMiscFlags(void);
 
 				//Synchronizacia audia a videa v milisekundach, nedavat male cislo
 				static const DWORD SyncTime = 5000;
-				//Maximalna dlzka cakania na synchronizaciu
-				static const DWORD WaitToSync = 3000;
 
 	private:	DesktopSourcePin * m_sourcePin;
 				DesktopSourceAudioPin * m_sourceAudioPin;
 				CCritSec m_syncSection;
-				HANDLE m_syncEvent[2];
-				BOOL m_signaled[2];
+				REFERENCE_TIME m_rtLastFrame;
+				BOOL m_isTimeSet;
 };
 
 #endif //DESKTOPSOURCEFILTER_DSWRAPPER_INCLUDED
