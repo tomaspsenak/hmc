@@ -25,7 +25,7 @@ private class DesktopSourcePin : public CSourceStream
 				void GetWidthHeight(const AM_MEDIA_TYPE * type, LONG * width, LONG * height); 
 				void GetBitmapInfo(const AM_MEDIA_TYPE * type, BITMAPINFOHEADER * bitmapInfo);
 		
-				DWORD m_iFrameNumber;
+				REFERENCE_TIME m_rtLastFrame;
 				const REFERENCE_TIME m_rtFrameLength;
 				CCritSec m_cSharedState;
 				IMediaObject * m_colorConverter;

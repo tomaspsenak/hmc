@@ -108,7 +108,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
@@ -131,7 +131,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
@@ -150,7 +150,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
@@ -170,7 +170,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
@@ -181,6 +181,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ContainerType.h" />
+    <ClInclude Include="DesktopSilenceGenerator.h" />
     <ClInclude Include="DesktopSourceAudioPin.h" />
     <ClInclude Include="DesktopSourceFilter.h" />
     <ClInclude Include="DesktopSourcePin.h" />
@@ -209,6 +210,7 @@
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="ContainerType.cpp" />
+    <ClCompile Include="DesktopSilenceGenerator.cpp" />
     <ClCompile Include="DesktopSourceAudioPin.cpp" />
     <ClCompile Include="DesktopSourceFilter.cpp" />
     <ClCompile Include="DesktopSourcePin.cpp" />

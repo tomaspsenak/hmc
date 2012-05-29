@@ -110,6 +110,7 @@
             this.videoCheckBox = new System.Windows.Forms.CheckBox();
             this.containerComboBox = new System.Windows.Forms.ComboBox();
             this.aboutTabPage = new System.Windows.Forms.TabPage();
+            this.homepageLinkLabel = new System.Windows.Forms.LinkLabel();
             this.settingsLinkLabel = new System.Windows.Forms.LinkLabel();
             this.aboutLabel = new System.Windows.Forms.Label();
             this.statusLabel = new System.Windows.Forms.Label();
@@ -1070,6 +1071,7 @@
             // 
             // aboutTabPage
             // 
+            this.aboutTabPage.Controls.Add(this.homepageLinkLabel);
             this.aboutTabPage.Controls.Add(this.settingsLinkLabel);
             this.aboutTabPage.Controls.Add(this.aboutLabel);
             this.aboutTabPage.Location = new System.Drawing.Point(4, 22);
@@ -1078,6 +1080,19 @@
             this.aboutTabPage.TabIndex = 4;
             this.aboutTabPage.Text = "About";
             this.aboutTabPage.UseVisualStyleBackColor = true;
+            // 
+            // homepageLinkLabel
+            // 
+            this.homepageLinkLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.homepageLinkLabel.Location = new System.Drawing.Point(3, 129);
+            this.homepageLinkLabel.Name = "homepageLinkLabel";
+            this.homepageLinkLabel.Size = new System.Drawing.Size(583, 17);
+            this.homepageLinkLabel.TabIndex = 2;
+            this.homepageLinkLabel.TabStop = true;
+            this.homepageLinkLabel.Text = "http://hmc.codeplex.com";
+            this.homepageLinkLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.homepageLinkLabel.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.homepageLinkLabel_LinkClicked);
             // 
             // settingsLinkLabel
             // 
@@ -1257,6 +1272,7 @@
         private System.Windows.Forms.Label aboutLabel;
         private System.Windows.Forms.LinkLabel settingsLinkLabel;
         private System.Windows.Forms.ComboBox outputTextBox;
+        private System.Windows.Forms.LinkLabel homepageLinkLabel;
     }
 }
 

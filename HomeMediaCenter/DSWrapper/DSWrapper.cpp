@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "DSWrapper.h"
 #include "DSException.h"
+#include <InitGuid.h>
 
 #pragma warning(disable : 4995)
 #include <list>

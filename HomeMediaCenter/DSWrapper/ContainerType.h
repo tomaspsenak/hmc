@@ -88,7 +88,7 @@ namespace DSWrapper
 
 					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
 
-					virtual GUID GetSubtype() override { return CLSID_WebmOut; }
+					virtual GUID GetSubtype() override;
 
 		protected:	UINT32 m_audBitrate;			
 	};

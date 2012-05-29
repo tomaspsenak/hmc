@@ -1,6 +1,8 @@
 #ifndef _IFFDSHOWBASE_H_
 #define _IFFDSHOWBASE_H_
 
+#include <InitGuid.h>
+
 //for doxygen
 #ifndef DECLARE_INTERFACE_
 #define DECLARE_INTERFACE_(x,y) struct x: public y

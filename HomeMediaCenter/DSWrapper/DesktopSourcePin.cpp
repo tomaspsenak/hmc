@@ -5,7 +5,7 @@
 #include "DesktopSourceFilter.h"
 
 DesktopSourcePin::DesktopSourcePin(TCHAR * pObjectName, HRESULT * phr, CSource * pms, LPCWSTR pName, UINT32 fps) 
-	: CSourceStream(pObjectName, phr, pms, pName), m_iFrameNumber(0), m_rtFrameLength(UNITS / fps), m_colorConverter(NULL), m_nextTick(0), m_lastSync(0)
+	: CSourceStream(pObjectName, phr, pms, pName), m_rtLastFrame(0), m_rtFrameLength(UNITS / fps), m_colorConverter(NULL), m_nextTick(0), m_lastSync(0)
 {
 	//Ak sa neda vytvorit ColorConvertDMO, bude NULL - bude sa pouzivat iba RGB
 	CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, __uuidof(IMediaObject), (void**)&this->m_colorConverter);
@@ -232,14 +232,8 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 		CHECK_HR(inMediaBuffer->SetLength(dmoType.lSampleSize));
 	}
 
-	//Synchronizacia audio / video a spomalenie snimkovania podla stanoveneho FPS
+	//Spomalenie snimkovania podla stanoveneho FPS
 	nowTick = GetTickCount();
-	if (nowTick > (this->m_lastSync + DesktopSourceFilter::SyncTime))
-	{
-		((DesktopSourceFilter*)this->m_pFilter)->SyncPins(0);
-		this->m_lastSync = this->m_nextTick = nowTick = GetTickCount();
-	}
-
 	if (nowTick < this->m_nextTick)
 		Sleep((DWORD)(this->m_nextTick - nowTick));
 	this->m_nextTick = (DWORD)(this->m_nextTick + (this->m_rtFrameLength / 10000));
@@ -257,9 +251,16 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 		outMediaBuffers[0].pBuffer->GetBufferAndLength(NULL, &writeCount);
 	}
 
-    REFERENCE_TIME rtStart = this->m_iFrameNumber * this->m_rtFrameLength;
+	//Synchronizacia audio / video
+	if (nowTick > (this->m_lastSync + DesktopSourceFilter::SyncTime))
+	{
+		((DesktopSourceFilter*)this->m_pFilter)->SyncPins(0, this->m_rtLastFrame);
+		this->m_lastSync = this->m_nextTick = nowTick = GetTickCount();
+	}
+
+    REFERENCE_TIME rtStart = this->m_rtLastFrame;
     REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
-	this->m_iFrameNumber++;
+	this->m_rtLastFrame = rtStop;
 
     CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
     CHECK_HR(hr = pSample->SetSyncPoint(TRUE));

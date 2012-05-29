@@ -1,13 +1,12 @@
 #include "StdAfx.h"
 #include "DesktopSourceAudioPin.h"
-#include <mmdeviceapi.h>
 #include "DesktopSourceFilter.h"
 
 #define REFTIMES_PER_SEC 10000000
 
 DesktopSourceAudioPin::DesktopSourceAudioPin(TCHAR * pObjectName, HRESULT * phr, CSource * pms, LPCWSTR pName)
-	: CSourceStream(pObjectName, phr, pms, pName), m_audioClient(NULL), m_captureClient(NULL), m_blockAlign(0), 
-	  m_iFrameNumber(0), m_nextTick(0), m_rtFrameLength(REFTIMES_PER_SEC), m_lastSync(0)
+	: CSourceStream(pObjectName, phr, pms, pName), m_device(NULL), m_audioClient(NULL), m_captureClient(NULL), m_blockAlign(0), 
+	  m_rtLastFrame(0), m_rtFrameLength(REFTIMES_PER_SEC), m_cBufferData(0), m_buffer(NULL)
 {
 	HRESULT hr = S_OK;
 
@@ -24,6 +23,8 @@ DesktopSourceAudioPin::DesktopSourceAudioPin(TCHAR * pObjectName, HRESULT * phr,
 
     this->m_audioClient = audioClient;
 	audioClient = NULL;
+	this->m_silenceArgs.device = this->m_device = device;
+	device = NULL;
 
 done:
 
@@ -35,7 +36,13 @@ done:
 
 DesktopSourceAudioPin::~DesktopSourceAudioPin(void)
 {
+	SAFE_RELEASE(this->m_device);
 	SAFE_RELEASE(this->m_audioClient);
+	if (this->m_buffer != NULL)
+	{
+		delete [] this->m_buffer;
+		this->m_buffer = NULL;
+	}
 }
 
 HRESULT DesktopSourceAudioPin::GetMediaType(int iPosition, CMediaType * pmt)
@@ -114,6 +121,14 @@ HRESULT DesktopSourceAudioPin::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATO
     if(aProp.cbBuffer < pProperties->cbBuffer)
 		CHECK_HR(hr = E_FAIL);
 
+	//Nastavenie zbytkoveho buffera
+	if (this->m_buffer != NULL)
+		delete [] this->m_buffer;
+	this->m_buffer = new BYTE[aProp.cbBuffer];
+	if (this->m_buffer == NULL)
+		CHECK_HR(hr = E_FAIL);
+	this->m_cBufferData = 0;
+
 done:
     return hr;
 }
@@ -121,6 +136,8 @@ done:
 HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 {
 	HRESULT hr = S_OK;
+	DWORD waitResult;
+	HANDLE waitArray[2];
 
 	WAVEFORMATEX * waveFormat = NULL;
 	IAudioCaptureClient * captureClient = NULL;
@@ -128,6 +145,20 @@ HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 	CAutoLock cAutoLockShared(&m_cSharedState);
 
 	if (this->m_captureClient != NULL)
+		CHECK_HR(hr = E_FAIL);
+
+	//Nastavenie argumentov a spustenie vlakna generujuceho ticho - koli kontinualnemu zaznamu cez WASAPI
+    this->m_silenceArgs.hr = S_OK;
+    if ((this->m_silenceArgs.startedEvent = waitArray[0] = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL)
+		CHECK_HR(hr = E_FAIL);
+    if ((this->m_silenceArgs.stopEvent = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL)
+		CHECK_HR(hr = E_FAIL);
+    if ((this->m_silenceArgs.thread = waitArray[1] = CreateThread(NULL, 0, PlaySilenceFunction, &this->m_silenceArgs, 0, NULL)) == NULL)
+		CHECK_HR(hr = E_FAIL);
+
+	//Pocka sa, kym sa spusti alebo ukonci vlakno generujuce ticho
+    waitResult = WaitForMultipleObjects(ARRAYSIZE(waitArray), waitArray, FALSE, INFINITE);
+	if (waitResult != WAIT_OBJECT_0)
 		CHECK_HR(hr = E_FAIL);
 
 	//Nastavenie parametrov pri prvom spusteni
@@ -173,74 +204,65 @@ HRESULT DesktopSourceAudioPin::FillBuffer(IMediaSample * pSample)
 	HRESULT hr = S_OK;
 
     UINT32 numFramesAvailable, packetLength = 0;
-	DWORD sampleDataCount, actualDataCount, flags, nowTick;
+	DWORD sampleDataCount, actualDataCount, flags;
 	BYTE * sampleData, * inData;
 
 	CAutoLock cAutoLockShared(&m_cSharedState);
     
 	CHECK_HR(hr = pSample->GetPointer(&sampleData));
     actualDataCount = sampleDataCount = pSample->GetSize();
+
+	//Ak sa v zbytkovom bufferi nieco nachadza - zapise sa do sample
+	for (UINT32 i = 0; i < this->m_cBufferData; i++)
+		sampleData[i] = this->m_buffer[i];
+
+	actualDataCount -= this->m_cBufferData;
+	sampleData = &sampleData[this->m_cBufferData];
+	this->m_cBufferData = 0;
 	
-	nowTick = GetTickCount();
-	while (nowTick < this->m_nextTick)
+	while (true)
     {
-		//Ak sa este neprekrocil cast stanovany na jeden zapis do buffera, zaznamenavaj do vystupneho buffera
-		//4-krat za stanoveny cas skontroluje vstupny buffer
-		Sleep((DWORD)(this->m_rtFrameLength / (10000 * 4)));
+		//Skontroluje sa, ci je spustene vlakno generujuce ticho
+		CHECK_HR(hr = this->m_silenceArgs.hr);
 
-        CHECK_SUCCEED(hr = this->m_captureClient->GetNextPacketSize(&packetLength));
-        while (packetLength != 0)
-        {
-			//Ak je nieco v buffery / zaznamenavaj do vystupneho buffera
-            CHECK_SUCCEED(hr = this->m_captureClient->GetBuffer(&inData, &numFramesAvailable, &flags, NULL, NULL));
+		//Ak je nieco v buffery / zaznamenavaj do vystupneho buffera
+        CHECK_SUCCEED(hr = this->m_captureClient->GetBuffer(&inData, &numFramesAvailable, &flags, NULL, NULL));
 
-			//Zisti pocet bajtov pre vsetky frame a ziskaj hodnotu, kolko je mozne zapisat do buffera
-			UINT32 bytesAvailable = numFramesAvailable * this->m_blockAlign;
-			bytesAvailable = min(bytesAvailable, actualDataCount);
+		//Zisti pocet bajtov pre vsetky frame a ziskaj hodnotu, kolko je mozne zapisat do buffera
+		UINT32 totalBytes = numFramesAvailable * this->m_blockAlign;
+		UINT32 bytesAvailable = min(totalBytes, actualDataCount);
 
-			//Zapis do vystupneho buffera - samplu
-			for (UINT32 i = 0; i < bytesAvailable; i++)
-				sampleData[i] = inData[i];
+		//Zapis do vystupneho buffera - samplu
+		for (UINT32 i = 0; i < bytesAvailable; i++)
+			sampleData[i] = inData[i];
 
-			//Aktualizuj dostupnu velkost buffera a posun smernik na prazdne miesto
-			sampleData = &sampleData[bytesAvailable];
-			actualDataCount -= bytesAvailable;
-
-            CHECK_SUCCEED(hr = this->m_captureClient->ReleaseBuffer(numFramesAvailable));
-            CHECK_SUCCEED(hr = this->m_captureClient->GetNextPacketSize(&packetLength));
-        }
+		//Aktualizuj dostupnu velkost buffera a posun smernik na prazdne miesto
+		sampleData = &sampleData[bytesAvailable];
+		actualDataCount -= bytesAvailable;
 
 		//Ak sa uz nezmesti do buffera ani jeden frame - koniec
 		if (actualDataCount < this->m_blockAlign)
-			break;
+		{
+			//Ak ostane zvysok, zapis do zbytkoveho buffera
+			totalBytes = min(totalBytes, sampleDataCount);
+			for (UINT32 i = bytesAvailable; i < totalBytes; i++)
+				this->m_buffer[i - bytesAvailable] = inData[i];
+			this->m_cBufferData = totalBytes - bytesAvailable;
 
-		nowTick = GetTickCount();
+			CHECK_SUCCEED(hr = this->m_captureClient->ReleaseBuffer(numFramesAvailable));
+
+			break;
+		}
+
+		CHECK_SUCCEED(hr = this->m_captureClient->ReleaseBuffer(numFramesAvailable));
     }
 
-	//Vyaze buffer, ak sa nic nezapisalo ostane ticho, teda 0
-	ZeroMemory(sampleData, actualDataCount);
-
-	//Synchronizacia audio / video
-	nowTick = GetTickCount();
-	if (nowTick > (this->m_lastSync + DesktopSourceFilter::SyncTime))
-	{
-		((DesktopSourceFilter*)this->m_pFilter)->SyncPins(1);
-		this->m_lastSync = this->m_nextTick = nowTick = GetTickCount();
-
-		//Vycistenie vstupneho buffera ak sa v nom nieco nachadza
-		CHECK_SUCCEED(hr = this->m_captureClient->GetNextPacketSize(&packetLength));
-        while (packetLength != 0)
-        {
-			CHECK_SUCCEED(hr = this->m_captureClient->GetBuffer(&inData, &numFramesAvailable, &flags, NULL, NULL));
-			CHECK_SUCCEED(hr = this->m_captureClient->ReleaseBuffer(numFramesAvailable));
-            CHECK_SUCCEED(hr = this->m_captureClient->GetNextPacketSize(&packetLength));
-		}
-	}
-	this->m_nextTick = (DWORD)(this->m_nextTick + (this->m_rtFrameLength / 10000));
-
-	REFERENCE_TIME rtStart = this->m_iFrameNumber * this->m_rtFrameLength;
+	REFERENCE_TIME rtStart = this->m_rtLastFrame;
     REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
-	this->m_iFrameNumber++;
+	this->m_rtLastFrame = rtStop;
+
+	//Synchronizacia casovej peciatky s audio / video
+	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(1, this->m_rtLastFrame);
 
     CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
 	CHECK_HR(hr = pSample->SetSyncPoint(TRUE));
@@ -259,6 +281,26 @@ HRESULT DesktopSourceAudioPin::OnThreadDestroy(void)
 		this->m_audioClient->Stop();
 		SAFE_RELEASE(this->m_captureClient);
 	}
+
+	//Pockanie na ukoncenie vlakna generujuceho ticho
+	if (this->m_silenceArgs.stopEvent != NULL)
+		SetEvent(this->m_silenceArgs.stopEvent);
+	if (this->m_silenceArgs.thread != NULL)
+	{
+		WaitForSingleObject(this->m_silenceArgs.thread, INFINITE);
+		CloseHandle(this->m_silenceArgs.thread);
+	}
+
+	//Uzavrenie premennych typu HANDLE a nastavenie na NULL
+	if (this->m_silenceArgs.startedEvent != NULL)
+		CloseHandle(this->m_silenceArgs.startedEvent);
+
+	if (this->m_silenceArgs.stopEvent != NULL)
+		CloseHandle(this->m_silenceArgs.stopEvent);
+
+	this->m_silenceArgs.thread = NULL;
+	this->m_silenceArgs.stopEvent = NULL;
+	this->m_silenceArgs.startedEvent = NULL;
 
 	return CSourceStream::OnThreadDestroy();
 }
