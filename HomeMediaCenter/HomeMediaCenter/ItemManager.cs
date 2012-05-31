@@ -222,25 +222,26 @@ namespace HomeMediaCenter
 
         public void BrowseSync(Dictionary<string, string> headers, uint objectID, BrowseFlag browseFlag, out string result)
         {
-            string numberReturned, totalMatches, updateID;
-            BrowseSync(headers, objectID, browseFlag, "*", 0, 0, string.Empty, out result, out numberReturned, out totalMatches, out updateID);
+            string numberReturned, totalMatches;
+            BrowseSync(headers, objectID, browseFlag, "*", 0, 0, string.Empty, out result, out numberReturned, out totalMatches);
         }
 
         public void BrowseSync(Dictionary<string, string> headers, uint objectID, BrowseFlag browseFlag, string filter, uint startingIndex,
-            uint requestedCount, string sortCriteria, out string result, out string numberReturned, out string totalMatches, out string updateID)
+            uint requestedCount, string sortCriteria, out string result, out string numberReturned, out string totalMatches)
         {
             string host = headers.ContainsKey("host") ? "http://" + headers["host"] : string.Empty;
             StringBuilder sb = new StringBuilder();
 
             HashSet<string> filterSet = null;
             if (filter != "*")
-                filterSet = new HashSet<string>(filter.ToLower().Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                filterSet = new HashSet<string>(filter.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
 
             using (XmlWriter writer = XmlWriter.Create(sb, new XmlWriterSettings() { OmitXmlDeclaration = true }))
             {
                 writer.WriteStartElement("DIDL-Lite", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/");
                 writer.WriteAttributeString("xmlns", "dc", null, "http://purl.org/dc/elements/1.1/");
                 writer.WriteAttributeString("xmlns", "upnp", null, "urn:schemas-upnp-org:metadata-1-0/upnp/");
+                writer.WriteAttributeString("xmlns", "av", null, "urn:schemas-sony-com:av");
 
                 this.rwLock.EnterReadLock();
                 try
@@ -279,7 +280,6 @@ namespace HomeMediaCenter
             }
             
             result = sb.ToString();
-            updateID = "0";
         }
 
         public void GetWebSync(uint objectID, XmlWriter xmlWriter)

@@ -140,7 +140,11 @@ namespace DSWrapper
 			if (this->m_height > 0)
 			{
 				//Problem s ffdshow - vysku bere s registrov, musi byt zapisane pred pripojenim
-				Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "resizeDy", gcnew int(this->m_height));
+				#ifdef _M_X64
+					Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw\\default", "resizeDy", gcnew int(this->m_height));
+				#else
+					Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "resizeDy", gcnew int(this->m_height));
+				#endif
 			}
 
 			tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
