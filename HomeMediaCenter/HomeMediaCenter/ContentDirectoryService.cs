@@ -19,6 +19,7 @@ namespace HomeMediaCenter
     [UpnpServiceVariable("SystemUpdateID", "ui4", true)]
     [UpnpServiceVariable("A_ARG_TYPE_Result", "string", false)]
     [UpnpServiceVariable("A_ARG_TYPE_ObjectID", "string", false)]
+    [UpnpServiceVariable("A_ARG_TYPE_Featurelist", "string", false)]
     public class ContentDirectoryService : UpnpService
     {
         private MediaServerDevice device;
@@ -70,7 +71,7 @@ namespace HomeMediaCenter
             [UpnpServiceArgument("A_ARG_TYPE_Count")]           string RequestedCount,
             [UpnpServiceArgument("A_ARG_TYPE_SortCriteria")]    string SortCriteria)
         {
-            string Result, NumberReturned, TotalMatches, UpdateID;
+            string Result, NumberReturned, TotalMatches;
             uint objectID, startingIndex, requestedCount;
             HomeMediaCenter.BrowseFlag browseFlag;
 
@@ -79,10 +80,53 @@ namespace HomeMediaCenter
                 throw new HttpException(402, "Browse - parse exception");
 
             this.device.ItemManager.BrowseSync(request.Headers, objectID, browseFlag, Filter, startingIndex, requestedCount, SortCriteria,
-                out Result, out NumberReturned, out TotalMatches, out UpdateID);
+                out Result, out NumberReturned, out TotalMatches);
 
             HttpResponse response = new HttpResponse(request);
-            response.SendSoapHeadersBody(Result, NumberReturned, TotalMatches, UpdateID);
+            response.SendSoapHeadersBody(Result, NumberReturned, TotalMatches, "0");
+        }
+
+        [UpnpServiceArgument(0, "FeatureList", "A_ARG_TYPE_Featurelist")]
+        private void X_GetFeatureList(HttpRequest request)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            using (XmlWriter writer = XmlWriter.Create(sb, new XmlWriterSettings() { OmitXmlDeclaration = true }))
+            {
+                writer.WriteStartElement("Features", "urn:schemas-upnp-org:av:avs");
+                writer.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instance");
+                writer.WriteAttributeString("xsi", "schemaLocation", null, "urn:schemas-upnp-org:av:avs http://www.upnp.org/schemas/av/avs.xsd");
+
+                writer.WriteStartElement("Feature");
+                writer.WriteAttributeString("name", "samsung.com_BASICVIEW");
+                writer.WriteAttributeString("version", "1");
+
+                writer.WriteStartElement("container");
+                writer.WriteAttributeString("id", "2");
+                writer.WriteAttributeString("type", "object.item.imageItem");
+                writer.WriteEndElement();
+
+                writer.WriteStartElement("container");
+                writer.WriteAttributeString("id", "1");
+                writer.WriteAttributeString("type", "object.item.audioItem");
+                writer.WriteEndElement();
+
+                writer.WriteStartElement("container");
+                writer.WriteAttributeString("id", "3");
+                writer.WriteAttributeString("type", "object.item.videoItem");
+                writer.WriteEndElement();
+
+                writer.WriteStartElement("container");
+                writer.WriteAttributeString("id", "4");
+                writer.WriteAttributeString("type", "object.item.videoItem");
+                writer.WriteEndElement();
+
+                writer.WriteEndElement();
+
+                writer.WriteEndElement();
+            }
+            HttpResponse response = new HttpResponse(request);
+            response.SendSoapHeadersBody(sb.ToString());
         }
     }
 }

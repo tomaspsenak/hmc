@@ -156,6 +156,11 @@ namespace HomeMediaCenter
                         writer.WriteEndElement();
                     }
 
+                    if (filterSet == null || filterSet.Contains("av:mediaClass"))
+                    {
+                        writer.WriteElementString("av", "mediaClass", null, "M");
+                    }
+
                     break;
                 case MediaType.Image:
                     if (filterSet == null || filterSet.Contains("upnp:searchClass"))
@@ -166,6 +171,11 @@ namespace HomeMediaCenter
                         writer.WriteEndElement();
                     }
 
+                    if (filterSet == null || filterSet.Contains("av:mediaClass"))
+                    {
+                        writer.WriteElementString("av", "mediaClass", null, "P");
+                    }
+
                     break;
                 case MediaType.Video:
                     if (filterSet == null || filterSet.Contains("upnp:searchClass"))
@@ -174,6 +184,11 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("includeDerived", "true");
                         writer.WriteValue("object.item.videoItem");
                         writer.WriteEndElement();
+                    }
+
+                    if (filterSet == null || filterSet.Contains("av:mediaClass"))
+                    {
+                        writer.WriteElementString("av", "mediaClass", null, "V");
                     }
 
                     break;
