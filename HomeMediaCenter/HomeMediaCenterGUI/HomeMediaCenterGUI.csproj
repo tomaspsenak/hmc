@@ -39,7 +39,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -48,14 +48,14 @@
     <PlatformTarget>x86</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x64\Debug\</OutputPath>
+    <OutputPath>..\x64\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
@@ -65,7 +65,7 @@
     <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
+    <OutputPath>..\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -76,6 +76,9 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>AppIco.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -112,6 +115,12 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ParametersControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ParametersControl.Designer.cs">
+      <DependentUpon>ParametersControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="ParametersForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -133,6 +142,10 @@
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ParametersControl.resx">
+      <DependentUpon>ParametersControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ParametersForm.resx">
       <DependentUpon>ParametersForm.cs</DependentUpon>
@@ -159,22 +172,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DSWrapper\DSWrapper.vcxproj">
-      <Project>{129F4D90-4638-40DF-9DFC-5B683A98CF69}</Project>
-      <Name>DSWrapper</Name>
-    </ProjectReference>
     <ProjectReference Include="..\HomeMediaCenter\HomeMediaCenter.csproj">
       <Project>{77C06EB1-C782-45DF-866C-5B7485EA8108}</Project>
       <Name>HomeMediaCenter</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MFWrapper\MFWrapper.vcxproj">
-      <Project>{7A1E3367-EB90-4B2E-B161-538C50AF323F}</Project>
-      <Name>MFWrapper</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="112_Minus_Orange.ico" />
     <Content Include="112_Plus_Green.ico" />
+    <Content Include="1462_Pencil.ico" />
     <Content Include="AppIco.ico" />
   </ItemGroup>
   <ItemGroup>

@@ -10,6 +10,7 @@ using HomeMediaCenter;
 using System.Runtime.Remoting.Messaging;
 using System.IO;
 using System.Net;
+using Microsoft.Win32;
 
 namespace HomeMediaCenterGUI
 {
@@ -29,6 +30,7 @@ namespace HomeMediaCenterGUI
         private readonly string directoryPath;
         private readonly string settingsPath;
         private readonly string databasePath;
+        private readonly string regRunName = "HomeMediaCenter";
 
         public MainForm()
         {
@@ -43,13 +45,6 @@ namespace HomeMediaCenterGUI
             this.databasePath = Path.Combine(di.FullName, "database.db");
 
             InitializeComponent();
-
-            this.containerComboBox.Items.Add(new ContainerMP4());
-            this.containerComboBox.Items.Add(new ContainerWMV3());
-            this.containerComboBox.Items.Add(new ContainerMPEG_PS());
-            this.containerComboBox.Items.Add(new ContainerMPEG_TS());
-            this.containerComboBox.Items.Add(new ContainerWEBM());
-            this.containerComboBox.Items.Add(new ContainerWMV2());
 
             InitLanguage();
         }
@@ -85,48 +80,50 @@ namespace HomeMediaCenterGUI
             this.videoStreamParamLabel.Text = LanguageResource.EncodeParametersStream;
             this.applySettingsButton.Text = LanguageResource.ApplyRestart;
             this.converterTabPage.Text = LanguageResource.Converter;
-            this.containerGroupBox.Text = LanguageResource.ContainerCodec;
-            this.audioCheckBox.Text = LanguageResource.Audio;
-            this.videoCheckBox.Text = LanguageResource.Video;
-            this.inputGroupBox.Text = LanguageResource.Input;
-            this.outputGroupBox.Text = LanguageResource.Output;
-            this.browseInputButton.Text = LanguageResource.Browse;
-            this.browseOutputButton.Text = LanguageResource.Browse;
-            this.resolutionGroupBox.Text = LanguageResource.Resolution;
-            this.resolutionComboBox.Items[0] = LanguageResource.SameAsSource;
-            this.keepAspectCheckBox.Text = LanguageResource.KeepAspectRatio;
-            this.bitrateGroupBox.Text = LanguageResource.BitRate;
-            this.bitrateVideoLabel.Text = LanguageResource.Video;
-            this.bitrateAudioLabel.Text = LanguageResource.Audio;
-            this.othersGroupBox.Text = LanguageResource.Others;
-            this.subtitlesIntCheckBox.Text = LanguageResource.IntegrateSubtitles;
-            this.startEndTimeLabel.Text = LanguageResource.StartEndTime;
-            this.fpsLabel.Text = LanguageResource.FPS;
-            this.fpsComboBox.Items[0] = LanguageResource.SameAsSource;
             this.convertButton.Text = LanguageResource.Convert;
             this.aboutTabPage.Text = LanguageResource.About;
             this.settingsLinkLabel.Text = LanguageResource.ConfigFiles;
+            this.minimizeCheckBox.Text = LanguageResource.MinimizeToTray;
+            this.startupCheckBox.Text = LanguageResource.RunAtStartup;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            this.ffdshowLabel.Text = DSWrapper.ContainerType.IsFFDSHOWInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.wmvLabel.Text = DSWrapper.ContainerType.IsWMVInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.mpeg2Label.Text = DSWrapper.ContainerType.IsMPEG2Installed() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.webmLabel.Text = DSWrapper.ContainerType.IsWEBMInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.ffdshowLabel.Text = DirectShowEncoder.IsFFDSHOWInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.wmvLabel.Text = DirectShowEncoder.IsWMVInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.mpeg2Label.Text = DirectShowEncoder.IsMPEG2Installed() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.webmLabel.Text = DirectShowEncoder.IsWEBMInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
 
             string str0 = System.Environment.Is64BitProcess ? "x64" : "x86";
-            string str1 = System.Reflection.Assembly.GetAssembly(typeof(DSWrapper.DSEncoder)).FullName;
-            string str2 = System.Reflection.Assembly.GetAssembly(typeof(MFWrapper.MFEncoder)).FullName;
+
+            string str1;
+            try { str1 = System.Reflection.AssemblyName.GetAssemblyName("DSWrapper.dll").FullName; }
+            catch { str1 = string.Empty; }
+
+            string str2;
+            try { str2 = System.Reflection.AssemblyName.GetAssemblyName("MFWrapper.dll").FullName; }
+            catch { str2 = string.Empty; }
+
             string str3 = System.Reflection.Assembly.GetAssembly(typeof(HomeMediaCenter.MediaServerDevice)).FullName;
             this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2012\r\ntomaspsenak@gmail.com\r\n----------------------------------------------\r\n{1}\r\n{2}\r\n{3}", str0, str1, str2, str3);
 
             try { this.mediaCenter.LoadSettings(this.settingsPath, this.databasePath); }
             catch { MessageBox.Show(this, LanguageResource.ConfigCorrupted, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 
+            try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
+            catch { this.startupCheckBox.Checked = false; }
+
             this.dirListBox.DataSource = this.mediaCenter.ItemManager.GetDirectoriesSync();
+            this.minimizeCheckBox.Checked = this.mediaCenter.MinimizeToTray;
 
             StartMediaCenterAsync();
+
+            if (Environment.GetCommandLineArgs().Contains("/b", StringComparer.OrdinalIgnoreCase))
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.ShowInTaskbar = false;
+                this.mainNotifyIcon.Visible = true;
+            }
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -340,6 +337,8 @@ namespace HomeMediaCenterGUI
             this.audioGroupBox.Enabled = enabled;
             this.imageGroupBox.Enabled = enabled;
             this.videoGroupBox.Enabled = enabled;
+            this.startupCheckBox.Enabled = enabled;
+            this.minimizeCheckBox.Enabled = enabled;
         }
 
         private void mainTabControl_Selected(object sender, TabControlEventArgs e)
@@ -371,12 +370,7 @@ namespace HomeMediaCenterGUI
             }
             else if (this.mainTabControl.SelectedTab == this.converterTabPage)
             {
-                this.inputTextBox.SelectedIndex = 0;
-                this.containerComboBox.SelectedIndex = 0;
-                this.resolutionComboBox.SelectedIndex = 0;
-                this.bitrateVideoComboBox.SelectedIndex = 3;
-                this.bitrateAudioComboBox.SelectedIndex = 3;
-                this.fpsComboBox.SelectedIndex = 0;
+                this.paramControl.LoadSettings(null, true, true, false, false, true);
             }
         }
 
@@ -440,10 +434,9 @@ namespace HomeMediaCenterGUI
 
         private void audioParamAddButton_Click(object sender, EventArgs e)
         {
-            ParametersForm form = new ParametersForm(this.audioParamCombo) { 
-                Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Audio };
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Audio };
 
-            if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (form.ShowDialog(this, null, true, false, false, true) == DialogResult.OK)
             {
                 try { this.audioParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
@@ -455,10 +448,9 @@ namespace HomeMediaCenterGUI
 
         private void imageParamAddButton_Click(object sender, EventArgs e)
         {
-            ParametersForm form = new ParametersForm(this.imageParamCombo) {
-                Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Image };
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Image };
 
-            if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (form.ShowDialog(this, null, false, false, true, true) == DialogResult.OK)
             {
                 try { this.imageParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
@@ -470,10 +462,9 @@ namespace HomeMediaCenterGUI
 
         private void videoParamAddButton_Click(object sender, EventArgs e)
         {
-            ParametersForm form = new ParametersForm(this.videoParamCombo) {
-                Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
 
-            if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (form.ShowDialog(this, null, false, true, false, true) == DialogResult.OK)
             {
                 try { this.videoParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
@@ -485,10 +476,9 @@ namespace HomeMediaCenterGUI
 
         private void videoStreamParamAddButton_Click(object sender, EventArgs e)
         {
-            ParametersForm form = new ParametersForm(this.videoStreamParamCombo) {
-                Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
 
-            if (form.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (form.ShowDialog(this, null, false, true, false, true) == DialogResult.OK)
             {
                 try { this.videoStreamParamCombo.Items.Add(EncoderBuilder.GetEncoder(form.QueryString).GetParamString()); }
                 catch (Exception ex)
@@ -498,100 +488,83 @@ namespace HomeMediaCenterGUI
             }
         }
 
-        private void browseOutputButton_Click(object sender, EventArgs e)
+        private void audioParamEditButton_Click(object sender, EventArgs e)
         {
-            SaveFileDialog sd = new SaveFileDialog();
-            sd.DefaultExt = ((ContainerItem)this.containerComboBox.SelectedItem).Extension;
-            sd.Filter = sd.DefaultExt.TrimStart('.') + "|" + sd.DefaultExt;
-            if (sd.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (this.audioParamCombo.SelectedIndex < 0)
+                return;
+
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Audio };
+
+            if (form.ShowDialog(this, this.audioParamCombo.SelectedItem as string, true, false, false, true) == DialogResult.OK)
             {
-                this.outputTextBox.Items[0] = sd.FileName;
-                this.outputTextBox.SelectedIndex = 0;
+                try { this.audioParamCombo.Items[this.audioParamCombo.SelectedIndex] = EncoderBuilder.GetEncoder(form.QueryString).GetParamString(); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
-        private void browseInputButton_Click(object sender, EventArgs e)
+        private void imageParamEditButton_Click(object sender, EventArgs e)
         {
-            OpenFileDialog od = new OpenFileDialog();
-            od.Multiselect = false;
-            if (od.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            if (this.imageParamCombo.SelectedIndex < 0)
+                return;
+
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Image };
+
+            if (form.ShowDialog(this, this.imageParamCombo.SelectedItem as string, false, false, true, true) == DialogResult.OK)
             {
-                this.inputTextBox.Items[0] = od.FileName;
-                this.inputTextBox.SelectedIndex = 0;
+                try { this.imageParamCombo.Items[this.imageParamCombo.SelectedIndex] = EncoderBuilder.GetEncoder(form.QueryString).GetParamString(); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
-        private void containerComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void videoParamEditButton_Click(object sender, EventArgs e)
         {
-            ContainerItem item = (ContainerItem)this.containerComboBox.SelectedItem;
+            if (this.videoParamCombo.SelectedIndex < 0)
+                return;
 
-            if (this.outputTextBox.SelectedIndex == 0 && ((string)this.outputTextBox.SelectedItem) != "..")
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
+
+            if (form.ShowDialog(this, this.videoParamCombo.SelectedItem as string, false, true, false, true) == DialogResult.OK)
             {
-                int index = ((string)this.outputTextBox.SelectedItem).LastIndexOf('.');
-                if (index > 0)
-                    this.outputTextBox.Items[0] = ((string)this.outputTextBox.SelectedItem).Substring(0, index) + item.Extension;
+                try { this.videoParamCombo.Items[this.videoParamCombo.SelectedIndex] = EncoderBuilder.GetEncoder(form.QueryString).GetParamString(); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
+        }
 
-            this.keepAspectCheckBox.Enabled = item.IsDirectShow;
-            this.subtitlesIntCheckBox.Enabled = item.IsDirectShow;
+        private void videoStreamParamEditButton_Click(object sender, EventArgs e)
+        {
+            if (this.videoStreamParamCombo.SelectedIndex < 0)
+                return;
 
-            while (this.inputTextBox.Items.Count > 1)
-                this.inputTextBox.Items.RemoveAt(1);
-            while (this.outputTextBox.Items.Count > 1)
-                this.outputTextBox.Items.RemoveAt(1);
+            ParametersForm form = new ParametersForm() { Text = LanguageResource.ParameterEditor + " - " + LanguageResource.Video };
 
-            this.inputTextBox.SelectedIndex = 0;
-            this.outputTextBox.SelectedIndex = 0;
-
-            if (item.IsDirectShow)
+            if (form.ShowDialog(this, this.videoStreamParamCombo.SelectedItem as string, false, true, false, true) == DialogResult.OK)
             {
-                this.inputTextBox.Items.Add("Desktop");
-                this.inputTextBox.Items.AddRange(DSWrapper.WebcamInput.GetVideoInputNames().Select(a => "Webcam_" + a).ToArray());
-            }
-
-            if (item.IsTransportStream)
-            {
-                foreach (IPAddress address in Dns.GetHostAddresses(Dns.GetHostName()).Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork))
-                    this.outputTextBox.Items.Add(string.Format("Multicast {0} - 239.255.255.251:12346", address));
+                try { this.videoStreamParamCombo.Items[this.videoStreamParamCombo.SelectedIndex] = EncoderBuilder.GetEncoder(form.QueryString).GetParamString(); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
         private void convertButton_Click(object sender, EventArgs e)
         {
-            Dictionary<string, string> parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
             try
             {
-                parameters["codec"] = ((ContainerItem)this.containerComboBox.SelectedItem).ParamName;
-                parameters["video"] = this.videoCheckBox.Checked ? "1" : "0";
-                parameters["audio"] = this.audioCheckBox.Checked ? "1" : "0";
-                parameters["source"] = (string)this.inputTextBox.SelectedItem;
-                parameters["vidbitrate"] = ((string)this.bitrateVideoComboBox.SelectedItem).Split(' ').First();
-                parameters["audbitrate"] = ((string)this.bitrateAudioComboBox.SelectedItem).Split(' ').First();
-                parameters["starttime"] = TimeSpan.Parse(this.startTimeTextBox.Text).TotalSeconds.ToString("F0");
-                parameters["endtime"] = TimeSpan.Parse(this.endTimeTextBox.Text).TotalSeconds.ToString("F0");
-
-                if (this.resolutionComboBox.SelectedIndex > 0)
-                {
-                    string[] res = ((string)this.resolutionComboBox.SelectedItem).Split('x');
-                    parameters["width"] = res[0];
-                    parameters["height"] = res[1];
-                }
-
-                if (this.keepAspectCheckBox.Checked)
-                    parameters["keepaspect"] = string.Empty;
-
-                if (this.fpsComboBox.SelectedIndex > 0)
-                    parameters["fps"] = (string)this.fpsComboBox.SelectedItem;
-
-                if (this.subtitlesIntCheckBox.Checked)
-                    parameters["subtitles"] = string.Empty;
-
-                EncoderBuilder builder = EncoderBuilder.GetEncoder(parameters);
+                EncoderBuilder builder = this.paramControl.GetEncoder();
                 if (builder == null)
                     throw new Exception("Unknown codec");
 
-                ConvertForm cf = new ConvertForm(builder, this.outputTextBox.Text);
+                ConvertForm cf = new ConvertForm(builder, this.paramControl.OutputText);
                 cf.Show(this);
             }
             catch (Exception ex)
@@ -616,6 +589,48 @@ namespace HomeMediaCenterGUI
                 System.Diagnostics.Process.Start("http://hmc.codeplex.com");
             }
             catch { }
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized && this.mediaCenter.MinimizeToTray)
+            {
+                this.ShowInTaskbar = false;
+                this.mainNotifyIcon.Visible = true;
+            }
+        }
+
+        private void mainNotifyIcon_Click(object sender, EventArgs e)
+        {
+            this.ShowInTaskbar = true;
+            this.mainNotifyIcon.Visible = false;
+            this.WindowState = FormWindowState.Normal;
+        }
+
+        private void minimizeCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            this.mediaCenter.MinimizeToTray = this.minimizeCheckBox.Checked;
+        }
+
+        private void startupCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+                if (this.startupCheckBox.Checked)
+                {
+                    rk.SetValue(this.regRunName, "\"" + Application.ExecutablePath.ToString() + "\" /b");
+                    this.minimizeCheckBox.Checked = true;
+                }
+                else
+                {
+                    rk.DeleteValue(this.regRunName, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 }

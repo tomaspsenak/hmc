@@ -26,12 +26,11 @@ namespace HomeMediaCenter
             this.mime = mime;
             this.date = file.LastWriteTime;
             this.length = file.Length;
-            FileHelper.GetVideoDuration(file, out this.duration);
+            DSWrapper.MediaFile.GetVideoInfo(file, out this.duration, out this.resolution);
             if (this.duration.TotalSeconds == 0f)
                 this.bitrate = 0;
             else
                 this.bitrate = (int)(file.Length / this.duration.TotalSeconds);
-            this.resolution = FileHelper.GetVideoResolution(file);
             this.subtitles = subtitles;
         }
 
@@ -152,9 +151,13 @@ namespace HomeMediaCenter
 
             xmlWriter.WriteEndElement();
 
+            xmlWriter.WriteStartElement("span");
+            xmlWriter.WriteValue("|");
+            xmlWriter.WriteEndElement();
+
             xmlWriter.WriteStartElement("a");
             xmlWriter.WriteAttributeString("href", "/web/control.html?id=" + Id);
-            xmlWriter.WriteValue(LanguageResource.Other);
+            xmlWriter.WriteValue(LanguageResource.PlayTo);
             xmlWriter.WriteEndElement();
 
             xmlWriter.WriteEndElement();

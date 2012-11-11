@@ -43,6 +43,11 @@ namespace HomeMediaCenter
             get { return this.deviceType; }
         }
 
+        public string ModelNumber
+        {
+            get { return this.modelNumber; }
+        }
+
         public string FriendlyName
         {
             get { return this.friendlyName; }

@@ -1,12 +1,13 @@
 #include "StdAfx.h"
 #include "ContainerType.h"
 #include "DSWrapper.h"
-#include "IffdshowBase.h"
-#include "vp8encoderidl.h"
+#include "Extern/IffdshowBase.h"
+#include "Extern/vp8encoderidl.h"
 #include <Ks.h>
 #include <codecapi.h>
-#include "IffDecoder.h"
-#include "IVorbisEncodeSettings.h"
+#include "Extern/IffDecoder.h"
+#include "Extern/IVorbisEncodeSettings.h"
+#include "HMCEncoder_i.c"
 #include "FileWriterFilter.h"
 #include <wmsdk.h>
 #include <dshowasf.h>
@@ -15,16 +16,17 @@
 #include "DSBufferedStream.h"
 #include "FramerateFilter.h"
 #include <InitGuid.h>
+#include "DLLManager.h"
 
 DEFINE_GUID(CLSID_Mpeg2Encoder, 0x5F5AFF4A, 0x2F7F, 0x4279, 0x88, 0xC2, 0xCD, 0x88, 0xEB, 0x39, 0xD1, 0x44);
 DEFINE_GUID(CLSID_WebmMux, 0xED3110F0, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
 DEFINE_GUID(CLSID_WebmVideo, 0xED3110F5, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
-DEFINE_GUID(CLSID_WebmAudio, 0x5C94FE86, 0xB93B, 0x467F, 0xBF, 0xC3, 0xBD, 0x6C, 0x91, 0x41, 0x6F, 0x9B);
 DEFINE_GUID(CLSID_VorbisEncodeFilter, 0x5C94FE86, 0xB93B, 0x467F, 0xBF, 0xC3, 0xBD, 0x6C, 0x91, 0x41, 0x6F, 0x9B);  
-DEFINE_GUID(IID_IVorbisEncodeSettings, 0xA4C6A887, 0x7BD3, 0x4B33, 0x9A, 0x57, 0xA3, 0xEB, 0x10, 0x92, 0x4D, 0x3A);  
-DEFINE_GUID(CLSID_WebmEncClass, 0xED3110FE, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
+DEFINE_GUID(CLSID_IVorbisEncodeSettings, 0xA4C6A887, 0x7BD3, 0x4B33, 0x9A, 0x57, 0xA3, 0xEB, 0x10, 0x92, 0x4D, 0x3A);  
 DEFINE_GUID(CLSID_WebmOut, 0xED3110EB, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
 DEFINE_GUID(CLSID_FFDSHOWRaw, 0x0B390488, 0xD80F, 0x4A68, 0x84, 0x08, 0x48, 0xDC, 0x19, 0x9F, 0x0E, 0x97);
+
+static DLLManager g_dllmanager;
 
 namespace DSWrapper 
 {
@@ -32,30 +34,46 @@ namespace DSWrapper
 		UINT32 percentQuality, UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, 
 		bool keepAspectRatio, MpaLayer mpaLayer, UINT32 audBitrate)
 	{
-		return gcnew ContainerMPEG2_PS(width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, intSubtitles, 
-			intSubtitlesPath, keepAspectRatio, mpaLayer, audBitrate);
+		if (IsMPEG2Installed())
+		{
+			return gcnew ContainerMPEG2_PS(width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, intSubtitles, 
+				intSubtitlesPath, keepAspectRatio, mpaLayer, audBitrate);
+		}
+		else
+		{
+			return gcnew ContainerHMC(Container_MPEG2PS, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+		}
 	}
 	
 	ContainerType ^ ContainerType::MPEG2_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, 
 		UINT32 percentQuality, UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath,
 		bool keepAspectRatio, MpaLayer mpaLayer, UINT32 audBitrate)
 	{
-		return gcnew ContainerMPEG2_TS(width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, intSubtitles, 
-			intSubtitlesPath, keepAspectRatio, mpaLayer, audBitrate);
+		if (IsMPEG2Installed())
+		{
+			return gcnew ContainerMPEG2_TS(width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, intSubtitles, 
+				intSubtitlesPath, keepAspectRatio, mpaLayer, audBitrate);
+		}
+		else
+		{
+			return gcnew ContainerHMC(Container_MPEG2TS, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+		}
 	}
 	
 	ContainerType ^ ContainerType::WEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
 	{
 		return gcnew ContainerWEBM(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, 
-			keepAspectRatio, audBitrate);
+			keepAspectRatio, audBitrate, kWebmMuxModeDefault);
 	}
 
 	ContainerType ^ ContainerType::WEBM_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
 	{
-		return gcnew ContainerWEBM_TS(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath,
-			keepAspectRatio, audBitrate);
+		return gcnew ContainerWEBM(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath,
+			keepAspectRatio, audBitrate, kWebmMuxModeLive);
 	}
 
 	ContainerType ^ ContainerType::WMV(UINT32 width, UINT32 height, WMVideoSubtype videoSubtype, UINT32 vidBitrate, UINT32 percentQuality, 
@@ -71,6 +89,46 @@ namespace DSWrapper
 			throw gcnew DSException(L"WMV - audio bitrate must be specified", 0);
 
 		return gcnew ContainerWMV(width, height, videoSubtype, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::AVI(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+		UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+	{
+		return gcnew ContainerHMC(Container_AVI, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::MP4(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+	{
+		return gcnew ContainerHMC(Container_MP4, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality)
+	{
+		return gcnew ContainerHMC(Container_MP3, false, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
+			false, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::MP3_TS(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality)
+	{
+		return gcnew ContainerHMC(Container_MP3, true, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
+			false, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::FLV(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+	{
+		return gcnew ContainerHMC(Container_FLV, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+	}
+
+	ContainerType ^ ContainerType::FLV_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+	{
+		return gcnew ContainerHMC(Container_FLV, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
 	}
 
 	System::Boolean ContainerType::IsMPEG2Installed(void)
@@ -399,7 +457,9 @@ namespace DSWrapper
 
 		IPin * inputPin = NULL;
 		IPin * outputPin = NULL;
+		IUnknown * unknown = NULL;
 		IVP8Encoder * webmEnc = NULL;
+		IWebmMux * webmMux = NULL;
 		IBaseFilter * webmMuxFilter = NULL;
 		IBaseFilter * webmVideoFilter = NULL;
 		IBaseFilter * webmAudioFilter = NULL;
@@ -410,11 +470,23 @@ namespace DSWrapper
 		SAFE_ADDREF(audioPin);
 		SAFE_ADDREF(subtitlePin);
 
-		CHECK_HR(hr = CoCreateInstance(CLSID_WebmVideo, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmVideoFilter));
 		CHECK_HR(hr = CoCreateInstance(CLSID_VorbisEncodeFilter, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmAudioFilter));
-		CHECK_HR(hr = CoCreateInstance(CLSID_WebmMux, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmMuxFilter));
-		CHECK_HR(hr = webmVideoFilter->QueryInterface(CLSID_WebmEncClass, (void **)&webmEnc));
-		CHECK_HR(hr = webmAudioFilter->QueryInterface(IID_IVorbisEncodeSettings, (void **)&webmAudio));
+		//CHECK_HR(hr = CoCreateInstance(CLSID_WebmVideo, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmVideoFilter));
+		//CHECK_HR(hr = CoCreateInstance(CLSID_WebmMux, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&webmMuxFilter));
+
+		CHECK_HR(hr = g_dllmanager.CreateWebmmux(CLSID_WebmMux, &unknown));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmMuxFilter));
+		SAFE_RELEASE(unknown);
+
+		CHECK_HR(hr = g_dllmanager.CreateVP8Encoder(CLSID_WebmVideo, &unknown));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmVideoFilter));
+		SAFE_RELEASE(unknown);
+
+		CHECK_HR(hr = webmMuxFilter->QueryInterface(__uuidof(IWebmMux), (void **)&webmMux));
+		CHECK_HR(hr = webmVideoFilter->QueryInterface(__uuidof(IVP8Encoder), (void **)&webmEnc));
+		CHECK_HR(hr = webmAudioFilter->QueryInterface(CLSID_IVorbisEncodeSettings, (void **)&webmAudio));
+
+		CHECK_HR(hr = webmMux->SetMuxMode(this->m_muxMode));
 
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(webmMuxFilter, NULL));
 
@@ -495,6 +567,8 @@ namespace DSWrapper
 		SAFE_RELEASE(webmMuxFilter);
 		SAFE_RELEASE(webmEnc);
 		SAFE_RELEASE(webmAudio);
+		SAFE_RELEASE(webmMux);
+		SAFE_RELEASE(unknown);
 
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
@@ -506,36 +580,6 @@ namespace DSWrapper
 	GUID ContainerWEBM::GetSubtype()
 	{ 
 		return CLSID_WebmOut; 
-	}
-
-	HRESULT ContainerWEBM_TS::GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter)
-	{
-		HRESULT hr = S_OK;
-
-		FileWriterFilter * writer = NULL;
-		DSBufferedStream ^ bufStream = nullptr;
-
-		//Vytvori writer s buffrovanym streamom - WebM standartne seekuje, preto pouzitie DSBufferedStream
-		try { bufStream = gcnew DSBufferedStream(outputStream, 131072); }
-		catch (System::OutOfMemoryException ^) { CHECK_HR(hr = E_OUTOFMEMORY); }
-		
-		writer = new FileWriterFilter(NULL, &hr, bufStream, GetSubtype());
-		if (writer == NULL)
-			hr = E_OUTOFMEMORY;
-		else
-			writer->AddRef();
-		CHECK_HR(hr);
-
-		CHECK_SUCCEED(hr = graphBuilder->AddFilter(writer, NULL));
-
-		*writerFilter = writer;
-		writer = NULL;
-
-	done: 
-
-		SAFE_RELEASE(writer);
-
-		return hr;
 	}
 
 	HRESULT ContainerWMV::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin)
@@ -727,6 +771,94 @@ namespace DSWrapper
 		SAFE_RELEASE(advWriter);
 		SAFE_RELEASE(writer);
 
+		return hr;
+	}
+
+	HRESULT ContainerHMC::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin)
+	{
+		HRESULT hr = S_OK;
+
+		IPin * tempPin = NULL;
+		IUnknown * unknown = NULL;
+		IBaseFilter * muxFilter = NULL;
+		IHMCEncoder * encoderProp = NULL;
+
+		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
+		SAFE_ADDREF(videoPin);
+		SAFE_ADDREF(audioPin);
+		SAFE_ADDREF(subtitlePin);
+
+		CHECK_HR(hr = g_dllmanager.CreateHMCEncoder(CLSID_HMCEncoder, &unknown));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&muxFilter));
+		CHECK_SUCCEED(hr = graphBuilder->AddFilter(muxFilter, NULL));
+
+		CHECK_HR(hr = muxFilter->QueryInterface(IID_IHMCEncoder, (void**)&encoderProp));
+
+		CHECK_HR(hr = encoderProp->SetContainer(this->m_container));
+		CHECK_HR(hr = encoderProp->SetStreamable(this->m_streamable));
+		
+		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
+
+		if (videoPin != NULL && this->m_container != Container_MP3)
+		{
+			if (this->m_vidBitrate > 0)
+			{
+				if (this->m_bitrateMode == BitrateMode::CBR)
+				{
+					//Konstantny bitrate
+					CHECK_HR(hr = encoderProp->SetVideoCBR(this->m_vidBitrate));
+				}
+				else
+				{
+					//Variabilny bitrate
+					CHECK_HR(hr = encoderProp->SetVideoVBR(this->m_vidBitrate, this->m_vidBitrate + 1000000, this->m_vidBitrate - 1000000, 
+						this->m_percentQuality));
+				}
+			}
+
+			CHECK_HR(hr = encoderProp->SetVideoInterlace(this->m_scanType == ScanType::Interlaced));
+
+			tempPin = DSEncoder::GetPin(muxFilter, PINDIR_INPUT, 0);
+			CHECK_SUCCEED(hr = graphBuilder->Connect(videoPin, tempPin));
+			SAFE_RELEASE(tempPin);
+		}
+
+		if (audioPin != NULL)
+		{
+			if (this->m_audBitrate > 0)
+			{
+				if (this->m_bitrateMode == BitrateMode::CBR)
+				{
+					//Konstantny bitrate
+					CHECK_HR(hr = encoderProp->SetAudioCBR(this->m_audBitrate));
+				}
+				else
+				{
+					//Variabilny bitrate
+					CHECK_HR(hr = encoderProp->SetAudioVBR(this->m_audBitrate, this->m_audBitrate + 32, this->m_audBitrate - 32, 
+						this->m_percentQuality));
+				}
+			}
+
+			tempPin = DSEncoder::GetPin(muxFilter, PINDIR_INPUT, 1);
+			CHECK_SUCCEED(hr = graphBuilder->Connect(audioPin, tempPin));
+			SAFE_RELEASE(tempPin);
+		}
+
+		tempPin = DSEncoder::GetFirstPin(muxFilter, PINDIR_OUTPUT);
+		CHECK_SUCCEED(hr = graphBuilder->Connect(tempPin, writerPin));
+
+	done:
+
+		SAFE_RELEASE(tempPin);
+		SAFE_RELEASE(muxFilter);
+		SAFE_RELEASE(encoderProp);
+		SAFE_RELEASE(unknown);
+
+		SAFE_RELEASE(videoPin);
+		SAFE_RELEASE(audioPin);
+		SAFE_RELEASE(subtitlePin);
+		
 		return hr;
 	}
 }

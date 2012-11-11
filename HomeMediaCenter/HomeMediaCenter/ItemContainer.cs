@@ -244,7 +244,7 @@ $(function () {{ $('.gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
                     {
                         item.WriteMe(xmlWriter, settings);
                     }
-                    xmlWriter.WriteEndElement();
+                    xmlWriter.WriteFullEndElement();
 
                     break;
                 case MediaType.Video:
@@ -261,7 +261,7 @@ $(function () {{ $('.gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
                     xmlWriter.WriteEndElement();
 
                     xmlWriter.WriteStartElement("tbody");
-                    foreach (Item item in this.childs.OrderBy(a => a.Title))
+                    foreach (Item item in this.childs.Where(a => !(a is ItemContainer)).OrderBy(a => a.Title))
                     {
                         item.WriteMe(xmlWriter, settings);
                     }

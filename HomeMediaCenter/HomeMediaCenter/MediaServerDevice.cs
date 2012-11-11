@@ -11,18 +11,23 @@ namespace HomeMediaCenter
 {
     public class MediaServerDevice : UpnpDevice
     {
+        private bool minimizeToTray;
         private ItemManager itemManager = new ItemManager();
         private UpnpControlPoint controlPoint = new UpnpControlPoint();
+        private enum WebContainer { WEBM, WMV, FLV };
 
         public MediaServerDevice()
         {
+            Version ver = Assembly.GetExecutingAssembly().GetName().Version;
+
             this.udn = Guid.NewGuid();
             this.friendlyName = "Home Media Center";
             this.deviceType = "urn:schemas-upnp-org:device:MediaServer:1";
             this.manufacturer = "Tomáš Pšenák";
             this.modelName = "Home Media Center Server";
-            this.modelNumber = "1.1";
+            this.modelNumber = ver.Major + "." + ver.Minor;
             this.serialNumber = this.udn.ToString();
+            this.modelUrl = "http://hmc.codeplex.com";
 
             this.services.Add(new ConnectionManagerService(this, this.server));
             this.services.Add(new ContentDirectoryService(this, this.server));
@@ -34,6 +39,7 @@ namespace HomeMediaCenter
 
             this.server.HttpServer.AddRoute("GET", "/Web/", new HttpRouteDelegate(GetWeb));
             this.server.HttpServer.AddRoute("GET", "/Web/player.html", new HttpRouteDelegate(GetWebPlayer));
+            this.server.HttpServer.AddRoute("HEAD", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/htmlstyle.css", new HttpRouteDelegate(GetWebStyle));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.css", new HttpRouteDelegate(GetWebStyle));
@@ -55,6 +61,12 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-btn-next.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-btn-prev.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-ico-loading.gif", new HttpRouteDelegate(GetWebGif));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/loading.gif", new HttpRouteDelegate(GetWebGif));
+            this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("HEAD", "/Web/flowplayer.swf", new HttpRouteDelegate(GetWebShockwave));
+            this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.swf", new HttpRouteDelegate(GetWebShockwave));
+            this.server.HttpServer.AddRoute("HEAD", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
+            this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("POST", "/Web/devices.xml", new HttpRouteDelegate(GetWebDevices));
             this.server.HttpServer.AddRoute("POST", "/Web/control", new HttpRouteDelegate(PostWebControl));
         }
@@ -62,6 +74,12 @@ namespace HomeMediaCenter
         public ItemManager ItemManager
         {
             get { return this.itemManager; }
+        }
+
+        public bool MinimizeToTray
+        {
+            get { return this.minimizeToTray; }
+            set { this.minimizeToTray = value; }
         }
 
         public void LoadSettings(string settingsPath, string databasePath)
@@ -100,6 +118,12 @@ namespace HomeMediaCenter
                         this.friendlyName = node.InnerText;
                     }
 
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/MinimizeToTray");
+                    if (node != null)
+                    {
+                        bool.TryParse(node.InnerText, out this.minimizeToTray);
+                    }
+
                     this.server.LoadSettings(xmlReader);
 
                     this.itemManager.LoadSettingsSync(xmlReader);
@@ -120,6 +144,7 @@ namespace HomeMediaCenter
 
                 xmlWriter.WriteElementString("Udn", this.udn.ToString());
                 xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
+                xmlWriter.WriteElementString("MinimizeToTray", this.minimizeToTray.ToString());
 
                 this.server.SaveSettings(xmlWriter);
 
@@ -368,6 +393,7 @@ namespace HomeMediaCenter
                     xmlWriter.WriteStartElement("select");
                     xmlWriter.WriteAttributeString("id", "devices");
                     xmlWriter.WriteAttributeString("name", "devices");
+                    xmlWriter.WriteAttributeString("style", "margin-right:10px;");
 
                     xmlWriter.WriteStartElement("option");
                     xmlWriter.WriteAttributeString("value", "none");
@@ -379,6 +405,7 @@ namespace HomeMediaCenter
                     xmlWriter.WriteEndElement();
 
                     xmlWriter.WriteRaw(string.Format(@"<button id=""refreshBtn"" type=""button"">{0}</button>", LanguageResource.Refresh));
+                    xmlWriter.WriteRaw(@"<img id=""loadingImg"" src=""/web/images/loading.gif"" alt="""" title="""" border=""0"" style=""display:none;"" />");
 
                     //Koniec left_content
                     xmlWriter.WriteEndElement();
@@ -386,14 +413,18 @@ namespace HomeMediaCenter
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("id", "right_content");
 
-                    if (id != 0)
+                    if (id == 0)
+                    {
+                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, LanguageResource.NotSelected));
+                    }
+                    else
                     {
                         xmlWriter.WriteRaw(string.Format(@"<input id=""idInput"" type=""hidden"" value=""{0}""></input>", id));
-                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.File, this.itemManager.GetTitleSync(id)));
+                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, this.itemManager.GetTitleSync(id)));
                     }
 
-                    xmlWriter.WriteRaw(@"<button id=""volPBtn"" type=""button"">+</button>");
-                    xmlWriter.WriteRaw(@"<button id=""volMBtn"" type=""button"">-</button>");
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""volPBtn"" type=""button"">{0} +</button>", LanguageResource.Volume));
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""volMBtn"" type=""button"">{0} -</button>", LanguageResource.Volume));
                     xmlWriter.WriteRaw(string.Format(@"<button id=""playBtn"" type=""button"">{0}</button>", LanguageResource.Play));
                     xmlWriter.WriteRaw(string.Format(@"<button id=""stopBtn"" type=""button"">{0}</button>", LanguageResource.Stop));
 
@@ -475,6 +506,7 @@ namespace HomeMediaCenter
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.7.1.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.lightbox-0.5.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.8.18.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/flowplayer.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/player.js""></script>");
                 xmlWriter.WriteEndElement();
 
@@ -494,14 +526,17 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartElement("div");
                 xmlWriter.WriteAttributeString("id", "main_content");
 
-                bool isWmv = request.UrlParams.ContainsKey("codec") && StringComparer.OrdinalIgnoreCase.Compare(request.UrlParams["codec"], "wmv") == 0;
-                if (isWmv)
+                WebContainer container;
+                if (!request.UrlParams.ContainsKey("codec") || !Enum.TryParse<WebContainer>(request.UrlParams["codec"], true, out container))
+                    container = WebContainer.WEBM;
+
+                if (container == WebContainer.WMV)
                 {
                     string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&width={1}&height={2}", index, width, height);
                     switch (quality)
                     {
-                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=40&quality=1&fps=20"; break;
-                        case "medium": sourceUrl += "&vidbitrate=400&audbitrate=40&quality=1&fps=20"; break;
+                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=40&quality=1&fps=25"; break;
+                        case "medium": sourceUrl += "&vidbitrate=400&audbitrate=40&quality=1&fps=25"; break;
                         case "high": sourceUrl += "&vidbitrate=800&audbitrate=80&quality=51&fps=30"; break;
                     }
 
@@ -538,14 +573,14 @@ namespace HomeMediaCenter
                     xmlWriter.WriteRaw(@"</object>");
                     xmlWriter.WriteRaw(@"</div>");
                 }
-                else
+                else if (container == WebContainer.WEBM)
                 {
                     string sourceUrl = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}", index, width, height);
                     switch (quality)
                     {
-                        case "low": sourceUrl += "&vidbitrate=48000&audbitrate=12000&quality=1"; break;
-                        case "medium": sourceUrl += "&vidbitrate=187500&audbitrate=16000&quality=1"; break;
-                        case "high": sourceUrl += "&vidbitrate=625000&audbitrate=24000&quality=51"; break;
+                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1"; break;
+                        case "medium": sourceUrl += "&vidbitrate=400&audbitrate=64&quality=1"; break;
+                        case "high": sourceUrl += "&vidbitrate=800&audbitrate=128&quality=51"; break;
                     }
 
                     xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" />");
@@ -570,6 +605,24 @@ namespace HomeMediaCenter
 
                     xmlWriter.WriteRaw(@"</video>");
                 }
+                else
+                {
+                    string sourceUrl = string.Format("/encode/web%3Fid={0}&codec=flv_ts&width={1}&height={2}", index, width, height);
+                    switch (quality)
+                    {
+                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1&fps=25"; break;
+                        case "medium": sourceUrl += "&vidbitrate=700&audbitrate=128&quality=1&fps=25"; break;
+                        case "high": sourceUrl += "&vidbitrate=1500&audbitrate=256&quality=51&fps=30"; break;
+                    }
+                    sourceUrl = sourceUrl.Replace("=", "%3D").Replace("&", "%26");
+
+                    xmlWriter.WriteStartElement("a");
+                    xmlWriter.WriteAttributeString("id", "videoLink");
+                    xmlWriter.WriteAttributeString("href", sourceUrl);
+                    xmlWriter.WriteAttributeString("style", string.Format("display:block;margin-left:auto;margin-right:auto;width:{0}px;height:{1}px;", width, height));
+                    xmlWriter.WriteValue(LanguageResource.Play + " " + LanguageResource.ThroughDirectLink);
+                    xmlWriter.WriteEndElement();
+                }
 
                 xmlWriter.WriteStartElement("form");
                 xmlWriter.WriteAttributeString("id", "mainForm");
@@ -592,9 +645,11 @@ namespace HomeMediaCenter
 
                 xmlWriter.WriteRaw(@"<span id=""codecRadios"">");
                 xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""webmRadio"" name=""codec"" value=""webm"" {0} /><label for=""webmRadio"">WebM</label>",
-                    isWmv ? string.Empty : "checked=\"checked\""));
+                    container == WebContainer.WEBM ? "checked=\"checked\"" : string.Empty));
                 xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""wmvRadio"" name=""codec"" value=""wmv"" {0} /><label for=""wmvRadio"">Wmv</label>",
-                    isWmv ? "checked=\"checked\"" : string.Empty));
+                    container == WebContainer.WMV ? "checked=\"checked\"" : string.Empty));
+                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""flvRadio"" name=""codec"" value=""flv"" {0} /><label for=""flvRadio"">Flash</label>",
+                    container == WebContainer.FLV ? "checked=\"checked\"" : string.Empty));
                 xmlWriter.WriteRaw(@"</span>");
 
                 string res = width + "x" + height;
@@ -672,6 +727,11 @@ namespace HomeMediaCenter
             SendResource(request, "application/x-silverlight-app");
         }
 
+        private void GetWebShockwave(HttpRequest request)
+        {
+            SendResource(request, "application/x-shockwave-flash");
+        }
+
         private void SendResource(HttpRequest request, string mime, bool encode = false)
         {
             HttpResponse response = new HttpResponse(request);
@@ -692,8 +752,11 @@ namespace HomeMediaCenter
                         response.AddHreader(HttpHeader.ContentType, builder.GetMime());
                         response.SendHeaders();
 
-                        memStream.Position = 0;
-                        memStream.CopyTo(request.Socket.GetStream());
+                        if (request.Method == "GET")
+                        {
+                            memStream.Position = 0;
+                            memStream.CopyTo(request.Socket.GetStream());
+                        }
                     }
                 }
                 else
@@ -702,7 +765,10 @@ namespace HomeMediaCenter
                     response.AddHreader(HttpHeader.ContentType, mime);
                     response.SendHeaders();
 
-                    resourceStream.CopyTo(request.Socket.GetStream());
+                    if (request.Method == "GET")
+                    {
+                        resourceStream.CopyTo(request.Socket.GetStream());
+                    }
                 }
             }
         }

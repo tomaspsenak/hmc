@@ -5,21 +5,63 @@ using System.Text;
 
 namespace HomeMediaCenterGUI
 {
-    public abstract class ContainerItem
+    public class ContainerItem
     {
         private string name;
         private string extension;
         private string paramName;
         private bool isDirectShow;
         private bool isTransportStream;
+        private bool isAudio;
+        private bool isVideo;
+        private bool isImage;
+        private bool isStreamable;
 
-        public ContainerItem(string name, string extension, string paramName, bool isDirectShow, bool isTransportStream)
+        private static readonly List<ContainerItem> containers;
+
+        public ContainerItem(string name, string extension, string paramName, bool isDirectShow, bool isTransportStream, bool isAudio,
+            bool isVideo, bool isImage, bool isStreamable)
         {
             this.name = name;
             this.extension = extension;
             this.paramName = paramName;
             this.isDirectShow = isDirectShow;
             this.isTransportStream = isTransportStream;
+            this.isAudio = isAudio;
+            this.isVideo = isVideo;
+            this.isImage = isImage;
+            this.isStreamable = isStreamable;
+        }
+
+        static ContainerItem()
+        {
+            containers = new List<ContainerItem> { 
+                new ContainerItem("MPEG2_PS  (DirectShow)", ".mpeg", "mpeg2_ps", true, false, true, true, false, true),
+                new ContainerItem("MPEG2_TS  (DirectShow)", ".mpeg", "mpeg2_ts", true, true, true, true, false, true),
+                new ContainerItem("WebM - VP8, Vorbis  (DirectShow)", ".webm", "webm", true, false, true, true, false, false),
+                new ContainerItem("WebM - VP8, Vorbis for streaming  (DirectShow)", ".webm", "webm_ts", true, false, true, true, false, true),
+                new ContainerItem("WMV - WMV2, VMA8  (DirectShow)", ".wmv", "wmv2", true, false, true, true, false, true),
+                new ContainerItem("MP3  (DirectShow)", ".mp3", "mp3", true, false, true, false, false, false),
+                new ContainerItem("MP3 for streaming  (DirectShow)", ".mp3", "mp3_ts", true, false, true, false, false, true),
+                new ContainerItem("AVI - MPEG-4, MP3  (DirectShow)", ".avi", "avi", true, false, true, true, false, false),
+                new ContainerItem("MP4 - H264, AAC  (DirectShow)", ".mp4", "mp4", true, false, true, true, false, false),
+                new ContainerItem("FLV - Sorenson Spark, MP3  (DirectShow)", ".flv", "flv", true, false, true, true, false, false),
+                new ContainerItem("FLV - Sorenson Spark, MP3 for streaming  (DirectShow)", ".flv", "flv_ts", true, false, true, true, false, true),
+                new ContainerItem("BMP", ".bmp", "bmp", true, false, false, false, true, true),
+                new ContainerItem("JPEG", ".jpeg", "jpeg", true, false, false, false, true, true),
+                new ContainerItem("PNG", ".png", "png", true, false, false, false, true, true)
+            };
+
+            if (Environment.OSVersion.Version.Major > 5)
+            {
+                containers.Add(new ContainerItem("MP4 - H264, AAC  (Media Foundation)", ".mp4", "mp4_mf", false, false, true, true, false, false));
+                containers.Add(new ContainerItem("WMV - WMV3, VMA9  (Media Foundation)", ".wmv", "wmv3", false, false, true, true, false, false));
+            }
+        }
+
+        public static List<ContainerItem> GetContainers()
+        {
+            return containers;
         }
 
         public string Extension
@@ -42,39 +84,29 @@ namespace HomeMediaCenterGUI
             get { return this.isDirectShow; }
         }
 
+        public bool IsAudio
+        {
+            get { return this.isAudio; }
+        }
+
+        public bool IsVideo
+        {
+            get { return this.isVideo; }
+        }
+
+        public bool IsImage
+        {
+            get { return this.isImage; }
+        }
+
+        public bool IsStreamable
+        {
+            get { return this.isStreamable; }
+        }
+
         public override string ToString()
         {
             return this.name;
         }
-    }
-
-    public class ContainerMP4 : ContainerItem
-    {
-        public ContainerMP4() : base("MP4 - H264, AAC", ".mp4", "MPEG4", false, false) { }
-    }
-
-    public class ContainerWMV3: ContainerItem
-    {
-        public ContainerWMV3() : base("WMV - WMV3, VMA9", ".wmv", "WMV3", false, false) { }
-    }
-
-    public class ContainerMPEG_PS : ContainerItem
-    {
-        public ContainerMPEG_PS() : base("MPEG2_PS", ".mpeg", "MPEG2_PS", true, false) { }
-    }
-
-    public class ContainerMPEG_TS : ContainerItem
-    {
-        public ContainerMPEG_TS() : base("MPEG2_TS", ".mpeg", "MPEG2_TS", true, true) { }
-    }
-
-    public class ContainerWEBM : ContainerItem
-    {
-        public ContainerWEBM() : base("WebM - VP8, Vorbis", ".webm", "WEBM", true, false) { }
-    }
-
-    public class ContainerWMV2 : ContainerItem
-    {
-        public ContainerWMV2() : base("WMV - WMV2, VMA8", ".wmv", "WMV2", true, false) { }
     }
 }

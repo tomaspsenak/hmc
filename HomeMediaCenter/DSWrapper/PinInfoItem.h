@@ -51,9 +51,33 @@ namespace DSWrapper
 					}
 
 		internal:	PinSubtitleItem(DWORD index, BOOL selected, System::String^ langName) : 
-						PinInfoItem(index, selected, PinMediaType::Subtitle), m_langName(langName)  { };
+						PinInfoItem(index, selected, PinMediaType::Subtitle), m_langName(langName) { };
 
 		private:	System::String^ m_langName;
+	};
+
+	public ref class PinVideoItem : public PinInfoItem
+	{
+		public:		property LONG Width
+					{
+						LONG get() { return m_width; }
+					}
+
+					property LONG Height
+					{
+						LONG get() { return m_height; }
+					}
+			
+					virtual System::String^ ToString(void) override
+					{
+						return System::String::Format(L"{0} - {1}x{2}", PinInfoItem::ToString(), m_width, m_height);
+					}
+
+		internal:	PinVideoItem(DWORD index, BOOL selected, LONG width, LONG height) : 
+						PinInfoItem(index, selected, PinMediaType::Video), m_width(width), m_height(height) { };
+
+		private:	LONG m_width;
+					LONG m_height;
 	};
 }
 

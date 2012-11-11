@@ -99,7 +99,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\BaseClasses\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(SolutionDir)HMCEncoder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>true</CompileAsManaged>
       <CallingConvention>
       </CallingConvention>
@@ -108,13 +108,23 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <SubSystem>Windows</SubSystem>
       <FixedBaseAddress>false</FixedBaseAddress>
+      <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>
+      </Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -122,7 +132,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\BaseClasses\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(SolutionDir)HMCEncoder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAsManaged>true</CompileAsManaged>
       <CallingConvention>
       </CallingConvention>
@@ -131,53 +141,85 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Debug\strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <SubSystem>Windows</SubSystem>
       <FixedBaseAddress>false</FixedBaseAddress>
+      <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\x64\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>
+      </Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\BaseClasses\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(SolutionDir)HMCEncoder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
+      <CompileAs>
+      </CompileAs>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
       </AssemblyDebug>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>
+      </Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\BaseClasses\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(SolutionDir)HMCEncoder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;..\BaseClasses\x64\Release\strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
       </AssemblyDebug>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\x64\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>
+      </Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ContainerType.h" />
@@ -186,17 +228,21 @@
     <ClInclude Include="DesktopSourceFilter.h" />
     <ClInclude Include="DesktopSourcePin.h" />
     <ClInclude Include="DibHelper.h" />
+    <ClInclude Include="DLLManager.h" />
     <ClInclude Include="DSBufferedStream.h" />
     <ClInclude Include="DSException.h" />
     <ClInclude Include="DSPlayer.h" />
     <ClInclude Include="DSWrapper.h" />
     <ClInclude Include="Enums.h" />
+    <ClInclude Include="Extern\vp8encoderidl.h" />
+    <ClInclude Include="Extern\webmmuxidl.h" />
     <ClInclude Include="FileWriterFilter.h" />
     <ClInclude Include="FramerateFilter.h" />
-    <ClInclude Include="IffDecoder.h" />
-    <ClInclude Include="IffdshowBase.h" />
+    <ClInclude Include="Extern\IffDecoder.h" />
+    <ClInclude Include="Extern\IffdshowBase.h" />
     <ClInclude Include="InputType.h" />
-    <ClInclude Include="IVorbisEncodeSettings.h" />
+    <ClInclude Include="Extern\IVorbisEncodeSettings.h" />
+    <ClInclude Include="MediaFile.h" />
     <ClInclude Include="PinInfoItem.h" />
     <ClInclude Include="ProgressChangeEventArgs.h" />
     <ClInclude Include="resource.h" />
@@ -204,7 +250,6 @@
     <ClInclude Include="SinkSourceFilter.h" />
     <ClInclude Include="SourceFilter.h" />
     <ClInclude Include="Stdafx.h" />
-    <ClInclude Include="vp8encoderidl.h" />
     <ClInclude Include="WMSinkWriter.h" />
   </ItemGroup>
   <ItemGroup>
@@ -221,6 +266,7 @@
     <ClCompile Include="FileWriterFilter.cpp" />
     <ClCompile Include="FramerateFilter.cpp" />
     <ClCompile Include="InputType.cpp" />
+    <ClCompile Include="MediaFile.cpp" />
     <ClCompile Include="SinkFilterGraph.cpp" />
     <ClCompile Include="SinkSourceFilter.cpp" />
     <ClCompile Include="SourceFilter.cpp" />

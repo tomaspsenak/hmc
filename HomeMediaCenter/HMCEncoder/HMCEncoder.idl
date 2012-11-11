@@ -1,0 +1,58 @@
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+    uuid(7D308C03-FB74-49ed-9C3B-AA4B7814C4B5),
+    helpstring("Home Media Center Filter Library"),
+    version(1.0)
+]
+library HMCEncoderLib
+{
+	enum Container
+	{
+		Container_MPEG2PS,
+		Container_MPEG2TS,
+		Container_MP3,
+		Container_MP4,
+		Container_AVI,
+		Container_FLV
+	};
+
+	enum BitrateMode
+	{
+		BitrateMode_CBR,
+		BitrateMode_VBR
+	};
+
+	[
+	   object,
+	   uuid(2FDD6C62-CA3B-4d2a-A93C-107EA551F42D),
+	   helpstring("Home Media Center Filter Interface")
+	]
+	interface IHMCEncoder : IUnknown
+	{
+		HRESULT SetContainer([in] enum Container container);
+		HRESULT GetContainer([out] enum Container * pContainer);
+
+		HRESULT SetStreamable([in] BOOL streamable);
+		HRESULT GetStreamable([out] BOOL * pStreamable);
+
+		HRESULT SetAudioCBR([in] int audioBitrate);
+		HRESULT SetAudioVBR([in] int audioBitrate, [in] int audioBitrateMax, [in] int audioBitrateMin, [in] int audioQuality);
+
+		HRESULT SetVideoCBR([in] int videoBitrate);
+		HRESULT SetVideoVBR([in] int videoBitrate, [in] int videoBitrateMax, [in] int videoBitrateMin, [in] int videoQuality);
+
+		HRESULT SetVideoInterlace([in] BOOL interlaced);
+		HRESULT GetVideoInterlace([out] BOOL * interlaced);
+	}
+
+	[
+	   uuid(3A45D055-A75B-4f46-8676-B8EB32883699),
+	   helpstring("Home Media Center Filter Class")
+	]
+	coclass HMCEncoder
+	{
+	   [default] interface IHMCEncoder;
+	}
+}

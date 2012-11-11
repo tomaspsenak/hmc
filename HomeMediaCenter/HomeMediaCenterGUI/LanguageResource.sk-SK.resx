@@ -169,7 +169,7 @@
     <value>Príklady:</value>
   </data>
   <data name="FPS" xml:space="preserve">
-    <value>Počet snímok za sekundu:</value>
+    <value>Počet snímok za sekundu</value>
   </data>
   <data name="FriendlyName" xml:space="preserve">
     <value>Názov zariadenia:</value>
@@ -211,7 +211,7 @@
     <value>Editor parametrov</value>
   </data>
   <data name="Parameters" xml:space="preserve">
-    <value>Parametre:</value>
+    <value>Parametre</value>
   </data>
   <data name="Port" xml:space="preserve">
     <value>Port:</value>
@@ -247,7 +247,7 @@
     <value>Spustené</value>
   </data>
   <data name="StartEndTime" xml:space="preserve">
-    <value>Čas začiatku / konca (hh:mm:ss):</value>
+    <value>Čas začiatku / konca (hh:mm:ss)</value>
   </data>
   <data name="Status" xml:space="preserve">
     <value>Stav:</value>
@@ -281,5 +281,26 @@
   </data>
   <data name="ConversionCompleted" xml:space="preserve">
     <value>Konverzia ukončená</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Upraviť</value>
+  </data>
+  <data name="ScanType" xml:space="preserve">
+    <value>Typ skenovania</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Použiť</value>
+  </data>
+  <data name="Interlaced" xml:space="preserve">
+    <value>Prekladane</value>
+  </data>
+  <data name="Progressive" xml:space="preserve">
+    <value>Progresívne</value>
+  </data>
+  <data name="MinimizeToTray" xml:space="preserve">
+    <value>Minimalizovať do tray panelu</value>
+  </data>
+  <data name="RunAtStartup" xml:space="preserve">
+    <value>Spustiť pri štarte systému</value>
   </data>
 </root>

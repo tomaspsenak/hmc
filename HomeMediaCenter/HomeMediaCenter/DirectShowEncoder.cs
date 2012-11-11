@@ -8,16 +8,16 @@ using System.Threading;
 
 namespace HomeMediaCenter
 {
-    internal class DirectShowEncoder : EncoderBuilder
+    public class DirectShowEncoder : EncoderBuilder
     {
-        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, WEBM, WEBM_TS, WMV2, WMV3A2 }
+        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, WEBM, WEBM_TS, WMV2, WMV3A2, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS }
 
         private DSEncoder encoder;
         private DSCodec codec;
 
         protected DirectShowEncoder() { }
 
-        public static DirectShowEncoder TryCreate(Dictionary<string, string> parameters)
+        internal static DirectShowEncoder TryCreate(Dictionary<string, string> parameters)
         {
             DSCodec codecEnum;
             if (Enum.TryParse<DSCodec>(parameters["codec"], true, out codecEnum))
@@ -29,6 +29,31 @@ namespace HomeMediaCenter
             }
 
             return null;
+        }
+
+        public static bool IsFFDSHOWInstalled()
+        {
+            return ContainerType.IsFFDSHOWInstalled();
+        }
+
+        public static bool IsWMVInstalled()
+        {
+            return ContainerType.IsWMVInstalled();
+        }
+
+        public static bool IsMPEG2Installed()
+        {
+            return ContainerType.IsMPEG2Installed();
+        }
+
+        public static bool IsWEBMInstalled()
+        {
+            return ContainerType.IsWEBMInstalled();
+        }
+
+        public static string[] GetVideoInputNames()
+        {
+            return WebcamInput.GetVideoInputNames().Select(a => "Webcam_" + a).ToArray();
         }
 
         public override string GetMime()
@@ -43,6 +68,12 @@ namespace HomeMediaCenter
                 case DSCodec.WEBM_TS: goto case DSCodec.WEBM;
                 case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "audio/x-ms-wma" : "video/x-ms-wmv";
                 case DSCodec.WMV3A2: goto case DSCodec.WMV2;
+                case DSCodec.MP3: return "audio/mpeg";
+                case DSCodec.MP3_TS: goto case DSCodec.MP3;
+                case DSCodec.MP4: return "video/mp4";
+                case DSCodec.AVI: return "video/avi";
+                case DSCodec.FLV: return "video/x-flv";
+                case DSCodec.FLV_TS: goto case DSCodec.FLV;
                 default: return string.Empty;
             }
         }
@@ -56,6 +87,8 @@ namespace HomeMediaCenter
                 case DSCodec.MPEG2LAYER1_PS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_TS: goto case DSCodec.MPEG2_TS;
                 case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "DLNA.ORG_PN=WMABASE;" : "DLNA.ORG_PN=WMVMED_BASE;";
+                case DSCodec.MP3: return "DLNA.ORG_PN=MP3;";
+                case DSCodec.MP3_TS: goto case DSCodec.MP3;
                 default: return string.Empty;
             }
         }
@@ -176,20 +209,30 @@ namespace HomeMediaCenter
                 //Zistenie ci zachovat pomer stran pri zmene rozlisenia
                 bool keepAspect = parameters.ContainsKey("keepaspect");
 
+                //Zistenie typu skenovania
+                ScanType? scanType = null;
+                if (parameters.ContainsKey("scan"))
+                {
+                    if (parameters["scan"].Equals("i", StringComparison.OrdinalIgnoreCase))
+                        scanType = ScanType.Interlaced;
+                    else if (parameters["scan"].Equals("p", StringComparison.OrdinalIgnoreCase))
+                        scanType = ScanType.Progressive;
+                }
+
                 ContainerType container = null;
                 switch (this.codec)
                 {
-                    case DSCodec.MPEG2_PS: container = ContainerType.MPEG2_PS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality,
-                        fps, ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer2, audBitrate * 1000);
+                    case DSCodec.MPEG2_PS: container = ContainerType.MPEG2_PS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, 
+                        scanType.HasValue ? scanType.Value : ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer2, audBitrate * 1000);
                         break;
-                    case DSCodec.MPEG2_TS: container = ContainerType.MPEG2_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality,
-                        fps, ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer2, audBitrate * 1000);
+                    case DSCodec.MPEG2_TS: container = ContainerType.MPEG2_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
+                        scanType.HasValue ? scanType.Value : ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer2, audBitrate * 1000);
                         break;
-                    case DSCodec.MPEG2LAYER1_PS: container = ContainerType.MPEG2_PS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality,
-                        fps, ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer1, audBitrate * 1000);
+                    case DSCodec.MPEG2LAYER1_PS: container = ContainerType.MPEG2_PS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
+                        scanType.HasValue ? scanType.Value : ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer1, audBitrate * 1000);
                         break;
-                    case DSCodec.MPEG2LAYER1_TS: container = ContainerType.MPEG2_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality,
-                        fps, ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer1, audBitrate * 1000);
+                    case DSCodec.MPEG2LAYER1_TS: container = ContainerType.MPEG2_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
+                        scanType.HasValue ? scanType.Value : ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer1, audBitrate * 1000);
                         break;
                     case DSCodec.WEBM: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate, quality, fps, subtitles, 
                         subPath, keepAspect, audBitrate);
@@ -202,6 +245,22 @@ namespace HomeMediaCenter
                         break;
                     case DSCodec.WMV3A2: container = ContainerType.WMV(width, height, WMVideoSubtype.WMMEDIASUBTYPE_WMV3, vidBitrate * 1000, quality,
                         fps, subtitles, subPath, audBitrate * 1000);
+                        break;
+                    case DSCodec.AVI: container = ContainerType.AVI(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
+                        scanType.HasValue ? scanType.Value : ScanType.Progressive, subtitles, subPath, keepAspect, audBitrate * 1000);
+                        break;
+                    case DSCodec.MP4: container = ContainerType.MP4(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath, 
+                        keepAspect, audBitrate * 1000);
+                        break;
+                    case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate, quality);
+                        break;
+                    case DSCodec.MP3_TS: container = ContainerType.MP3_TS(BitrateMode.CBR, audBitrate, quality);
+                        break;
+                    case DSCodec.FLV: container = ContainerType.FLV(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000);
+                        break;
+                    case DSCodec.FLV_TS: container = ContainerType.FLV_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000);
                         break;
                 }
 
