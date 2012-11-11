@@ -51,7 +51,7 @@ namespace HomeMediaCenter
             AddItem(this.audioItem = new ItemContainer("Audio", this.rootItem, MediaType.Audio));
             AddItem(this.imageItem = new ItemContainer("Image", this.rootItem, MediaType.Image));
             AddItem(this.videoItem = new ItemContainer("Video", this.rootItem, MediaType.Video));
-            AddItem(this.streamItem = new ItemContainerStream("Stream", this.rootItem, MediaType.Video));
+            AddItem(this.streamItem = new ItemContainerStream("Stream", this.videoItem, MediaType.Video));
         }
 
         public MediaSettings MediaSettings

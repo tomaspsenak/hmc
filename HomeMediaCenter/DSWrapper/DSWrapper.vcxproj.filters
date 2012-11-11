@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Extern">
+      <UniqueIdentifier>{cde77b54-cad1-4698-93ea-e3a04c042861}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DSWrapper.h">
@@ -24,16 +27,7 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileWriterFilter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DSException.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="vp8encoderidl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IffDecoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PinInfoItem.h">
@@ -43,12 +37,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ContainerType.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IffdshowBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IVorbisEncodeSettings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ProgressChangeEventArgs.h">
@@ -93,6 +81,30 @@
     <ClInclude Include="DesktopSilenceGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Extern\vp8encoderidl.h">
+      <Filter>Header Files\Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="Extern\webmmuxidl.h">
+      <Filter>Header Files\Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="Extern\IVorbisEncodeSettings.h">
+      <Filter>Header Files\Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="FileWriterFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Extern\IffDecoder.h">
+      <Filter>Header Files\Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="Extern\IffdshowBase.h">
+      <Filter>Header Files\Extern</Filter>
+    </ClInclude>
+    <ClInclude Include="DLLManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MediaFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DSWrapper.cpp">
@@ -114,9 +126,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DibHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DesktopSourcePin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DesktopSourceAudioPin.cpp">
@@ -147,6 +156,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DesktopSilenceGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DesktopSourcePin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MediaFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -8,7 +8,7 @@ DesktopSourcePin::DesktopSourcePin(TCHAR * pObjectName, HRESULT * phr, CSource *
 	: CSourceStream(pObjectName, phr, pms, pName), m_rtLastFrame(0), m_rtFrameLength(UNITS / fps), m_colorConverter(NULL), m_nextTick(0), m_lastSync(0)
 {
 	//Ak sa neda vytvorit ColorConvertDMO, bude NULL - bude sa pouzivat iba RGB
-	CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, __uuidof(IMediaObject), (void**)&this->m_colorConverter);
+	//CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, __uuidof(IMediaObject), (void**)&this->m_colorConverter);
 }
 
 DesktopSourcePin::~DesktopSourcePin(void)
@@ -47,12 +47,12 @@ HRESULT DesktopSourcePin::GetMediaType(int iPosition, CMediaType * pmt)
 		pvi->bmiHeader.biBitCount = 32;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB32);
     }
-	else if (iPosition == 1)
+	/*else if (iPosition == 1)
     {
 		pvi->bmiHeader.biCompression = BI_RGB;
 		pvi->bmiHeader.biBitCount = 24;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB24);
-    }
+    }*/
 	else
 	{
 		CHECK_HR(hr = VFW_S_NO_MORE_ITEMS);
@@ -135,7 +135,7 @@ HRESULT DesktopSourcePin::CheckMediaType(const CMediaType * pMediaType)
 
 	if (this->m_colorConverter == NULL)
 	{
-		if (subType != MEDIASUBTYPE_RGB24 && subType != MEDIASUBTYPE_RGB32)
+		if (/*subType != MEDIASUBTYPE_RGB24 &&*/ subType != MEDIASUBTYPE_RGB32)
 			CHECK_HR(hr = E_INVALIDARG);
 	}
 	else
@@ -201,7 +201,6 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 
 	if (this->m_colorConverter == NULL)
 	{
-		dmoType = m_mt;
 		writeCount = m_mt.lSampleSize;
 	}
 	else

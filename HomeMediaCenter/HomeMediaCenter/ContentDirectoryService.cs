@@ -116,11 +116,6 @@ namespace HomeMediaCenter
                 writer.WriteAttributeString("type", "object.item.videoItem");
                 writer.WriteEndElement();
 
-                writer.WriteStartElement("container");
-                writer.WriteAttributeString("id", "4");
-                writer.WriteAttributeString("type", "object.item.videoItem");
-                writer.WriteEndElement();
-
                 writer.WriteEndElement();
 
                 writer.WriteEndElement();

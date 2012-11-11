@@ -169,7 +169,7 @@
     <value>Examples:</value>
   </data>
   <data name="FPS" xml:space="preserve">
-    <value>Frames per second:</value>
+    <value>Frames per second</value>
   </data>
   <data name="FriendlyName" xml:space="preserve">
     <value>Device name:</value>
@@ -211,7 +211,7 @@
     <value>Parameter editor</value>
   </data>
   <data name="Parameters" xml:space="preserve">
-    <value>Parameters:</value>
+    <value>Parameters</value>
   </data>
   <data name="Port" xml:space="preserve">
     <value>Port:</value>
@@ -247,7 +247,7 @@
     <value>Started</value>
   </data>
   <data name="StartEndTime" xml:space="preserve">
-    <value>Start time / end time (hh:mm:ss):</value>
+    <value>Start time / end time (hh:mm:ss)</value>
   </data>
   <data name="Status" xml:space="preserve">
     <value>Status:</value>
@@ -281,5 +281,29 @@
   </data>
   <data name="ConversionCompleted" xml:space="preserve">
     <value>Conversion completed</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="ScanType" xml:space="preserve">
+    <value>Scan type</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Interlaced" xml:space="preserve">
+    <value>Interlaced</value>
+  </data>
+  <data name="Progressive" xml:space="preserve">
+    <value>Progressive</value>
+  </data>
+  <data name="MinimizeToTray" xml:space="preserve">
+    <value>Minimize to tray</value>
+  </data>
+  <data name="RunAtStartup" xml:space="preserve">
+    <value>Run at system startup</value>
+  </data>
+  <data name="NotSelected" xml:space="preserve">
+    <value>Not selected</value>
   </data>
 </root>

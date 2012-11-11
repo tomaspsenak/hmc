@@ -26,14 +26,14 @@ namespace HomeMediaCenter
             this.mime = mime;
             this.date = file.LastWriteTime;
             this.length = file.Length;
-            FileHelper.GetVideoDuration(file, out this.duration);
+            DSWrapper.MediaFile.GetAudioDuration(file, out this.duration);
             if (this.duration.TotalSeconds == 0f)
                 this.bitrate = 0;
             else
                 this.bitrate = (int)(file.Length / this.duration.TotalSeconds);
-            this.genre = FileHelper.GetAudioGenre(file);
-            this.artist = FileHelper.GetAudioArtist(file);
-            this.album = FileHelper.GetAudioAlbum(file);
+            this.genre = DSWrapper.MediaFile.GetAudioGenre(file);
+            this.artist = DSWrapper.MediaFile.GetAudioArtist(file);
+            this.album = DSWrapper.MediaFile.GetAudioAlbum(file);
         }
 
         public override DateTime Date
@@ -156,9 +156,13 @@ namespace HomeMediaCenter
 
             xmlWriter.WriteEndElement();
 
+            xmlWriter.WriteStartElement("span");
+            xmlWriter.WriteValue("|");
+            xmlWriter.WriteEndElement();
+
             xmlWriter.WriteStartElement("a");
             xmlWriter.WriteAttributeString("href", "/web/control.html?id=" + Id);
-            xmlWriter.WriteValue(LanguageResource.Other);
+            xmlWriter.WriteValue(LanguageResource.PlayTo);
             xmlWriter.WriteEndElement();
 
             xmlWriter.WriteEndElement();

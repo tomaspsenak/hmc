@@ -22,7 +22,7 @@ namespace HomeMediaCenter
             this.mime = mime;
             this.date = file.LastWriteTime;
             this.length = file.Length;
-            this.resolution = FileHelper.GetImageResolution(file);
+            this.resolution = DSWrapper.MediaFile.GetImageResolution(file);
         }
 
         public override DateTime Date

@@ -12,7 +12,7 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 	friend class FileWriterPin;
 
 	public:		FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype);
-				~FileWriterFilter(void);
+				virtual ~FileWriterFilter(void);
 
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
@@ -27,19 +27,24 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 	private:	CCritSec m_critSection;
 				FileWriterPin * m_writerPin;
 				GUID m_inputSubtype;
+				CPosPassThru * m_passThru;
 };
 
-private class FileWriterPin : public CBaseInputPin, public IStream
+private class FileWriterPin : public CBaseInputPin, public IStream, public CAMThread
 {
 	public:		FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, 
 					LPCWSTR pName, System::IO::Stream^ outputStream);
-				~FileWriterPin(void);
+				virtual ~FileWriterPin(void);
 
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
 				
 				//CBasePin
 				HRESULT CheckMediaType(const CMediaType * pmt);
+
+				//CBaseInputPin
+				HRESULT Active(void);
+				HRESULT Inactive(void);
 
 				//IPin
 				STDMETHODIMP BeginFlush(void);
@@ -63,9 +68,17 @@ private class FileWriterPin : public CBaseInputPin, public IStream
 				STDMETHODIMP Stat(STATSTG * pstatstg, DWORD grfStatFlag);
 				STDMETHODIMP Clone(IStream ** ppstm);
 
-	private:	gcroot<System::IO::Stream^> m_outputStream;
+				//CAMThread
+				DWORD ThreadProc(void);
+
+	private:	HRESULT Write(array<System::Byte> ^ buffer);
+		
+				gcroot<System::IO::Stream^> m_outputStream;
+				gcroot<array<System::Byte>^> m_buffer;
 				LONGLONG m_position;
 				CCritSec m_readWriteSect;
+
+				enum Command { CMD_STOP, CMD_WRITE };
 };
 
 #endif //FILEWRITERFILTER_DSWRAPPER_INCLUDED

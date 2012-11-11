@@ -4,6 +4,8 @@
 #define CONTAINERTYPE_DSWRAPPER_INCLUDED
 
 #include "Enums.h"
+#include "Extern/webmmuxidl.h"
+#include "HMCEncoder_h.h"
 
 namespace DSWrapper 
 {
@@ -25,6 +27,22 @@ namespace DSWrapper
 
 					static ContainerType ^ WMV(UINT32 width, UINT32 height, WMVideoSubtype videoSubtype, UINT32 vidBitrate, UINT32 percentQuality,
 						UINT32 fps,	bool intSubtitles, System::String ^ intSubtitlesPath, UINT32 audBitrate);
+
+					static ContainerType ^ AVI(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+						UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
+
+					static ContainerType ^ MP4(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
+
+					static ContainerType ^ MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality);
+
+					static ContainerType ^ MP3_TS(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality);
+
+					static ContainerType ^ FLV(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
+
+					static ContainerType ^ FLV_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
 
 					static System::Boolean IsMPEG2Installed(void);
 					static System::Boolean IsWEBMInstalled(void);
@@ -83,23 +101,15 @@ namespace DSWrapper
 	private ref class ContainerWEBM : ContainerType
 	{
 		internal:	ContainerWEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, UINT32 fps, bool intSubtitles, 
-						System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate) : ContainerType(width, height, bitrateMode, vidBitrate, percentQuality, 
-						fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate) { }
+						System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, WebmMuxMode muxMode) : ContainerType(width, height, bitrateMode, vidBitrate, 
+						percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate), m_muxMode(muxMode) { }
 
 					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
 
 					virtual GUID GetSubtype() override;
 
-		protected:	UINT32 m_audBitrate;			
-	};
-
-	private ref class ContainerWEBM_TS : ContainerWEBM
-	{
-		internal:	ContainerWEBM_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, UINT32 fps, bool intSubtitles, 
-						System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate) : ContainerWEBM(width, height, bitrateMode, vidBitrate, percentQuality, 
-						fps, intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate) { }
-
-					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter) override;			
+		protected:	UINT32 m_audBitrate;
+					WebmMuxMode m_muxMode;
 	};
 
 	private ref class ContainerWMV : ContainerType
@@ -116,6 +126,23 @@ namespace DSWrapper
 
 		protected:	UINT32 m_audBitrate;
 					WMVideoSubtype m_videoSubtype;
+	};
+
+	private ref class ContainerHMC : ContainerType
+	{
+		internal:	ContainerHMC(enum Container container, bool streamable, UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+						UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate) : ContainerType(width, 
+						height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate), m_container(container), 
+						m_streamable(streamable), m_scanType(scanType) { }
+
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
+
+					virtual GUID GetSubtype() override { return GUID_NULL; }
+
+		protected:	bool m_streamable;
+					UINT32 m_audBitrate;
+					ScanType m_scanType;
+					enum Container m_container;
 	};
 }
 

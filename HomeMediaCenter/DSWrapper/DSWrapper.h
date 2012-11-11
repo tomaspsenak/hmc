@@ -31,6 +31,8 @@ namespace DSWrapper
 
 					void StopEncode(void);
 
+					System::Int64 GetDuration(void);
+
 					property System::Collections::Generic::IEnumerable<PinInfoItem^>^ SourcePins
 					{
 						System::Collections::Generic::IEnumerable<PinInfoItem^>^ get() { return m_sourcePins; }
@@ -44,11 +46,13 @@ namespace DSWrapper
 					static IPin * GetPin(IBaseFilter * filter, PIN_DIRECTION direction, DWORD index);
 					static BOOL IsConnected(IPin * pin);
 					static System::Collections::Generic::List<PinInfoItem^>^ GetPinInfo(IBaseFilter * filter, PIN_DIRECTION direction);
+					static DWORD GetTypesArray(IPin * pin, GUID * typesArray, DWORD maxLength);
+					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter);
+					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter, BOOL removeFilter);
 
 		private:	void OnProgressChange(ProgressChangeEventArgs ^ arg);
 					HRESULT FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking);
 					HRESULT GetSourcePins(IPin ** videoPin, IPin ** audioPin, IPin ** subtitlePin);
-					HRESULT ClearGraph(void);
 
 					System::Collections::Generic::List<PinInfoItem^>^ m_sourcePins;
 					ContainerType ^ m_containerType;

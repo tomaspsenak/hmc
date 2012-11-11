@@ -50,18 +50,20 @@ $(function () {
 
             clearTimeout(document.delayTimer);
             document.delayTimer = setTimeout(function () {
-                if ($("#streamVideo").get(0)) {
-                    var url = $("#videoLink").prop("href");
+                var url = $("#videoLink").prop("href");
 
+                if ($("#streamVideo").get(0)) {
                     $("#streamVideo").get(0).pause();
                     $("#streamVideo").prop("src", url);
                     $("#streamVideo").get(0).load();
                     $("#streamVideo").get(0).play();
                 }
-                else {
-                    var url = $("#videoLink").prop("href");
+                else if ($("#silverlightControlHost").get(0)) {
                     if ($("#silverlightControlHost").get(0).Content)
                         $("#silverlightControlHost").get(0).Content.Player.Play(url);
+                }
+                else {
+                    $f("videoLink").play(url.replace("=", "%3D").replace("&", "%26"));
                 }
             }, 300);
         }
@@ -75,8 +77,10 @@ $(function () {
         slide: function (event, ui) {
             if ($("#streamVideo").get(0))
                 $("#streamVideo").prop("volume", ui.value);
-            else
+            else if ($("#silverlightControlHost").get(0))
                 $("#silverlightControlHost").get(0).Content.Player.SetVolume(ui.value);
+            else
+                $f("videoLink").setVolume(ui.value * 100);
 
             $("#volumeVal").html(Math.round(ui.value * 100) + "%");
         }
@@ -93,16 +97,20 @@ $(function () {
     $("#playButton").click(function () {
         if ($("#streamVideo").get(0))
             $("#streamVideo").get(0).play();
-        else
+        else if ($("#silverlightControlHost").get(0))
             $("#silverlightControlHost").get(0).Content.Player.Play($("#videoLink").prop("href"));
+        else
+            $f("videoLink").play();
     });
 
     $("#pauseButton").button();
     $("#pauseButton").click(function () {
         if ($("#streamVideo").get(0))
             $("#streamVideo").get(0).pause();
-        else
+        else if ($("#silverlightControlHost").get(0))
             $("#silverlightControlHost").get(0).Content.Player.Pause();
+        else
+            $f("videoLink").pause();
     });
 
     var submitForm = function () {
@@ -122,8 +130,30 @@ $(function () {
     $("#submitButton").css("background-color", "#416271");
     $("#submitButton").css("color", "#ffffff");
 
-    if ($("#streamVideo").get(0))
+    if ($("#streamVideo").get(0)) {
         SetNewVolume($("#streamVideo").prop("volume"));
+    }
+    else if ($("#silverlightControlHost").get(0)) {
+    }
+    else {
+        $f("videoLink", "/web/flowplayer.swf");
+
+        $f("videoLink").onLoad(function () {
+            SetNewVolume($f("videoLink").getVolume() / 100.0);
+        });
+
+        $f("videoLink").getCommonClip().onStart(function () {
+            document.posInterval = setInterval(function () {
+                SetNewPosition($f("videoLink").getTime());
+            }, 1000);
+        });
+
+        $f("videoLink").getCommonClip().onStop(function () {
+            clearInterval(document.posInterval)
+        });
+
+        $f("videoLink").play();
+    }
 });
 
 function WebPlayerPositionChange(totalSeconds) {

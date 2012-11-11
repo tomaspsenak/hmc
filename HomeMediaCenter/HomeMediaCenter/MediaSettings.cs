@@ -12,13 +12,12 @@ namespace HomeMediaCenter
         private string audioFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private string audioEncodeFeature = "DLNA.ORG_OP=10;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private List<EncoderBuilder> audioEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&audbitrate=128&video=0") };
+            EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100") };
 
         private bool imageNativeFile = true;
         private string imageFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000";
         private string imageEncodeFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000";
         private List<EncoderBuilder> imageEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=jpeg&width=1280&height=720&keepaspect"),
             EncoderBuilder.GetEncoder("&codec=jpeg&width=160&height=160&keepaspect") };
 
         private bool videoNativeFile = true;
@@ -28,9 +27,9 @@ namespace HomeMediaCenter
         private List<EncoderBuilder> videoEncode = new List<EncoderBuilder>() {
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25") };
         private List<EncoderBuilder> videoStreamEncode = new List<EncoderBuilder>() { 
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576"), 
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768"),
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=9000&audbitrate=128&width=1920&height=1080&audio=0")};
+            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"), 
+            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0"),
+            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0")};
 
         public void SaveSettings(XmlWriter xmlWriter)
         {

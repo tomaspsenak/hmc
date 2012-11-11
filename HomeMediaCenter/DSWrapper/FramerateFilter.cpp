@@ -2,13 +2,59 @@
 #include "FramerateFilter.h"
 #include <dvdmedia.h>
 
-FramerateFilter::FramerateFilter(LPUNKNOWN punk, HRESULT * phr, UINT32 fps) : CTransformFilter(L"FramerateFilter", punk, CLSID_NULL), m_fps(fps),
-	m_fpsMod(UNITS % fps), m_rtFrameLength(UNITS / fps), m_rtOriginFrameLength(0), m_rtLastFrame(0), m_fpsModSum(0)
+FramerateOutputPin::FramerateOutputPin(LPCTSTR pObjectName, CTransInPlaceFilter * pFilter, HRESULT * phr, LPCWSTR pName) :
+	CTransInPlaceOutputPin(pObjectName, pFilter, phr, pName)
 {
+}
+
+FramerateOutputPin::~FramerateOutputPin(void)
+{
+}
+
+//********************************************
+//************* FramerateFilter **************
+//********************************************
+
+FramerateFilter::FramerateFilter(LPUNKNOWN punk, HRESULT * phr, UINT32 fps) : CTransInPlaceFilter(L"FramerateFilter", punk, CLSID_NULL, phr), 
+	m_fps(fps), m_fpsMod(UNITS % fps), m_rtFrameLength(UNITS / fps), m_rtOriginFrameLength(0), m_rtLastFrame(0), m_fpsModSum(0)
+{
+	this->m_pInput = new CTransInPlaceInputPin(L"TransInPlace input pin", this, phr, L"Input");
+	if (this->m_pInput == NULL)
+	{
+		*phr = E_OUTOFMEMORY;
+		return;
+	}
+
+	if (*phr != S_OK)
+		return;
+
+	this->m_pOutput = new FramerateOutputPin(L"TransInPlace output pin", this, phr, L"Output");
+	if (this->m_pOutput == NULL)
+	{
+		*phr = E_OUTOFMEMORY;
+		return;
+	}
 }
 
 FramerateFilter::~FramerateFilter(void)
 {
+}
+
+//*********** CTransInPlaceFilter ***********\\
+
+CBasePin * FramerateFilter::GetPin(int n)
+{
+    if (n == 0)
+        return this->m_pInput;
+    else if (n == 1)
+        return this->m_pOutput;
+    else
+        return NULL;
+}
+
+HRESULT FramerateFilter::Transform(IMediaSample * pSample)
+{
+	return E_NOTIMPL;
 }
 
 //************* CTransformFilter *************\\
@@ -29,39 +75,6 @@ HRESULT FramerateFilter::CheckInputType(const CMediaType * mtIn)
 	//Na zaciatku povoli kazdy video format na vstupe
 	//Po pripojeni vystupu sa prepoji na novy format
 	return S_OK;
-}
-
-HRESULT FramerateFilter::CheckTransform(const CMediaType * mtIn, const CMediaType * mtOut)
-{
-	CheckPointer(mtIn, E_POINTER);
-    CheckPointer(mtOut, E_POINTER);
-
-	//Kontrola vystupneho formatu - ziskaneho pomocou GetMediaType - povoli kazdy
-	//Vstupny format sa nekontroluje - bude zmeneny po pripojeni vystupu
-	return S_OK;
-}
-
-HRESULT FramerateFilter::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATOR_PROPERTIES * pProperties)
-{
-	CheckPointer(pAlloc, E_POINTER);
-    CheckPointer(pProperties, E_POINTER);
-
-    if (this->m_pInput->IsConnected() == FALSE || this->m_pOutput->IsConnected() == FALSE)
-        return E_UNEXPECTED;
-
-    HRESULT hr = S_OK;
-	ALLOCATOR_PROPERTIES actual;
-
-    pProperties->cBuffers = 1;
-    pProperties->cbBuffer = this->m_pOutput->CurrentMediaType().GetSampleSize();
-
-    CHECK_HR(hr = pAlloc->SetProperties(pProperties, &actual));
-
-    if (pProperties->cBuffers > actual.cBuffers || pProperties->cbBuffer > actual.cbBuffer)
-		CHECK_HR(hr =  E_FAIL);
-
-done:
-	return hr;
 }
 
 HRESULT FramerateFilter::GetMediaType(int iPosition, CMediaType * pMediaType)
@@ -131,7 +144,7 @@ HRESULT FramerateFilter::CompleteConnect(PIN_DIRECTION direction, IPin * pReceiv
 	if (direction == PINDIR_OUTPUT)
 	{
 		//Ak je pripojeny vystup, nastavi sa vstup podla neho
-		CHECK_HR(hr = pReceivePin->ConnectionMediaType(&pmt));
+		CHECK_HR(hr = this->m_pOutput->ConnectionMediaType(&pmt));
 		
 		conPin = this->m_pInput->GetConnected();
 		if (conPin == NULL)
@@ -142,10 +155,14 @@ HRESULT FramerateFilter::CompleteConnect(PIN_DIRECTION direction, IPin * pReceiv
 			VIDEOINFOHEADER * header = (VIDEOINFOHEADER *)pmt.pbFormat;
 			header->AvgTimePerFrame = this->m_rtOriginFrameLength;
 		}
-		else
+		else if (pmt.formattype == FORMAT_VideoInfo2)
 		{
 			VIDEOINFOHEADER2 * header = (VIDEOINFOHEADER2 *)pmt.pbFormat;
 			header->AvgTimePerFrame = this->m_rtOriginFrameLength;
+		}
+		else
+		{
+			CHECK_HR(hr = E_FAIL);
 		}
 
 		hr = conPin->QueryAccept(&pmt);
@@ -168,23 +185,24 @@ done:
 
 HRESULT FramerateFilter::Receive(IMediaSample * pSample)
 {
+	//Spracovava sa iba media stream
+    AM_SAMPLE2_PROPERTIES * const pProps = this->m_pInput->SampleProps();
+    if (pProps->dwStreamId != AM_STREAM_MEDIA)
+	{
+        return this->m_pOutput->Deliver(pSample);
+    }
 	CheckPointer(pSample, E_POINTER);
 
-	HRESULT hr = S_OK;
-    BYTE * pSourceBuffer, * pDestBuffer;
-	REFERENCE_TIME rtOldStart, rtOldStop;
+    HRESULT hr = S_OK;
 	IMediaSample * pOut = NULL;
-    long longVal; 
+	REFERENCE_TIME rtOldStart, rtOldStop;
+	BOOL diffAllocators = UsingDifferentAllocators();
 
-	longVal = pSample->GetActualDataLength();
-	CHECK_HR(hr = pSample->GetPointer(&pSourceBuffer));
 	CHECK_HR(hr = pSample->GetTime(&rtOldStart, &rtOldStop));
 
 	//Snimka sa bude opakovat, pokial nedosiahne povodnu casovu peciatku
 	while (this->m_rtLastFrame + this->m_rtFrameLength <= rtOldStop)
 	{
-		CHECK_HR(hr = InitializeOutputSample(pSample, &pOut));
-
 		REFERENCE_TIME rtStart = this->m_rtLastFrame;
 		REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
 
@@ -193,21 +211,30 @@ HRESULT FramerateFilter::Receive(IMediaSample * pSample)
 		rtStop += (this->m_fpsModSum / m_fps);
 		this->m_fpsModSum %= m_fps;
 
+		if (diffAllocators)
+		{
+			pOut = Copy(pSample);
+			if (pOut == NULL)
+				CHECK_HR(hr = E_UNEXPECTED);
+		}
+		else
+		{
+			pOut = pSample;
+		}
+
 		CHECK_HR(hr = pOut->SetTime(&rtStart, &rtStop));
 		this->m_rtLastFrame = rtStop;
 
-		//Skopirovat data zo vstupneho buffera do vystupneho
-		CHECK_HR(hr = pOut->GetPointer(&pDestBuffer));
-		CopyMemory((void *)pDestBuffer, (void *)pSourceBuffer, longVal);
-
 		CHECK_HR(hr = this->m_pOutput->Deliver(pOut));
 
-		SAFE_RELEASE(pOut);
+		if (diffAllocators)
+			SAFE_RELEASE(pOut);
 	}
 
 done:
 
-	SAFE_RELEASE(pOut);
+	if (diffAllocators)
+			SAFE_RELEASE(pOut);
 
 	return hr;
 }

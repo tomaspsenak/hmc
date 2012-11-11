@@ -107,9 +107,13 @@ namespace HomeMediaCenter
 
             xmlWriter.WriteEndElement();
 
+            xmlWriter.WriteStartElement("span");
+            xmlWriter.WriteValue("|");
+            xmlWriter.WriteEndElement();
+
             xmlWriter.WriteStartElement("a");
             xmlWriter.WriteAttributeString("href", "/web/control.html?id=" + Id);
-            xmlWriter.WriteValue(LanguageResource.Other);
+            xmlWriter.WriteValue(LanguageResource.PlayTo);
             xmlWriter.WriteEndElement();
 
             xmlWriter.WriteEndElement();

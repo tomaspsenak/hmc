@@ -298,10 +298,12 @@ private:
 
 class CPosPassThru : public IMediaSeeking, public CMediaPosition
 {
+protected:
+
     IPin *m_pPin;
 
-    HRESULT GetPeer(__deref_out IMediaPosition **ppMP);
-    HRESULT GetPeerSeeking(__deref_out IMediaSeeking **ppMS);
+	virtual HRESULT GetPeer(__deref_out IMediaPosition **ppMP);
+    virtual HRESULT GetPeerSeeking(__deref_out IMediaSeeking **ppMS);
 
 public:
 

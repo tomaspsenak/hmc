@@ -1,7 +1,8 @@
 $(function () {
     $("#refreshBtn").click(function () {
 
-        $(this).attr("disabled", "disabled");
+        $(this).hide();
+        $("#loadingImg").show();
 
         $.ajax({
             type: "POST",
@@ -9,7 +10,8 @@ $(function () {
             dataType: "xml",
             success: function (xml) {
 
-                $("#refreshBtn").removeAttr("disabled");
+                $("#refreshBtn").show();
+                $("#loadingImg").hide();
                 $("#devices").empty();
 
                 $(xml).find("option").each(function () {

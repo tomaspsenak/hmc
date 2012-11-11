@@ -132,9 +132,6 @@
   <data name="Duration" xml:space="preserve">
     <value>duration</value>
   </data>
-  <data name="File" xml:space="preserve">
-    <value>File</value>
-  </data>
   <data name="Genre" xml:space="preserve">
     <value>genre</value>
   </data>
@@ -147,6 +144,9 @@
   <data name="Install" xml:space="preserve">
     <value>Install</value>
   </data>
+  <data name="Item" xml:space="preserve">
+    <value>Item</value>
+  </data>
   <data name="Low" xml:space="preserve">
     <value>Low</value>
   </data>
@@ -156,14 +156,14 @@
   <data name="Music" xml:space="preserve">
     <value>music</value>
   </data>
+  <data name="NotSelected" xml:space="preserve">
+    <value>Not selected</value>
+  </data>
   <data name="Of" xml:space="preserve">
     <value>of</value>
   </data>
   <data name="Or" xml:space="preserve">
     <value>or</value>
-  </data>
-  <data name="Other" xml:space="preserve">
-    <value>Other</value>
   </data>
   <data name="Pause" xml:space="preserve">
     <value>Pause</value>
@@ -176,6 +176,9 @@
   </data>
   <data name="Play" xml:space="preserve">
     <value>Play</value>
+  </data>
+  <data name="PlayTo" xml:space="preserve">
+    <value>Play to</value>
   </data>
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
@@ -203,5 +206,8 @@
   </data>
   <data name="Video" xml:space="preserve">
     <value>video</value>
+  </data>
+  <data name="Volume" xml:space="preserve">
+    <value>Volume</value>
   </data>
 </root>
