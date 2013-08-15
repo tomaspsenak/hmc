@@ -47,14 +47,14 @@ namespace HomeMediaCenter
         [UpnpServiceArgument(1, "Sink", "SinkProtocolInfo")]
         private void GetProtocolInfo(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody(this.sourceProtocolInfo, string.Empty);
         }
 
         [UpnpServiceArgument(0, "ConnectionIDs", "CurrentConnectionIDs")]
         private void GetCurrentConnectionIDs(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody("0");
         }
 
@@ -69,9 +69,9 @@ namespace HomeMediaCenter
             [UpnpServiceArgument("A_ARG_TYPE_ConnectionID")] string ConnectionID)
         {
             if (ConnectionID != "0")
-                throw new HttpException(406, "Illegal ConnectionID value");
+                throw new SoapException(402, "Invalid Args");
 
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody("-1", "-1", string.Empty, string.Empty, "-1", "Output", "OK");
         }
     }

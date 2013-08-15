@@ -22,14 +22,18 @@ function SetNewVolume(volume) {
     $("#volumeVal").html(Math.round(volume * 100) + "%");
 }
 
-function RefreshUrl(starttime) {
-    var oldSrc = $("#videoLink").prop("href");
-    var timeIndex = oldSrc.search(/&starttime=/i);
-
+function UpdateTimeUrl(url, starttime) {
+    var timeIndex = url.search(/&starttime=/i);
     if (timeIndex >= 0)
-        oldSrc = oldSrc.substr(0, timeIndex);
+        url = url.substr(0, timeIndex);
 
-    $("#videoLink").prop("href", oldSrc + "&starttime=" + starttime);
+    return url + "&starttime=" + starttime;
+}
+
+function RefreshUrl(starttime) {
+    var src = UpdateTimeUrl($("#videoLink").prop("href"), starttime);
+
+    $("#videoLink").prop("href", src);
 }
 
 $(function () {
@@ -43,26 +47,32 @@ $(function () {
         max: streamLength,
         value: 0,
         slide: function (event, ui) {
-            document.streamBasePosition = ui.value;
-            SetNewPositionText(ui.value);
+            var uiVal = ui.value;
 
-            RefreshUrl(ui.value);
+            document.streamBasePosition = uiVal;
+            SetNewPositionText(uiVal);
+
+            RefreshUrl(uiVal);
 
             clearTimeout(document.delayTimer);
             document.delayTimer = setTimeout(function () {
-                var url = $("#videoLink").prop("href");
-
                 if ($("#streamVideo").get(0)) {
+                    var url = $("#streamVideo").get(0).currentSrc;
+
                     $("#streamVideo").get(0).pause();
-                    $("#streamVideo").prop("src", url);
+                    $("#streamVideo").prop("src", UpdateTimeUrl(url, uiVal));
                     $("#streamVideo").get(0).load();
                     $("#streamVideo").get(0).play();
                 }
                 else if ($("#silverlightControlHost").get(0)) {
+                    var url = $("#videoLink").prop("href");
+
                     if ($("#silverlightControlHost").get(0).Content)
                         $("#silverlightControlHost").get(0).Content.Player.Play(url);
                 }
                 else {
+                    var url = $("#videoLink").prop("href");
+
                     $f("videoLink").play(url.replace("=", "%3D").replace("&", "%26"));
                 }
             }, 300);

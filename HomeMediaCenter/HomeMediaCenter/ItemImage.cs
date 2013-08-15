@@ -4,45 +4,61 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.IO;
+using System.Data.Linq;
+using System.Data.Linq.Mapping;
 
 namespace HomeMediaCenter
 {
-    [Serializable]
     public class ItemImage : Item
     {
-        private readonly string path;
-        private readonly string mime;
-        private readonly DateTime date;
-        private readonly long length;
-        private readonly string resolution;
+        public ItemImage() : base(null, null, null) { }
 
-        public ItemImage(ItemContainer parent, FileInfo file, string mime) : base(file.Name, parent)
+        public ItemImage(FileInfo file, string mime, ItemContainer parent) : base(file.Name, file.Name, parent)
         {
-            this.path = file.FullName;
-            this.mime = mime;
-            this.date = file.LastWriteTime;
-            this.length = file.Length;
-            this.resolution = DSWrapper.MediaFile.GetImageResolution(file);
+            this.Mime = mime;
+            this.Date = file.LastWriteTime;
+            this.Length = file.Length;
+
+            parent.SetMediaType(MediaType.Image);
         }
 
+        [Column(IsPrimaryKey = false, DbType = "datetime", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
         public override DateTime Date
         {
-            get { return this.date; }
+            get; set;
         }
 
-        public override string Path
+        [Column(IsPrimaryKey = false, DbType = "nvarchar(50)", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
+        public string Mime
         {
-            get { return this.path; }
+            get; set;
         }
 
-        public override string Mime
+        [Column(IsPrimaryKey = false, DbType = "bigint", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
+        public long Length
         {
-            get { return this.mime; }
+            get; set;
+        }
+
+        [Column(IsPrimaryKey = false, DbType = "nvarchar(11)", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
+        public string Resolution
+        {
+            get; set;
+        }
+
+        public override string GetMime()
+        {
+            return this.Mime;
+        }
+
+        public override string GetPath()
+        {
+            return System.IO.Path.Combine(this.Parent.Path, this.Path);
         }
 
         public override string GetFileFeature(MediaSettings settings)
         {
-            return (this.mime == "image/jpeg" ? "DLNA.ORG_PN=JPEG_MED;" : string.Empty) + settings.ImageFileFeature;
+            return (this.Mime == "image/jpeg" ? "DLNA.ORG_PN=JPEG_MED;" : string.Empty) + settings.ImageFileFeature;
         }
 
         public override string GetEncodeFeature(MediaSettings settings)
@@ -50,30 +66,52 @@ namespace HomeMediaCenter
             return settings.ImageEncodeFeature;
         }
 
-        public override void WriteMe(XmlWriter writer, MediaSettings settings, string host, HashSet<string> filterSet)
+        public override void RemoveMe(DataContext context)
+        {
+            this.Parent.CheckMediaType(MediaType.Image);
+        }
+
+        public override bool IsType(MediaType type)
+        {
+            return type == MediaType.Image;
+        }
+
+        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        {
+            //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
+            if (this.Resolution == null)
+                AssignValues(new FileInfo(GetPath()));
+        }
+
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
+        {
+            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Image));
+        }
+
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
         {
             writer.WriteStartElement("item");
 
-            writer.WriteAttributeString("id", Id.ToString());
+            writer.WriteAttributeString("id", this.Id.ToString());
             writer.WriteAttributeString("restricted", "true");
-            writer.WriteAttributeString("parentID", Parent == null ? "-1" : Parent.Id.ToString());
+            writer.WriteAttributeString("parentID", parentId + "_" + ImageIndex);
 
             //Povinne hodnoty
-            writer.WriteElementString("dc", "title", null, Title);
+            writer.WriteElementString("dc", "title", null, this.Title);
             writer.WriteElementString("upnp", "class", null, "object.item.imageItem");
 
             //Volitelne hodnoty
             if (filterSet == null || filterSet.Contains("dc:date"))
-                writer.WriteElementString("dc", "date", null, this.date.ToString("yyyy-MM-dd"));
+                writer.WriteElementString("dc", "date", null, this.Date.ToString("yyyy-MM-dd"));
 
             if (filterSet == null || filterSet.Contains("upnp:icon"))
-                writer.WriteElementString("upnp", "icon", null, host + "/encode/image?id=" + Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteElementString("upnp", "icon", null, host + "/encode/image?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
 
             if (filterSet == null || filterSet.Contains("upnp:albumArtURI"))
             {
                 writer.WriteStartElement("upnp", "albumArtURI", null);
                 writer.WriteAttributeString("dlna", "profileID", "urn:schemas-dlna-org:metadata-1-0/", "JPEG_TN");
-                writer.WriteValue(host + "/encode/image?id=" + Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteValue(host + "/encode/image?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
                 writer.WriteEndElement();
             }
 
@@ -84,13 +122,13 @@ namespace HomeMediaCenter
                     writer.WriteStartElement("res");
 
                     if (filterSet == null || filterSet.Contains("res@size"))
-                        writer.WriteAttributeString("size", this.length.ToString());
+                        writer.WriteAttributeString("size", this.Length.ToString());
 
-                    if (this.resolution != string.Empty && (filterSet == null || filterSet.Contains("res@resolution")))
-                        writer.WriteAttributeString("resolution", this.resolution);
+                    if (this.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
+                        writer.WriteAttributeString("resolution", this.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", this.mime, GetFileFeature(settings)));
-                    writer.WriteValue(host + "/files/image?id=" + Id);
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", this.Mime, GetFileFeature(settings)));
+                    writer.WriteValue(host + "/files/image?id=" + this.Id);
                     writer.WriteEndElement();
                 }
 
@@ -102,7 +140,7 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.ImageEncodeFeature));
-                    writer.WriteValue(host + "/encode/image?id=" + Id + sett.GetParamString());
+                    writer.WriteValue(host + "/encode/image?id=" + this.Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }
             }
@@ -110,15 +148,22 @@ namespace HomeMediaCenter
             writer.WriteEndElement();
         }
 
-        public override void WriteMe(XmlWriter xmlWriter, MediaSettings settings)
+        public override void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams)
         {
             xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/files/image?id=" + Id);
+            xmlWriter.WriteAttributeString("href", "/files/image?id=" + this.Id);
             xmlWriter.WriteStartElement("img");
-            xmlWriter.WriteAttributeString("src", "/encode/image?id=" + Id + "&codec=jpeg&width=50&height=50&quality=10");
+            xmlWriter.WriteAttributeString("src", "/encode/image?id=" + this.Id + "&codec=jpeg&width=80&height=80&quality=10");
             xmlWriter.WriteAttributeString("alt", Title);
             xmlWriter.WriteEndElement();
             xmlWriter.WriteEndElement();
+        }
+
+        private void AssignValues(FileInfo file)
+        {
+            string resolution;
+            if (DSWrapper.MediaFile.GetImageResolution(file, out resolution))
+                this.Resolution = resolution;
         }
     }
 }

@@ -139,6 +139,7 @@
     <EmbeddedResource Include="LanguageResource.sk-SK.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>LanguageResource.sk-SK.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>

@@ -11,6 +11,7 @@ namespace HomeMediaCenter
         private bool audioNativeFile = true;
         private string audioFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private string audioEncodeFeature = "DLNA.ORG_OP=10;DLNA.ORG_FLAGS=01500000000000000000000000000000";
+        private string audioStreamFeature = "DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private List<EncoderBuilder> audioEncode = new List<EncoderBuilder>() {
             EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100") };
 
@@ -26,10 +27,12 @@ namespace HomeMediaCenter
         private string videoStreamFeature = "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000";
         private List<EncoderBuilder> videoEncode = new List<EncoderBuilder>() {
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25") };
-        private List<EncoderBuilder> videoStreamEncode = new List<EncoderBuilder>() { 
+
+        private List<EncoderBuilder> streamEncode = new List<EncoderBuilder>() { 
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"), 
             EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0"),
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0")};
+            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0"),
+            EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100") };
 
         public void SaveSettings(XmlWriter xmlWriter)
         {
@@ -39,6 +42,7 @@ namespace HomeMediaCenter
             xmlWriter.WriteElementString("NativeFile", this.audioNativeFile.ToString());
             xmlWriter.WriteElementString("FileFeature", this.audioFileFeature);
             xmlWriter.WriteElementString("EncodeFeature", this.audioEncodeFeature);
+            xmlWriter.WriteElementString("StreamFeature", this.audioStreamFeature);
 
             xmlWriter.WriteStartElement("Parameters");
             foreach (string par in this.audioEncode.Select(a => a.GetParamString()))
@@ -74,8 +78,13 @@ namespace HomeMediaCenter
                 xmlWriter.WriteElementString("string", par);
             xmlWriter.WriteEndElement();
 
-            xmlWriter.WriteStartElement("StreamParameters");
-            foreach (string par in this.videoStreamEncode.Select(a => a.GetParamString()))
+            xmlWriter.WriteEndElement();
+
+            //Zapisanie streamu
+            xmlWriter.WriteStartElement("StreamSettings");
+
+            xmlWriter.WriteStartElement("Parameters");
+            foreach (string par in this.streamEncode.Select(a => a.GetParamString()))
                 xmlWriter.WriteElementString("string", par);
             xmlWriter.WriteEndElement();
 
@@ -94,6 +103,9 @@ namespace HomeMediaCenter
             node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/EncodeFeature");
             if (node != null)
                 this.audioEncodeFeature = node.InnerText;
+            node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/StreamFeature");
+            if (node != null)
+                this.audioStreamFeature = node.InnerText;
 
             this.audioEncode.Clear();
             foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/AudioSettings/Parameters/*"))
@@ -132,9 +144,10 @@ namespace HomeMediaCenter
             foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/VideoSettings/Parameters/*"))
                 this.videoEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
 
-            this.videoStreamEncode.Clear();
-            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/VideoSettings/StreamParameters/*"))
-                this.videoStreamEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
+            //Nacitanie streamu
+            this.streamEncode.Clear();
+            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/StreamSettings/Parameters/*"))
+                this.streamEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
         }
 
         public bool AudioNativeFile
@@ -159,6 +172,12 @@ namespace HomeMediaCenter
         {
             get { return this.audioEncodeFeature; }
             set { this.audioEncodeFeature = value; }
+        }
+
+        public string AudioStreamFeature
+        {
+            get { return this.audioStreamFeature; }
+            set { this.audioStreamFeature = value; }
         }
 
         public bool ImageNativeFile
@@ -191,10 +210,10 @@ namespace HomeMediaCenter
             set { this.videoNativeFile = value; }
         }
 
-        public List<EncoderBuilder> VideoStreamEncode
+        public List<EncoderBuilder> StreamEncode
         {
-            get { return this.videoStreamEncode; }
-            set { this.videoStreamEncode = value; }
+            get { return this.streamEncode; }
+            set { this.streamEncode = value; }
         }
 
         public List<EncoderBuilder> VideoEncode

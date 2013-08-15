@@ -80,6 +80,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Linq" />
+    <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\System.Data.SqlServerCe.dll</HintPath>
+    </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web">
       <Private>False</Private>
@@ -91,11 +96,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChunkedStream.cs" />
     <Compile Include="ConnectionManagerService.cs" />
     <Compile Include="ContentDirectoryService.cs" />
     <Compile Include="DirectShowEncoder.cs" />
     <Compile Include="EncoderBuilder.cs" />
-    <Compile Include="FileHelper.cs" />
+    <Compile Include="ExceptionEventArgs.cs" />
+    <Compile Include="HelperClass.cs" />
     <Compile Include="GDIEncoder.cs" />
     <Compile Include="HttpException.cs" />
     <Compile Include="HttpMime.cs" />
@@ -106,11 +113,13 @@
     <Compile Include="Item.cs" />
     <Compile Include="ItemAudio.cs" />
     <Compile Include="ItemContainer.cs" />
+    <Compile Include="ItemContainerRoot.cs" />
     <Compile Include="ItemContainerStream.cs" />
+    <Compile Include="ItemContainerVideo.cs" />
     <Compile Include="ItemImage.cs" />
     <Compile Include="ItemManager.cs" />
     <Compile Include="ItemVideo.cs" />
-    <Compile Include="ItemVideoStream.cs" />
+    <Compile Include="ItemStream.cs" />
     <Compile Include="LanguageResource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -128,6 +137,7 @@
     <Compile Include="MediaSettings.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SoapException.cs" />
     <Compile Include="SsdpServer.cs" />
     <Compile Include="UDPStream.cs" />
     <Compile Include="UpnpControlPoint.cs" />
@@ -233,6 +243,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\loading.gif" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\folder.png" />
+    <Content Include="System.Data.SqlServerCe.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

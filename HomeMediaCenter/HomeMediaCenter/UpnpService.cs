@@ -143,7 +143,7 @@ namespace HomeMediaCenter
 
         private void GetDescription(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.AddHreader(HttpHeader.ContentLength, this.descArray.Length.ToString());
             response.AddHreader(HttpHeader.ContentType, "text/xml; charset=\"utf-8\"");
 
@@ -151,14 +151,14 @@ namespace HomeMediaCenter
             {
                 response.SendHeaders();
 
-                stream.CopyTo(request.Socket.GetStream());
+                stream.CopyTo(response.GetStream());
             }
         }
 
         private void ProceedControl(HttpRequest request)
         {
             if (!request.Headers["SOAPACTION"].Trim('"').StartsWith(this.serviceType))
-                throw new HttpException(400, "Service type mismatch");
+                throw new HttpException(500, "Service type mismatch");
 
             XmlDocument xDoc = new XmlDocument();
             using (MemoryStream stream = request.GetContent())
@@ -169,10 +169,15 @@ namespace HomeMediaCenter
                 namespaceManager.AddNamespace("soapNam", "http://schemas.xmlsoap.org/soap/envelope/");
 
                 XmlNode bodyNode = xDoc.SelectSingleNode("/soapNam:Envelope/soapNam:Body/*[1]", namespaceManager);
+                if (bodyNode == null)
+                    throw new HttpException(500, "Body node of SOAP message not found");
 
                 this.server.RootDevice.OnLogEvent(string.Format("ACTION: {0}, {1}", bodyNode.LocalName, this.serviceType));
 
                 MethodInfo method = GetType().GetMethod(bodyNode.LocalName, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (method == null)
+                    throw new SoapException(401, "Invalid Action");
+
                 string[] outParam = method.GetCustomAttributes(typeof(UpnpServiceArgument), true).Cast<UpnpServiceArgument>().OrderBy(
                     a => a.Index).Select(a => a.Name).ToArray();
                 ParameterInfo[] paramDef = method.GetParameters();
@@ -184,19 +189,30 @@ namespace HomeMediaCenter
                 for (int i = 1; i < paramDef.Length; i++)
                 {
                     XmlNode paramNode = bodyNode.SelectSingleNode(paramDef[i].Name);
-                    if (paramNode != null)
-                        paramVal[i] = paramNode.InnerXml;
+                    if (paramNode == null)
+                        throw new SoapException(402, "Invalid Args");
+
+                    paramVal[i] = paramNode.InnerXml;
                 }
 
-                try 
-                { 
-                    method.Invoke(this, paramVal); 
+                try
+                {
+                    method.Invoke(this, paramVal);
+                }
+                catch (ArgumentException)
+                {
+                    throw new SoapException(402, "Invalid Args");
+                }
+                catch (TargetParameterCountException)
+                {
+                    throw new SoapException(402, "Invalid Args");
                 }
                 catch (TargetInvocationException ex)
                 {
-                    if (ex.InnerException != null)
+                    if (ex.InnerException is SoapException)
                         throw ex.InnerException;
-                    throw;
+
+                    throw new SoapException(501, "Action Failed");
                 }
             }
         }
@@ -221,7 +237,7 @@ namespace HomeMediaCenter
                 new SendEventDel(SendEvent).BeginInvoke(sid, uri, null, null);
             }
 
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.AddHreader(HttpHeader.ContentLength, "0");
             response.AddHreader("SID", sid);
             response.AddHreader("TIMEOUT", "Second-" + timeout);
@@ -231,7 +247,7 @@ namespace HomeMediaCenter
 
         private void ProceedEventUnsub(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendHeaders();
         }
 

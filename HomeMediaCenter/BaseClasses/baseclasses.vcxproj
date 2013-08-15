@@ -321,6 +321,7 @@
     <ClInclude Include="amextra.h" />
     <ClInclude Include="amfilter.h" />
     <ClInclude Include="cache.h" />
+    <ClInclude Include="checkbmi.h" />
     <ClInclude Include="combase.h" />
     <ClInclude Include="cprop.h" />
     <ClInclude Include="ctlutil.h" />

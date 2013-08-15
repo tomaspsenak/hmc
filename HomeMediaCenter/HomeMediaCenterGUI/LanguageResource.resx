@@ -159,8 +159,8 @@
   <data name="EncodeParameters" xml:space="preserve">
     <value>Encode parameters:</value>
   </data>
-  <data name="EncodeParametersStream" xml:space="preserve">
-    <value>Encode parameters (stream):</value>
+  <data name="Stream" xml:space="preserve">
+    <value>Stream</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>Error</value>
@@ -305,5 +305,11 @@
   </data>
   <data name="NotSelected" xml:space="preserve">
     <value>Not selected</value>
+  </data>
+  <data name="RealTimeDatabaseRefresh" xml:space="preserve">
+    <value>Real time database refresh</value>
+  </data>
+  <data name="EnablePortForwarding" xml:space="preserve">
+    <value>Enable UPnP port forwarding</value>
   </data>
 </root>

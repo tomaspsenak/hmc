@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Reflection;
 
 namespace HomeMediaCenter
@@ -12,12 +11,14 @@ namespace HomeMediaCenter
     public class MediaServerDevice : UpnpDevice
     {
         private bool minimizeToTray;
-        private ItemManager itemManager = new ItemManager();
-        private UpnpControlPoint controlPoint = new UpnpControlPoint();
-        private enum WebContainer { WEBM, WMV, FLV };
+        private bool tryToForwardPort;
+        private ItemManager itemManager;
+        private UpnpControlPoint controlPoint;
 
         public MediaServerDevice()
         {
+            this.itemManager = new ItemManager(this);
+            this.controlPoint = new UpnpControlPoint(this);
             Version ver = Assembly.GetExecutingAssembly().GetName().Version;
 
             this.udn = Guid.NewGuid();
@@ -49,6 +50,7 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("GET", "/Web/jquery-1.7.1.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.8.18.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/folder.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmllogo.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlarrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlorangearrow.gif", new HttpRouteDelegate(GetWebGif));
@@ -82,19 +84,24 @@ namespace HomeMediaCenter
             set { this.minimizeToTray = value; }
         }
 
+        public bool TryToForwardPort
+        {
+            get { return this.tryToForwardPort; }
+            set { this.tryToForwardPort = value; }
+        }
+
         public void LoadSettings(string settingsPath, string databasePath)
         {
-            if (File.Exists(databasePath))
+            bool reThrow = true;
+            try
             {
-                using (FileStream stream = new FileStream(databasePath, FileMode.Open, FileAccess.Read))
+                if (!File.Exists(settingsPath))
                 {
-                    BinaryFormatter binFormat = new BinaryFormatter();
-                    this.itemManager = (ItemManager)binFormat.Deserialize(stream);
+                    //Subor neexistuje - napr. po instalacii - nevyhadzovat chybu
+                    reThrow = false;
+                    throw new MediaCenterException("Settings file not found");
                 }
-            }
 
-            if (File.Exists(settingsPath))
-            {
                 using (FileStream file = new FileStream(settingsPath, FileMode.Open, FileAccess.Read))
                 {
                     XmlDocument xmlReader = new XmlDocument();
@@ -102,7 +109,10 @@ namespace HomeMediaCenter
 
                     XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/@ModelNumber");
                     if (node == null || node.Value != this.modelNumber)
-                        return;
+                    {
+                        reThrow = false;
+                        throw new MediaCenterException("Version of the configuration file is changed");
+                    }
 
                     Guid udn;
                     node = xmlReader.SelectSingleNode("/HomeMediaCenter/Udn");
@@ -124,10 +134,26 @@ namespace HomeMediaCenter
                         bool.TryParse(node.InnerText, out this.minimizeToTray);
                     }
 
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/TryToForwardPort");
+                    if (node != null)
+                    {
+                        bool.TryParse(node.InnerText, out this.tryToForwardPort);
+                    }
+
                     this.server.LoadSettings(xmlReader);
 
-                    this.itemManager.LoadSettingsSync(xmlReader);
+                    this.itemManager.LoadSync(xmlReader, databasePath);
                 }
+            }
+            catch
+            {
+                try { File.Delete(databasePath); }
+                catch { }
+
+                this.itemManager.LoadSync(null, databasePath);
+
+                if (reThrow)
+                    throw;
             }
         }
 
@@ -145,6 +171,7 @@ namespace HomeMediaCenter
                 xmlWriter.WriteElementString("Udn", this.udn.ToString());
                 xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
                 xmlWriter.WriteElementString("MinimizeToTray", this.minimizeToTray.ToString());
+                xmlWriter.WriteElementString("TryToForwardPort", this.tryToForwardPort.ToString());
 
                 this.server.SaveSettings(xmlWriter);
 
@@ -153,8 +180,19 @@ namespace HomeMediaCenter
                 xmlWriter.WriteEndElement();
                 xmlWriter.WriteEndDocument();
             }
+        }
 
-            this.itemManager.SerializeDatabaseSync(databasePath);
+        public override void Start()
+        {
+            this.controlPoint.PortForwardingAsync(this.tryToForwardPort, this.server.HttpPort);
+            this.itemManager.Start();
+            base.Start();
+        }
+
+        public override void Stop()
+        {
+            base.Stop();
+            this.itemManager.Stop();
         }
 
         protected override void WriteSpecificDescription(XmlTextWriter descWriter)
@@ -180,14 +218,13 @@ namespace HomeMediaCenter
 
         private void GetFile(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
             if (!request.UrlParams.ContainsKey("id"))
                 throw new HttpException(404, "Unknown source");
 
-            uint index;
             string path, mime, fileFeature;
-            if (!uint.TryParse(request.UrlParams["id"], out index) || !this.ItemManager.GetFileSync(index, out path, out mime, out fileFeature))
+            if (!this.itemManager.GetFile(request.UrlParams["id"], out path, out mime, out fileFeature))
                 throw new HttpException(404, "Bad parameter");
 
             if (!File.Exists(path))
@@ -231,7 +268,7 @@ namespace HomeMediaCenter
 
                     int readed;
                     byte[] buffer = new byte[4096];
-                    Stream responseStream = request.Socket.GetStream();
+                    Stream responseStream = response.GetStream();
 
                     while ((readed = fs.Read(buffer, 0, buffer.Length)) > 0)
                     {
@@ -248,7 +285,7 @@ namespace HomeMediaCenter
 
         private void GetEncode(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
             if (request.UrlParams.ContainsKey("source"))
             {
@@ -259,12 +296,10 @@ namespace HomeMediaCenter
             else if (request.UrlParams.ContainsKey("id"))
             {
                 //Zisti zdroj podla id
-                uint index;
                 TimeSpan? duration;
                 string path, subtitlesPath, encodeFeature;
 
-                if (!uint.TryParse(request.UrlParams["id"], out index) || 
-                    !this.ItemManager.GetEncodeSync(index, out path, out subtitlesPath, out encodeFeature, out duration))
+                if (!this.itemManager.GetEncode(request.UrlParams["id"], out path, out subtitlesPath, out encodeFeature, out duration))
                     throw new HttpException(404, "Bad parameter");
 
                 request.UrlParams["source"] = path;
@@ -326,17 +361,17 @@ namespace HomeMediaCenter
             if (request.Method == "GET")
             {
                 OnLogEvent(string.Format("Starting encode {0} as {1}", request.UrlParams["source"], builder.GetMime()));
-                builder.StartEncode(request.Socket.GetStream());
+                builder.StartEncode(response.GetStream());
             }
         }
 
         private void GetWeb(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
-            uint id;
-            if (!request.UrlParams.ContainsKey("id") || !uint.TryParse(request.UrlParams["id"], out id))
-                id = 0;
+            string id;
+            if (!request.UrlParams.ContainsKey("id") || (id = request.UrlParams["id"]) == string.Empty)
+                id = "0";
 
             using (MemoryStream stream = new MemoryStream())
             using (XmlWriter xmlWriter = XmlWriter.Create(stream, new XmlWriterSettings() { Indent = true, Encoding = new UTF8Encoding(false) }))
@@ -368,10 +403,9 @@ namespace HomeMediaCenter
                 xmlWriter.WriteAttributeString("id", "menu");
                 xmlWriter.WriteStartElement("ul");
                 xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=0"" title="""">{0}</a></li>", LanguageResource.Home));
-                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=2"" title="""">{0}</a></li>", LanguageResource.Photos));
-                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=1"" title="""">{0}</a></li>", LanguageResource.Music));
-                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=3"" title="""">{0}</a></li>", LanguageResource.Video));
-                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=4"" title="""">{0}</a></li>", LanguageResource.Stream));
+                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=0_2"" title="""">{0}</a></li>", LanguageResource.Photos));
+                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=0_1"" title="""">{0}</a></li>", LanguageResource.Music));
+                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/page.html?id=0_3"" title="""">{0}</a></li>", LanguageResource.Video));
                 xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/control.html"" title="""">{0}</a></li>", LanguageResource.Control));
                 xmlWriter.WriteEndElement();
                 xmlWriter.WriteEndElement();
@@ -413,14 +447,14 @@ namespace HomeMediaCenter
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("id", "right_content");
 
-                    if (id == 0)
+                    if (id == "0")
                     {
                         xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, LanguageResource.NotSelected));
                     }
                     else
                     {
                         xmlWriter.WriteRaw(string.Format(@"<input id=""idInput"" type=""hidden"" value=""{0}""></input>", id));
-                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, this.itemManager.GetTitleSync(id)));
+                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, this.itemManager.GetTitle(id)));
                     }
 
                     xmlWriter.WriteRaw(string.Format(@"<button id=""volPBtn"" type=""button"">{0} +</button>", LanguageResource.Volume));
@@ -436,10 +470,10 @@ namespace HomeMediaCenter
                 }
                 else
                 {
-                    this.itemManager.GetWebSync(id, xmlWriter);
+                    this.itemManager.GetWeb(id, xmlWriter);
                 }
 
-                xmlWriter.WriteRaw(@"<div id=""footer""><div class=""copyright"">Tomáš Pšenák</div></div>");
+                xmlWriter.WriteRaw(@"<div id=""footer""><div class=""copyright"">Home Media Center " + this.modelNumber + "</div></div>");
 
                 //Koniec main_container
                 xmlWriter.WriteEndElement();
@@ -455,41 +489,17 @@ namespace HomeMediaCenter
                 response.AddHreader(HttpHeader.ContentType, "text/html; charset=utf-8");
                 response.SendHeaders();
 
-                stream.CopyTo(request.Socket.GetStream());
+                stream.CopyTo(response.GetStream());
             }
         }
 
         private void GetWebPlayer(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
-            uint index;
-            TimeSpan? duration;
-            string path, subtitlesPath, encodeFeature;
-
-            if (!request.UrlParams.ContainsKey("id") || !uint.TryParse(request.UrlParams["id"], out index) ||
-                !this.itemManager.GetEncodeSync(index, out path, out subtitlesPath, out encodeFeature, out duration))
-            {
-                index = 0;
-                duration = null;
-                path = null;
-                encodeFeature = null;
-            }
-
-            string width = "800", height = "480";
-            if (request.UrlParams.ContainsKey("resolution"))
-            {
-                string[] res = request.UrlParams["resolution"].Split(new char[] { 'x' }, StringSplitOptions.RemoveEmptyEntries);
-                if (res.Length == 2)
-                {
-                    width = res[0];
-                    height = res[1];
-                }
-            }
-
-            string quality = "medium";
-            if (request.UrlParams.ContainsKey("quality"))
-                quality = request.UrlParams["quality"].ToLower();
+            string id;
+            if (!request.UrlParams.ContainsKey("id") || (id = request.UrlParams["id"]) == string.Empty)
+                id = "0";
 
             using (MemoryStream stream = new MemoryStream())
             using (XmlWriter xmlWriter = XmlWriter.Create(stream, new XmlWriterSettings() { Indent = true, Encoding = new UTF8Encoding(false) }))
@@ -526,163 +536,12 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartElement("div");
                 xmlWriter.WriteAttributeString("id", "main_content");
 
-                WebContainer container;
-                if (!request.UrlParams.ContainsKey("codec") || !Enum.TryParse<WebContainer>(request.UrlParams["codec"], true, out container))
-                    container = WebContainer.WEBM;
-
-                if (container == WebContainer.WMV)
-                {
-                    string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&width={1}&height={2}", index, width, height);
-                    switch (quality)
-                    {
-                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=40&quality=1&fps=25"; break;
-                        case "medium": sourceUrl += "&vidbitrate=400&audbitrate=40&quality=1&fps=25"; break;
-                        case "high": sourceUrl += "&vidbitrate=800&audbitrate=80&quality=51&fps=30"; break;
-                    }
-
-                    xmlWriter.WriteRaw(@"<div>");
-                    xmlWriter.WriteRaw(@"<object id=""silverlightControlHost"" data=""data:application/x-silverlight-2,"" type=""application/x-silverlight-2"">");
-                    xmlWriter.WriteRaw(@"<param name=""source"" value=""/web/webplayer.xap"" />");
-                    xmlWriter.WriteRaw(@"<param name=""onError"" value=""onSilverlightError"" />");
-                    xmlWriter.WriteRaw(@"<param name=""background"" value=""white"" />");
-                    xmlWriter.WriteRaw(@"<param name=""minRuntimeVersion"" value=""4.0.60310.0"" />");
-                    xmlWriter.WriteRaw(@"<param name=""autoUpgrade"" value=""true"" />");
-                    xmlWriter.WriteRaw(@"<param name=""onLoad"" value=""silverlightControlLoaded"" />");
-
-                    xmlWriter.WriteStartElement("span");
-                    xmlWriter.WriteValue(LanguageResource.Install + " ");
-
-                    xmlWriter.WriteStartElement("a");
-                    xmlWriter.WriteAttributeString("class", "videoLink");
-                    xmlWriter.WriteAttributeString("href", "http://go.microsoft.com/fwlink/?LinkID=149156&v=4.0.60310.0");
-                    xmlWriter.WriteValue("Silverlight");
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteValue(string.Format(" {0} ", LanguageResource.Or));
-
-                    xmlWriter.WriteStartElement("a");
-                    xmlWriter.WriteAttributeString("href", sourceUrl);
-                    xmlWriter.WriteAttributeString("id", "videoLink");
-                    xmlWriter.WriteAttributeString("class", "videoLink");
-                    xmlWriter.WriteValue(LanguageResource.Play);
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteValue(" " + LanguageResource.ThroughDirectLink);
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteRaw(@"</object>");
-                    xmlWriter.WriteRaw(@"</div>");
-                }
-                else if (container == WebContainer.WEBM)
-                {
-                    string sourceUrl = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}", index, width, height);
-                    switch (quality)
-                    {
-                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1"; break;
-                        case "medium": sourceUrl += "&vidbitrate=400&audbitrate=64&quality=1"; break;
-                        case "high": sourceUrl += "&vidbitrate=800&audbitrate=128&quality=51"; break;
-                    }
-
-                    xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" />");
-
-                    xmlWriter.WriteStartElement("source");
-                    xmlWriter.WriteAttributeString("src", sourceUrl);
-                    xmlWriter.WriteAttributeString("type", "video/webm; codecs=\"vp8.0, vorbis\"");
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteStartElement("span");
-                    xmlWriter.WriteAttributeString("id", "streamVideoSpan");
-
-                    xmlWriter.WriteStartElement("a");
-                    xmlWriter.WriteAttributeString("href", sourceUrl);
-                    xmlWriter.WriteAttributeString("id", "videoLink");
-                    xmlWriter.WriteAttributeString("class", "videoLink");
-                    xmlWriter.WriteValue(LanguageResource.Play);
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteValue(" " + LanguageResource.ThroughDirectLink);
-                    xmlWriter.WriteEndElement();
-
-                    xmlWriter.WriteRaw(@"</video>");
-                }
-                else
-                {
-                    string sourceUrl = string.Format("/encode/web%3Fid={0}&codec=flv_ts&width={1}&height={2}", index, width, height);
-                    switch (quality)
-                    {
-                        case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1&fps=25"; break;
-                        case "medium": sourceUrl += "&vidbitrate=700&audbitrate=128&quality=1&fps=25"; break;
-                        case "high": sourceUrl += "&vidbitrate=1500&audbitrate=256&quality=51&fps=30"; break;
-                    }
-                    sourceUrl = sourceUrl.Replace("=", "%3D").Replace("&", "%26");
-
-                    xmlWriter.WriteStartElement("a");
-                    xmlWriter.WriteAttributeString("id", "videoLink");
-                    xmlWriter.WriteAttributeString("href", sourceUrl);
-                    xmlWriter.WriteAttributeString("style", string.Format("display:block;margin-left:auto;margin-right:auto;width:{0}px;height:{1}px;", width, height));
-                    xmlWriter.WriteValue(LanguageResource.Play + " " + LanguageResource.ThroughDirectLink);
-                    xmlWriter.WriteEndElement();
-                }
-
-                xmlWriter.WriteStartElement("form");
-                xmlWriter.WriteAttributeString("id", "mainForm");
-                xmlWriter.WriteAttributeString("action", "/Web/player.html");
-                xmlWriter.WriteAttributeString("method", "get");
-                xmlWriter.WriteAttributeString("enctype", "application/x-www-form-urlencoded");
-
-                xmlWriter.WriteRaw(string.Format(@"<input type=""hidden"" name=""id"" value=""{0}"" />", index));
-
-                xmlWriter.WriteRaw(@"<span id=""streamPos"">0:00:00</span>");
-                xmlWriter.WriteRaw(@"<div id=""seekSlider""></div>");
-                xmlWriter.WriteRaw(string.Format(@"<span id=""streamLength"">{0}</span>", 
-                    duration.HasValue ? duration.Value.ToString("h':'mm':'ss") : "0:00:00"));
-                xmlWriter.WriteRaw(@"<div id=""volumeSlider""></div>");
-                xmlWriter.WriteRaw(@"<span id=""volumeVal"">100%</span>");
-
-                xmlWriter.WriteRaw(@"<div id=""streamToolbar"" class=""ui-widget-header ui-corner-all"">");
-                xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""playButton"">{0}</button>", LanguageResource.Play));
-                xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""pauseButton"">{0}</button>", LanguageResource.Pause));
-
-                xmlWriter.WriteRaw(@"<span id=""codecRadios"">");
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""webmRadio"" name=""codec"" value=""webm"" {0} /><label for=""webmRadio"">WebM</label>",
-                    container == WebContainer.WEBM ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""wmvRadio"" name=""codec"" value=""wmv"" {0} /><label for=""wmvRadio"">Wmv</label>",
-                    container == WebContainer.WMV ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""flvRadio"" name=""codec"" value=""flv"" {0} /><label for=""flvRadio"">Flash</label>",
-                    container == WebContainer.FLV ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(@"</span>");
-
-                string res = width + "x" + height;
-                xmlWriter.WriteRaw(@"<span id=""resolutionRadios"">");
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r1280x720Radio"" name=""resolution"" value=""1280x720"" {0} /><label for=""r1280x720Radio"">1280x720</label>",
-                    res == "1280x720" ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r800x480Radio"" name=""resolution"" value=""800x480"" {0} /><label for=""r800x480Radio"">800x480</label>",
-                    res == "800x480" ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r640x480Radio"" name=""resolution"" value=""640x480"" {0} /><label for=""r640x480Radio"">640x480</label>",
-                    res == "640x480" ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r320x240Radio"" name=""resolution"" value=""320x240"" {0} /><label for=""r320x240Radio"">320x240</label>",
-                    res == "320x240" ? "checked=\"checked\"" : string.Empty));
-                xmlWriter.WriteRaw(@"</span>");
-
-                xmlWriter.WriteRaw(@"<span id=""qualityRadios"">");
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""lowRadio"" name=""quality"" value=""low"" {0} /><label for=""lowRadio"">{1}</label>",
-                    quality == "low" ? "checked=\"checked\"" : string.Empty, LanguageResource.Low));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""mediumRadio"" name=""quality"" value=""medium"" {0} /><label for=""mediumRadio"">{1}</label>",
-                    quality == "medium" ? "checked=\"checked\"" : string.Empty, LanguageResource.Medium));
-                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""highRadio"" name=""quality"" value=""high"" {0} /><label for=""highRadio"">{1}</label>",
-                    quality == "high" ? "checked=\"checked\"" : string.Empty, LanguageResource.High));
-                xmlWriter.WriteRaw(@"</span>");
-
-                xmlWriter.WriteRaw(@"<button id=""submitButton"" type=""submit"">Ok</button>");
-                xmlWriter.WriteRaw(@"</div>");
-
-                //Koniec form
-                xmlWriter.WriteEndElement();
+                this.itemManager.GetWebPlayer(id, xmlWriter, request.UrlParams);
 
                 //Koniec main_content
-                xmlWriter.WriteEndElement();
+                xmlWriter.WriteFullEndElement();
 
-                xmlWriter.WriteRaw(@"<div id=""footer""><div class=""copyright"">Tomáš Pšenák</div></div>");
+                xmlWriter.WriteRaw(@"<div id=""footer""><div class=""copyright"">Home Media Center " + this.modelNumber + "</div></div>");
 
                 //Koniec main_container
                 xmlWriter.WriteEndElement();
@@ -698,7 +557,7 @@ namespace HomeMediaCenter
                 response.AddHreader(HttpHeader.ContentType, "text/html; charset=utf-8");
                 response.SendHeaders();
 
-                stream.CopyTo(request.Socket.GetStream());
+                stream.CopyTo(response.GetStream());
             }
         }
 
@@ -734,7 +593,7 @@ namespace HomeMediaCenter
 
         private void SendResource(HttpRequest request, string mime, bool encode = false)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
             string name = request.Url.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
 
@@ -755,7 +614,7 @@ namespace HomeMediaCenter
                         if (request.Method == "GET")
                         {
                             memStream.Position = 0;
-                            memStream.CopyTo(request.Socket.GetStream());
+                            memStream.CopyTo(response.GetStream());
                         }
                     }
                 }
@@ -767,7 +626,7 @@ namespace HomeMediaCenter
 
                     if (request.Method == "GET")
                     {
-                        resourceStream.CopyTo(request.Socket.GetStream());
+                        resourceStream.CopyTo(response.GetStream());
                     }
                 }
             }
@@ -775,7 +634,7 @@ namespace HomeMediaCenter
 
         private void GetWebDevices(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
 
             string type;
             if (request.UrlParams.ContainsKey("type"))
@@ -788,7 +647,7 @@ namespace HomeMediaCenter
                 bool refresh = false;
                 bool.TryParse(request.UrlParams["refresh"], out refresh);
                 if (refresh)
-                    this.controlPoint.Refresh(type);
+                    this.controlPoint.Refresh();
             }
 
             using (MemoryStream stream = new MemoryStream())
@@ -797,7 +656,7 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartDocument();
 
                 xmlWriter.WriteStartElement("devices");
-                this.controlPoint.WriteXml(xmlWriter);
+                this.controlPoint.WriteXml(xmlWriter, type);
                 xmlWriter.WriteEndElement();
 
                 xmlWriter.Flush();
@@ -807,7 +666,7 @@ namespace HomeMediaCenter
                 response.AddHreader(HttpHeader.ContentType, "text/xml; charset=utf-8");
                 response.SendHeaders();
 
-                stream.CopyTo(request.Socket.GetStream());
+                stream.CopyTo(response.GetStream());
             }
         }
 
@@ -822,13 +681,13 @@ namespace HomeMediaCenter
                     break;
                 case "volm": this.controlPoint.VolumeMinus(device);
                     break;
-                case "play": this.controlPoint.Play(device, this.server.HttpPort, uint.Parse(request.UrlParams["id"]), this.itemManager);
+                case "play": this.controlPoint.Play(device, this.server.HttpPort, request.UrlParams["id"], this.itemManager);
                     break;
                 case "stop": this.controlPoint.Stop(device);
                     break;
             }
 
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendHeaders();
         }
     }

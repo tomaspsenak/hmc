@@ -10,7 +10,7 @@ namespace HomeMediaCenter
 {
     public class DirectShowEncoder : EncoderBuilder
     {
-        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, WEBM, WEBM_TS, WMV2, WMV3A2, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS }
+        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, MPEG2_TS_H264, WEBM, WEBM_TS, WMV2, WMV3, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS }
 
         private DSEncoder encoder;
         private DSCodec codec;
@@ -51,6 +51,11 @@ namespace HomeMediaCenter
             return ContainerType.IsWEBMInstalled();
         }
 
+        public static bool IsHMCInstalled()
+        {
+            return ContainerType.IsHMCInstalled();
+        }
+
         public static string[] GetVideoInputNames()
         {
             return WebcamInput.GetVideoInputNames().Select(a => "Webcam_" + a).ToArray();
@@ -64,10 +69,11 @@ namespace HomeMediaCenter
                 case DSCodec.MPEG2_TS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_PS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_TS: goto case DSCodec.MPEG2_PS;
+                case DSCodec.MPEG2_TS_H264: goto case DSCodec.MPEG2_PS;
                 case DSCodec.WEBM: return (this.video.HasValue && this.video.Value == 0) ? "audio/webm" : "video/webm";
                 case DSCodec.WEBM_TS: goto case DSCodec.WEBM;
                 case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "audio/x-ms-wma" : "video/x-ms-wmv";
-                case DSCodec.WMV3A2: goto case DSCodec.WMV2;
+                case DSCodec.WMV3: goto case DSCodec.WMV2;
                 case DSCodec.MP3: return "audio/mpeg";
                 case DSCodec.MP3_TS: goto case DSCodec.MP3;
                 case DSCodec.MP4: return "video/mp4";
@@ -86,7 +92,9 @@ namespace HomeMediaCenter
                 case DSCodec.MPEG2_TS: return (this.video.HasValue && this.video.Value == 0) ? string.Empty : "DLNA.ORG_PN=MPEG_TS_SD_EU_ISO;";
                 case DSCodec.MPEG2LAYER1_PS: goto case DSCodec.MPEG2_PS;
                 case DSCodec.MPEG2LAYER1_TS: goto case DSCodec.MPEG2_TS;
+                case DSCodec.MPEG2_TS_H264: goto case DSCodec.MPEG2_TS;
                 case DSCodec.WMV2: return (this.video.HasValue && this.video.Value == 0) ? "DLNA.ORG_PN=WMABASE;" : "DLNA.ORG_PN=WMVMED_BASE;";
+                case DSCodec.WMV3: goto case DSCodec.WMV2;
                 case DSCodec.MP3: return "DLNA.ORG_PN=MP3;";
                 case DSCodec.MP3_TS: goto case DSCodec.MP3;
                 default: return string.Empty;
@@ -146,11 +154,15 @@ namespace HomeMediaCenter
                 }
 
                 //Nastavenie video a zvukovej stopy
-                uint actVideo = 1, actAudio = 1;
+                uint actVideo = 1, actAudio = 1, actSubtitle = 1;
                 foreach (PinInfoItem item in enc.SourcePins)
                 {
                     if (item.MediaType == PinMediaType.Video)
                     {
+                        //Ak sa jedna o stream a uzivatel nezadal index, nenastavuje sa IsSelected - necha sa povodne
+                        if (item.IsStream && !this.video.HasValue)
+                            continue;
+
                         if (actVideo == setVideo)
                             item.IsSelected = true;
                         else
@@ -159,6 +171,10 @@ namespace HomeMediaCenter
                     }
                     else if (item.MediaType == PinMediaType.Audio)
                     {
+                        //Ak sa jedna o stream a uzivatel nezadal index, nenastavuje sa IsSelected - necha sa povodne
+                        if (item.IsStream && !this.audio.HasValue)
+                            continue;
+
                         if (actAudio == setAudio)
                             item.IsSelected = true;
                         else
@@ -167,9 +183,12 @@ namespace HomeMediaCenter
                     }
                     else if (item.MediaType == PinMediaType.Subtitle)
                     {
+                        //Ak uzivatel nevyziadal titulky - nezapnu sa ani ked ide stream
                         string lang = ((PinSubtitleItem)item).LangName;
-                        if (string.Compare(lang, subPath, true) == 0)
+                        if (string.Compare(lang, subPath, true) == 0 || actSubtitle.ToString() == subPath)
                         {
+                            //Ak parameter zodpoveda nazvu jazyka alebo indexu nastavi sa IsSelected
+                            //subPath sa nastavi na null - aby ho enkoder nepovazoval ze cestu k titulkom
                             subPath = null;
                             item.IsSelected = true;
                         }
@@ -177,6 +196,7 @@ namespace HomeMediaCenter
                         {
                             item.IsSelected = false;
                         }
+                        actSubtitle++;
                     }
                     else
                     {
@@ -234,6 +254,9 @@ namespace HomeMediaCenter
                     case DSCodec.MPEG2LAYER1_TS: container = ContainerType.MPEG2_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
                         scanType.HasValue ? scanType.Value : ScanType.Interlaced, subtitles, subPath, keepAspect, MpaLayer.Layer1, audBitrate * 1000);
                         break;
+                    case DSCodec.MPEG2_TS_H264: container = ContainerType.MPEG2_TS_H264(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
+                        subtitles, subPath, keepAspect, audBitrate * 1000);
+                        break;
                     case DSCodec.WEBM: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate, quality, fps, subtitles, 
                         subPath, keepAspect, audBitrate);
                         break;
@@ -243,7 +266,7 @@ namespace HomeMediaCenter
                     case DSCodec.WMV2: container = ContainerType.WMV(width, height, WMVideoSubtype.WMMEDIASUBTYPE_WMV2, vidBitrate * 1000, quality, 
                         fps, subtitles, subPath, audBitrate * 1000);
                         break;
-                    case DSCodec.WMV3A2: container = ContainerType.WMV(width, height, WMVideoSubtype.WMMEDIASUBTYPE_WMV3, vidBitrate * 1000, quality,
+                    case DSCodec.WMV3: container = ContainerType.WMV(width, height, WMVideoSubtype.WMMEDIASUBTYPE_WMV3, vidBitrate * 1000, quality,
                         fps, subtitles, subPath, audBitrate * 1000);
                         break;
                     case DSCodec.AVI: container = ContainerType.AVI(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
@@ -252,9 +275,9 @@ namespace HomeMediaCenter
                     case DSCodec.MP4: container = ContainerType.MP4(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath, 
                         keepAspect, audBitrate * 1000);
                         break;
-                    case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate, quality);
+                    case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate * 1000, quality);
                         break;
-                    case DSCodec.MP3_TS: container = ContainerType.MP3_TS(BitrateMode.CBR, audBitrate, quality);
+                    case DSCodec.MP3_TS: container = ContainerType.MP3_TS(BitrateMode.CBR, audBitrate * 1000, quality);
                         break;
                     case DSCodec.FLV: container = ContainerType.FLV(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
                         keepAspect, audBitrate * 1000);

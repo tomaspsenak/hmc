@@ -159,8 +159,8 @@
   <data name="EncodeParameters" xml:space="preserve">
     <value>Parametre konverzie:</value>
   </data>
-  <data name="EncodeParametersStream" xml:space="preserve">
-    <value>Parametre konverzie (stream):</value>
+  <data name="Stream" xml:space="preserve">
+    <value>Stream</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>Chyba</value>
@@ -302,5 +302,11 @@
   </data>
   <data name="RunAtStartup" xml:space="preserve">
     <value>Spustiť pri štarte systému</value>
+  </data>
+  <data name="RealTimeDatabaseRefresh" xml:space="preserve">
+    <value>Obnova databázy v reálnom čase</value>
+  </data>
+  <data name="EnablePortForwarding" xml:space="preserve">
+    <value>Povoliť UPnP presmerovanie portu</value>
   </data>
 </root>
