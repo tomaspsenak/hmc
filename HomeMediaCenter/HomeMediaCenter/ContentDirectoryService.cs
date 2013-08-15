@@ -41,21 +41,21 @@ namespace HomeMediaCenter
         [UpnpServiceArgument(0, "SearchCaps", "SearchCapabilities")]
         private void GetSearchCapabilities(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody("");
         }
 
         [UpnpServiceArgument(0, "SortCaps", "SortCapabilities")]
         private void GetSortCapabilities(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody("dc:title,dc:date");
         }
 
         [UpnpServiceArgument(0, "Id", "SystemUpdateID")]
         private void GetSystemUpdateID(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody("0");
         }
 
@@ -72,17 +72,17 @@ namespace HomeMediaCenter
             [UpnpServiceArgument("A_ARG_TYPE_SortCriteria")]    string SortCriteria)
         {
             string Result, NumberReturned, TotalMatches;
-            uint objectID, startingIndex, requestedCount;
+            uint startingIndex, requestedCount;
             HomeMediaCenter.BrowseFlag browseFlag;
 
-            if (!uint.TryParse(ObjectID, out objectID) || !uint.TryParse(StartingIndex, out startingIndex) || 
-                !uint.TryParse(RequestedCount, out requestedCount) || !Enum.TryParse(BrowseFlag, true, out browseFlag))
-                throw new HttpException(402, "Browse - parse exception");
+            if (!uint.TryParse(StartingIndex, out startingIndex) || !uint.TryParse(RequestedCount, out requestedCount) || 
+                !Enum.TryParse(BrowseFlag, true, out browseFlag))
+                throw new SoapException(402, "Invalid Args");
 
-            this.device.ItemManager.BrowseSync(request.Headers, objectID, browseFlag, Filter, startingIndex, requestedCount, SortCriteria,
+            this.device.ItemManager.Browse(request.Headers, ObjectID, browseFlag, Filter, startingIndex, requestedCount, SortCriteria,
                 out Result, out NumberReturned, out TotalMatches);
 
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody(Result, NumberReturned, TotalMatches, "0");
         }
 
@@ -102,17 +102,17 @@ namespace HomeMediaCenter
                 writer.WriteAttributeString("version", "1");
 
                 writer.WriteStartElement("container");
-                writer.WriteAttributeString("id", "2");
+                writer.WriteAttributeString("id", "0_" + Item.ImageIndex);
                 writer.WriteAttributeString("type", "object.item.imageItem");
                 writer.WriteEndElement();
 
                 writer.WriteStartElement("container");
-                writer.WriteAttributeString("id", "1");
+                writer.WriteAttributeString("id", "0_" + Item.AudioIndex);
                 writer.WriteAttributeString("type", "object.item.audioItem");
                 writer.WriteEndElement();
 
                 writer.WriteStartElement("container");
-                writer.WriteAttributeString("id", "3");
+                writer.WriteAttributeString("id", "0_" + Item.VideoIndex);
                 writer.WriteAttributeString("type", "object.item.videoItem");
                 writer.WriteEndElement();
 
@@ -120,7 +120,7 @@ namespace HomeMediaCenter
 
                 writer.WriteEndElement();
             }
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.SendSoapHeadersBody(sb.ToString());
         }
     }

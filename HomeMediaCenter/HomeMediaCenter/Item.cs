@@ -3,85 +3,131 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using System.Data.Linq;
+using System.Data.Linq.Mapping;
 
 namespace HomeMediaCenter
 {
-    [Serializable]
+    [Table(Name = "Items")]
+    [InheritanceMapping(Code = 0, Type = typeof(ItemContainerRoot), IsDefault = true)]
+    [InheritanceMapping(Code = 1, Type = typeof(ItemContainerStream))]
+    [InheritanceMapping(Code = 2, Type = typeof(ItemContainerVideo))]
+    [InheritanceMapping(Code = 3, Type = typeof(ItemContainer))]
+    [InheritanceMapping(Code = 4, Type = typeof(ItemAudio))]
+    [InheritanceMapping(Code = 5, Type = typeof(ItemImage))]
+    [InheritanceMapping(Code = 6, Type = typeof(ItemVideo))]
+    [InheritanceMapping(Code = 7, Type = typeof(ItemStream))]
     public abstract class Item
     {
-        private uint id;
-        private readonly string title;
-        private readonly ItemContainer parent;
+        public const string AudioIndex = "1";
+        public const string ImageIndex = "2";
+        public const string VideoIndex = "3";
 
-        public Item(string title, ItemContainer parent)
+        [Column(Name = "ParentId", IsPrimaryKey = false, DbType = "int", CanBeNull = true)]
+        protected int? parentId;
+
+        private EntityRef<ItemContainer> parent = new EntityRef<ItemContainer>();
+
+        public Item(string title, string path, ItemContainer parent)
         {
-            this.title = title;
-            this.parent = parent;
+            this.Title = title;
+            this.Path = path;
+            if (parent != null)
+            {
+                Parent = parent;
+                parent.Items.Add(this);
+            }
         }
 
-        public uint Id
+        [Column(IsPrimaryKey = true, DbType = "int IDENTITY(0,1)", CanBeNull = false, IsDbGenerated = true)]
+        public int Id
         {
-            get { return this.id; }
-            set { this.id = value; }
+            get; set;
         }
 
+        [Column(IsPrimaryKey = false, DbType = "nvarchar(255)", CanBeNull = false, UpdateCheck = UpdateCheck.Never)]
         public string Title
         {
-            get { return this.title; }
+            get; set;
         }
 
+        [Column(IsPrimaryKey = false, DbType = "nvarchar(255)", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
+        public string Path
+        {
+            get; set;
+        }
+
+        [Column(IsPrimaryKey = false, DbType = "tinyint", CanBeNull = false, IsDiscriminator = true)]
+        public int Type
+        {
+            get; set;
+        }
+
+        [Association(Storage = "parent", IsForeignKey = true, ThisKey = "parentId", OtherKey = "Id")]
         public ItemContainer Parent
         {
-            get { return this.parent; }
+            get { return this.parent.Entity; }
+            set { this.parent.Entity = value; }
+        }
+
+        public virtual IEnumerable<Item> Children
+        {
+            get { return Enumerable.Empty<Item>(); }
         }
 
         public virtual DateTime Date
         {
             get { return new DateTime(0); }
+            set { }
         }
 
-        public virtual string Path
+        public override bool Equals(object obj)
         {
-            get { return null; }
+            if (obj is string)
+                return this.Path == (string)obj;
+            return base.Equals(obj);
         }
 
-        public virtual string SubtitlesPath
+        public override int GetHashCode()
         {
-            get { return null; }
+            if (this.Path == null)
+                return 0;
+            return this.Path.GetHashCode();
         }
 
-        public virtual string Mime
+        public virtual string GetMime() { return null; }
+
+        public virtual string GetPath() { return this.Path; }
+
+        public virtual TimeSpan? GetDuration() { return null; }
+
+        public virtual string GetSubtitlesPath() { return null; }
+
+        public virtual string GetFileFeature(MediaSettings settings) { return string.Empty; }
+
+        public virtual string GetEncodeFeature(MediaSettings settings) { return string.Empty; }
+
+        public virtual void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive) { }
+
+        public virtual void RemoveMe(DataContext context) { }
+
+        public virtual void BrowseDirectChildren(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet,
+            uint startingIndex, uint requestedCount, string sortCriteria, out string numberReturned, out string totalMatches, ItemContainer skippedItem = null)
         {
-            get { return null; }
+            numberReturned = "0";
+            totalMatches = "0";
         }
 
-        public virtual TimeSpan? Duration
-        {
-            get { return null; }
-        }
+        public virtual void BrowseWebDirectChildren(XmlWriter xmlWriter, MediaSettings settings, string idParams) { }
 
-        public virtual string GetFileFeature(MediaSettings settings)
-        {
-            return string.Empty;
-        }
+        public virtual void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams) { }
 
-        public virtual string GetEncodeFeature(MediaSettings settings)
-        {
-            return string.Empty;
-        }
+        public abstract bool IsType(MediaType type);
 
-        public virtual void RefresMe(ItemManager manager, IEnumerable<string> directories, HttpMimeDictionary mimeTypes,
-            MediaSettings settings, HashSet<string> subtitleExt)
-        {
-        }
+        public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet);
 
-        public virtual IEnumerable<Item> GetChilds()
-        {
-            return Enumerable.Empty<Item>();
-        }
+        public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId);
 
-        public abstract void WriteMe(XmlWriter writer, MediaSettings settings, string host, HashSet<string> filterSet);
-
-        public abstract void WriteMe(XmlWriter xmlWriter, MediaSettings settings);
+        public abstract void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams);
     }
 }

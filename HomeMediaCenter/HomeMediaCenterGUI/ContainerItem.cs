@@ -37,10 +37,12 @@ namespace HomeMediaCenterGUI
         {
             containers = new List<ContainerItem> { 
                 new ContainerItem("MPEG2_PS  (DirectShow)", ".mpeg", "mpeg2_ps", true, false, true, true, false, true),
-                new ContainerItem("MPEG2_TS  (DirectShow)", ".mpeg", "mpeg2_ts", true, true, true, true, false, true),
+                new ContainerItem("MPEG2_TS  (DirectShow)", ".ts", "mpeg2_ts", true, true, true, true, false, true),
+                new ContainerItem("MPEG2_TS_H264  (DirectShow)", ".ts", "mpeg2_ts_h264", true, true, true, true, false, true),
                 new ContainerItem("WebM - VP8, Vorbis  (DirectShow)", ".webm", "webm", true, false, true, true, false, false),
                 new ContainerItem("WebM - VP8, Vorbis for streaming  (DirectShow)", ".webm", "webm_ts", true, false, true, true, false, true),
                 new ContainerItem("WMV - WMV2, VMA8  (DirectShow)", ".wmv", "wmv2", true, false, true, true, false, true),
+                new ContainerItem("WMV - WMV3, VMA9  (DirectShow)", ".wmv", "wmv3", true, false, true, true, false, true),
                 new ContainerItem("MP3  (DirectShow)", ".mp3", "mp3", true, false, true, false, false, false),
                 new ContainerItem("MP3 for streaming  (DirectShow)", ".mp3", "mp3_ts", true, false, true, false, false, true),
                 new ContainerItem("AVI - MPEG-4, MP3  (DirectShow)", ".avi", "avi", true, false, true, true, false, false),
@@ -55,7 +57,7 @@ namespace HomeMediaCenterGUI
             if (Environment.OSVersion.Version.Major > 5)
             {
                 containers.Add(new ContainerItem("MP4 - H264, AAC  (Media Foundation)", ".mp4", "mp4_mf", false, false, true, true, false, false));
-                containers.Add(new ContainerItem("WMV - WMV3, VMA9  (Media Foundation)", ".wmv", "wmv3", false, false, true, true, false, false));
+                containers.Add(new ContainerItem("WMV - WMV3, VMA9  (Media Foundation)", ".wmv", "wmv3_mf", false, false, true, true, false, false));
             }
         }
 

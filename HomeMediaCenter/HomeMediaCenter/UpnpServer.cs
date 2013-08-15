@@ -86,7 +86,7 @@ namespace HomeMediaCenter
 
         public void GetDescription(HttpRequest request)
         {
-            HttpResponse response = new HttpResponse(request);
+            HttpResponse response = request.GetResponse();
             response.AddHreader(HttpHeader.ContentLength, this.descArray.Length.ToString());
             response.AddHreader(HttpHeader.ContentType, "text/xml; charset=\"utf-8\"");
 
@@ -94,7 +94,7 @@ namespace HomeMediaCenter
             {
                 response.SendHeaders();
 
-                stream.CopyTo(request.Socket.GetStream());
+                stream.CopyTo(response.GetStream());
             }
         }
 

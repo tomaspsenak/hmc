@@ -85,6 +85,7 @@ namespace HomeMediaCenter
             set.Add(new HttpMime(".mpga", "mpeg", MediaType.Audio));
             set.Add(new HttpMime(".wav", "wav", MediaType.Audio));
             set.Add(new HttpMime(".wma", "x-ms-wma", MediaType.Audio));
+            set.Add(new HttpMime(".flac", "flac", MediaType.Audio));
 
             set.Add(new HttpMime(".bmp", "bmp", MediaType.Image));
             set.Add(new HttpMime(".gif", "gif", MediaType.Image));

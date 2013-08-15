@@ -90,5 +90,11 @@ namespace WebPlayer
                 this.Buffering.Stop();
             }
         }
+
+        private void UserControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Application.Current.Host.Content.IsFullScreen = !Application.Current.Host.Content.IsFullScreen;
+            this.LayoutRoot.Background = new SolidColorBrush(Application.Current.Host.Content.IsFullScreen ? Colors.Black : Colors.White);
+        }
     }
 }

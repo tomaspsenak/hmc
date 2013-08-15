@@ -179,9 +179,10 @@ namespace HomeMediaCenterGUI
             this.infoTextBox.AppendText("\tmpeg2layer1_ps\t(MPEG2 Program stream, audio layer 1)\r\n");
             this.infoTextBox.AppendText("\tmpeg2_ts\t\t(MPEG2 Transport stream, audio layer 2)\r\n");
             this.infoTextBox.AppendText("\tmpeg2layer1_ts\t(MPEG2 Transport stream, audio layer 1)\r\n");
+            this.infoTextBox.AppendText("\tmpeg2_ts_h264\t(MPEG2 Transport stream, H264 video, AAC audio layer)\r\n");
             this.infoTextBox.AppendText("\twebm_ts\t\t(WebM, VP8 video, Vorbis audio)\r\n");
             this.infoTextBox.AppendText("\twmv2\t\t(Windows Media Video 8, Windows Media Audio 8)\r\n");
-            this.infoTextBox.AppendText("\twmv3a2\t\t(Windows Media Video 9, Windows Media Audio 8)\r\n");
+            this.infoTextBox.AppendText("\twmv3\t\t(Windows Media Video 9, Windows Media Audio 10)\r\n");
             this.infoTextBox.AppendText("\tmp3_ts\t\t(MPEG audio layer 3)\r\n");
             this.infoTextBox.AppendText("\tflv_ts\t\t(Sorenson Spark, MPEG audio layer 3)\r\n");
             this.infoTextBox.AppendText("\tbmp\t\t(Bitmap image file)\r\n");

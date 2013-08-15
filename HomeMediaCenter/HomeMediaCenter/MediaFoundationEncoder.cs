@@ -9,7 +9,7 @@ namespace HomeMediaCenter
 {
     internal class MediaFoundationEncoder : EncoderBuilder
     {
-        private enum MFCodec { WMV3, MP4_MF }
+        private enum MFCodec { WMV3_MF, MP4_MF }
 
         private MFEncoder encoder;
         private MFCodec codec;
@@ -35,7 +35,7 @@ namespace HomeMediaCenter
             switch (this.codec)
             {
                 case MFCodec.MP4_MF: return "video/mp4";
-                case MFCodec.WMV3: return "video/x-ms-wmv";
+                case MFCodec.WMV3_MF: return "video/x-ms-wmv";
                 default: return string.Empty;
             }
         }
@@ -137,7 +137,7 @@ namespace HomeMediaCenter
                         video = new VideoStream(VideoFormat.H264, width, height, numerator, denominator, InterlaceMode.Progressive, vidBitrate);
                         audio = new AudioStream(AudioFormat.AAC, 2, 44100, audBitrate);
                         break;
-                    case MFCodec.WMV3:
+                    case MFCodec.WMV3_MF:
                         container = ContainerType.MF_ASF;
                         video = new VideoStream(VideoFormat.WMV3, width, height, numerator, denominator, InterlaceMode.Progressive, vidBitrate);
                         audio = new AudioStream(AudioFormat.WMAudioV9, 2, 44100, audBitrate);

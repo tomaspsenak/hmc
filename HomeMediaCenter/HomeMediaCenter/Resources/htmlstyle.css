@@ -127,7 +127,6 @@ img.box_img{
 	padding:0 0 0 25px;
 	background:url(/web/images/htmlarrow.gif) no-repeat left;
 }
-
 /*----------------middle green box-----------*/
 .green_box{
 	width:900px;
@@ -137,11 +136,33 @@ img.box_img{
 	background-position:50px 0px;
 }
 /*--------------------------gallery------------------------*/
-.gallery a{
-    color:white;
+.gallery a, .galleryFolders a{
+    border-style: solid;
+    border-width: 1px;
+    border-color: white;
+    display: inline-block;
+    width: 90px;
+    height: 80px;
+    overflow: hidden;
+    padding: 5px 0 5px 0;
+    margin: 0px;
+    font-size: 13px;
+    color: #f7951e;
+    text-decoration: none;
+    text-align: center;
 }
-.gallery a img{
-    padding: 5px;
+.gallery a:hover, .galleryFolders a:hover{
+    border-color: #f7951e;
+    text-decoration:underline;
+}
+.gallery a img, .galleryFolders img{
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    border: 0px;
+}
+.galleryFolders img{
+	width: 30px;
 }
 /*--------------------------main_content-------------------*/
 #main_content{
@@ -172,11 +193,31 @@ img.box_img{
 	color:#f7951e;
 	text-decoration:none;
 }
+#main_content table{
+    border-collapse:collapse;
+    width: 100%;
+}
 #main_content table a img{
     border:0px #000000 solid;
 }
 #main_content table a:hover{
     text-decoration:underline;
+}
+#main_content table tr{
+    border-top-style: solid;
+    border-right-style: solid;
+    border-left-style: solid;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-left-width: 1px;
+    border-top-color: white;
+    border-right-color: white;
+    border-left-color: white;
+}
+#main_content table tbody tr:hover{
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-color: #f7951e;
 }
 #main_content #streamVideo, #streamVideoSpan, #silverlightControlHost{
     display:block;

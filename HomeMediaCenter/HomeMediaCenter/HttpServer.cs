@@ -20,8 +20,8 @@ namespace HomeMediaCenter
         private readonly Dictionary<string, HttpRouteDelegate> routeTable = new Dictionary<string, HttpRouteDelegate>(StringComparer.OrdinalIgnoreCase);
         private readonly LinkedList<HttpRequest> requestList = new LinkedList<HttpRequest>();
 
-        private int receiveTimeout = 20000;
-        private int sendTimeout = 20000;
+        private int receiveTimeout = 900000;
+        private int sendTimeout = 900000;
 
         public HttpServer(UpnpServer upnpServer)
         {
@@ -89,7 +89,7 @@ namespace HomeMediaCenter
                 lock (this.requestList)
                 {
                     foreach (HttpRequest req in this.requestList)
-                        req.Socket.Close();
+                        req.CloseStream();
                 }
 
                 while (true)
@@ -181,17 +181,25 @@ namespace HomeMediaCenter
             {
                 this.upnpServer.RootDevice.OnLogEvent(ex.Message);
 
-                HttpResponse response = new HttpResponse(lln.Value);
+                HttpResponse response = lln.Value.GetResponse();
                 response.SetStateCode(ex.Code);
                 try { response.SendHeaders(); }
+                catch { }
+            }
+            catch (SoapException ex)
+            {
+                this.upnpServer.RootDevice.OnLogEvent(ex.Message);
+
+                HttpResponse response = lln.Value.GetResponse();
+                try { response.SendSoapErrorHeadersBody(ex.Code, ex.Message); }
                 catch { }
             }
             catch (Exception ex)
             {
                 this.upnpServer.RootDevice.OnLogEvent(ex.Message);
 
-                HttpResponse response = new HttpResponse(lln.Value);
-                response.SetStateCode(400);
+                HttpResponse response = lln.Value.GetResponse();
+                response.SetStateCode(500);
                 try { response.SendHeaders(); }
                 catch { }
             }
@@ -203,8 +211,12 @@ namespace HomeMediaCenter
 
                 this.upnpServer.RootDevice.OnLogEvent(this.requestList.Count);
             }
+            
+            //Pockat kratky cas kym sa uzatvori spojenie
+            Thread.Sleep(10);
             //Uzatvorenie spojenia
-            lln.Value.Socket.Close();
+            try { lln.Value.CloseStream(); }
+            catch { }
         }
     }
 }

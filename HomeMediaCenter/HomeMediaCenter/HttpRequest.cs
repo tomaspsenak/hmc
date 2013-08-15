@@ -11,7 +11,7 @@ namespace HomeMediaCenter
 {
     public class HttpRequest
     {
-        private readonly TcpClient socket;
+        private readonly NetworkStream stream;
         private readonly Thread thread;
 
         private readonly Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -25,22 +25,18 @@ namespace HomeMediaCenter
         private string soapService;
         private string[] soapOutParam;
 
-        private bool responseSended;
+        private HttpResponse response;
+        private ChunkedStream chunkedStream;
 
         public HttpRequest(TcpClient socket, Thread thread)
         {
-            this.socket = socket;
+            this.stream = socket.GetStream();
             this.thread = thread;
         }
 
         public Thread Thread
         {
             get { return this.thread; }
-        }
-
-        public TcpClient Socket
-        {
-            get { return this.socket; }
         }
 
         public string Method
@@ -90,20 +86,13 @@ namespace HomeMediaCenter
             this.soapOutParam = soapOutParam;
         }
 
-        public bool ResponseSended
-        {
-            get { return this.responseSended; }
-            set { this.responseSended = value; }
-        }
-
         public void ParseHeaders()
         {
-            NetworkStream stream = this.socket.GetStream();
             StringBuilder sb = new StringBuilder(128);
             bool isLastR = false, isFirstLine = true;
             int iByte;
 
-            while ((iByte = stream.ReadByte()) >= 0)
+            while ((iByte = this.stream.ReadByte()) >= 0)
             {
                 if (iByte == '\n' && isLastR)
                 {
@@ -153,6 +142,12 @@ namespace HomeMediaCenter
                     isLastR = false;
                 }
             }
+
+            if (this.headers.ContainsKey("Transfer-Encoding") && 
+                String.Compare(this.headers["Transfer-Encoding"].Trim('"'), "chunked", true) == 0)
+            {
+                this.chunkedStream = new ChunkedStream(this.stream, true);
+            }
         }
 
         public int GetLength()
@@ -160,20 +155,54 @@ namespace HomeMediaCenter
             return int.Parse(this.headers["Content-Length"]);
         }
 
+        public Stream GetStream()
+        {
+            return this.chunkedStream == null ? (Stream)this.stream : (Stream)this.chunkedStream;
+        }
+
+        public void CloseStream()
+        {
+            if (this.response == null)
+                GetStream().Close();
+            else
+                this.response.GetStream().Close();
+        }
+
         public MemoryStream GetContent()
         {
-            NetworkStream stream = this.socket.GetStream();
-            byte[] buffer = new byte[GetLength()];
-            int readed, offset = 0;
-
-            while ((readed = stream.Read(buffer, offset, buffer.Length - offset)) > 0)
+            if (this.chunkedStream == null)
             {
-                offset += readed;
-                if (offset >= buffer.Length)
-                    break;
-            }
+                byte[] buffer = new byte[GetLength()];
+                int readed, offset = 0;
 
-            return new MemoryStream(buffer, 0, buffer.Length);
+                while ((readed = this.stream.Read(buffer, offset, buffer.Length - offset)) > 0)
+                {
+                    offset += readed;
+                    if (offset >= buffer.Length)
+                        break;
+                }
+
+                return new MemoryStream(buffer, 0, buffer.Length);
+            }
+            else
+            {
+                MemoryStream outStream = new MemoryStream();
+
+                this.chunkedStream.CopyTo(outStream);
+
+                outStream.Flush();
+                outStream.Position = 0;
+
+                return outStream;
+            }
+        }
+
+        public HttpResponse GetResponse()
+        {
+            if (this.response == null)
+                this.response = new HttpResponse(this, this.stream);
+
+            return this.response;
         }
     }
 }

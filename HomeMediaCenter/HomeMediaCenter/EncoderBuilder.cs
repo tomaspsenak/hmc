@@ -93,13 +93,23 @@ namespace HomeMediaCenter
             }
         }
 
-        public string Audio
+        public bool Audio
         {
             get
             {
                 if (this.audio.HasValue && this.audio.Value == 0)
-                    return "-Audio";
-                return "+Audio";
+                    return false;
+                return true;
+            }
+        }
+
+        public bool Video
+        {
+            get
+            {
+                if (this.video.HasValue && this.video.Value == 0)
+                    return false;
+                return true;
             }
         }
 

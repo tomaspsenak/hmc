@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using System.Runtime.Remoting.Messaging;
 
 namespace HomeMediaCenter
 {
@@ -21,11 +22,19 @@ namespace HomeMediaCenter
         protected readonly List<UpnpService> services = new List<UpnpService>();
         protected readonly UpnpServer server;
 
+        private readonly Action asyncStartDel;
+        private readonly Action asyncStopDel;
+
         public event EventHandler<LogEventArgs> LogEvent;
+        public event EventHandler<ExceptionEventArgs> AsyncStartEnd;
+        public event EventHandler<ExceptionEventArgs> AsyncStopEnd;
 
         public UpnpDevice()
         {
             this.server = new UpnpServer(this);
+
+            this.asyncStartDel = new Action(Start);
+            this.asyncStopDel = new Action(Stop);
         }
 
         public IEnumerable<UpnpService> Services
@@ -95,14 +104,24 @@ namespace HomeMediaCenter
             descWriter.WriteEndElement();
         }
 
-        public void Start()
+        public virtual void Start()
         {
             this.server.Start();
         }
 
-        public void Stop()
+        public void StartAsync()
+        {
+            this.asyncStartDel.BeginInvoke(new AsyncCallback(AsyncStartResult), null);
+        }
+
+        public virtual void Stop()
         {
             this.server.Stop();
+        }
+
+        public void StopAsync()
+        {
+            this.asyncStopDel.BeginInvoke(new AsyncCallback(AsyncStopResult), null);
         }
 
         public void OnLogEvent(string message)
@@ -124,5 +143,31 @@ namespace HomeMediaCenter
         }
 
         protected virtual void WriteSpecificDescription(XmlTextWriter descWriter) { }
+
+        protected void OnExceptionEvent(Exception ex, EventHandler<ExceptionEventArgs> handler)
+        {
+            if (handler != null)
+            {
+                handler(this, new ExceptionEventArgs(ex));
+            }
+        }
+
+        private void AsyncStartResult(IAsyncResult result)
+        {
+            Exception exc = null;
+            try { this.asyncStartDel.EndInvoke(result); }
+            catch (Exception ex) { exc = ex; }
+
+            OnExceptionEvent(exc, AsyncStartEnd);
+        }
+
+        private void AsyncStopResult(IAsyncResult result)
+        {
+            Exception exc = null;
+            try { this.asyncStopDel.EndInvoke(result); }
+            catch (Exception ex) { exc = ex; }
+
+            OnExceptionEvent(exc, AsyncStopEnd);
+        }
     }
 }
