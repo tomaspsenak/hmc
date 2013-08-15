@@ -12,10 +12,12 @@ library HMCEncoderLib
 	{
 		Container_MPEG2PS,
 		Container_MPEG2TS,
+		Container_MPEG2TSH264,
 		Container_MP3,
 		Container_MP4,
 		Container_AVI,
-		Container_FLV
+		Container_FLV,
+		Container_ASF
 	};
 
 	enum BitrateMode

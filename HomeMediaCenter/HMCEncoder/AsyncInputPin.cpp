@@ -1,9 +1,10 @@
 #include "StdAfx.h"
 #include "AsyncInputPin.h"
+#include "HMCFilter.h"
 
 AsyncInputPin::AsyncInputPin(LPCTSTR pObjectName, HMCFilter * pFilter, CCritSec * pLock, HRESULT * phr) : 
 	CBaseInputPin(pObjectName, (CBaseFilter *)pFilter, pLock, phr, pObjectName), CAMThread(phr), m_pFilter(pFilter), m_tempSample(NULL),
-	m_deliverBufferLen(0), m_deliverBuffer(NULL)
+	m_deliverBufferLen(0), m_deliverBuffer(NULL), m_time(-1)
 {
 	if (this->m_pFilter == NULL)
 		*phr = E_FAIL;
@@ -16,6 +17,15 @@ AsyncInputPin::~AsyncInputPin(void)
 		free(this->m_deliverBuffer);
 		this->m_deliverBuffer = NULL;
 	}
+}
+
+HRESULT AsyncInputPin::GetCurrentPosition(LONGLONG * pCurrent)
+{
+	if (this->m_time < 0)
+		return E_NOTIMPL;
+
+	*pCurrent = this->m_time;
+	return S_OK;
 }
 
 //********** CBaseOutputPin **********\\
@@ -101,15 +111,23 @@ STDMETHODIMP AsyncInputPin::GetAllocator(IMemAllocator ** ppAllocator)
 STDMETHODIMP AsyncInputPin::Receive(IMediaSample * pSample)
 {
 	CheckPointer(pSample, E_POINTER);
+	HRESULT hr;
 
 	//m_tempSample by malo byt vzdy NULL, iba pri multithread nemusi byt
 	if (this->m_tempSample)
 		ASSERT("m_tempSample must be NULL");
 
-	this->m_tempSample = pSample;
+	//Ignorovat sample so zapornym timeStart - napr. po seekovani treba zaciatok vynechat
+	REFERENCE_TIME timeStart = 0, timeEnd;
+	hr = pSample->GetTime(&timeStart, &timeEnd);
+	if (hr == S_OK && timeStart < 0)
+		return S_OK;
+	this->m_time = timeStart;
 
-	HRESULT hr = CallWorker(CMD_RECEIVE);
+	this->m_tempSample = pSample;
+	hr = CallWorker(CMD_RECEIVE);
 	this->m_tempSample = NULL;
+
 	return hr;
 }
 
@@ -151,8 +169,10 @@ DWORD AsyncInputPin::ThreadProc(void)
 				memcpy(this->m_deliverBuffer, buffer, length);
 
 				Reply(S_OK);
-				
-				ReceiveAsync(this->m_deliverBuffer, length);
+
+				//Ak sa pri spracovani sampla vyskytne chyba, je vyvolana udalost s chybovym hlasenim
+				if (FAILED(ReceiveAsync(this->m_deliverBuffer, length)))
+					this->m_pFilter->NotifyEvent(EC_ERRORABORT, E_FAIL, 0);
 				
 				break;
 			}

@@ -29,6 +29,8 @@ class AsyncInputPin : public CBaseInputPin, public CAMThread
 				virtual STDMETHODIMP ReceiveAsync(BYTE * buffer, long length) = 0;
 				virtual STDMETHODIMP EndOfStreamAsync(void) = 0;
 
+				HRESULT GetCurrentPosition(LONGLONG * pCurrent);
+
 				//CBaseInputPin
 				HRESULT Active(void);
 				HRESULT Inactive(void);
@@ -50,6 +52,7 @@ class AsyncInputPin : public CBaseInputPin, public CAMThread
 	private:	BYTE * m_deliverBuffer;
 				long m_deliverBufferLen;
 				IMediaSample * m_tempSample;
+				REFERENCE_TIME m_time;
 		
 				enum Command { CMD_STOP, CMD_RECEIVE, CMD_EOS };
 };

@@ -35,7 +35,8 @@ const AMOVIESETUP_MEDIATYPE videoTypes[] =
 {
 	{ &MEDIATYPE_Video, &MEDIASUBTYPE_YUY2 },
 	{ &MEDIATYPE_Video, &MEDIASUBTYPE_UYVY },
-	{ &MEDIATYPE_Video, &MEDIASUBTYPE_RGB24 }
+	{ &MEDIATYPE_Video, &MEDIASUBTYPE_RGB24 },
+	{ &MEDIATYPE_Video, &MEDIASUBTYPE_YV12 }
 };
 
 const AMOVIESETUP_MEDIATYPE audioTypes[] =  
@@ -50,7 +51,7 @@ const AMOVIESETUP_MEDIATYPE streamTypes[] =
 
 const AMOVIESETUP_PIN pins[] =
 {
-    { L"Video Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, 3, &videoTypes[0] },
+    { L"Video Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, 4, &videoTypes[0] },
     { L"Audio Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, 1, &audioTypes[0] },
 	{ L"Stream Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 1, &streamTypes[0] }
 };

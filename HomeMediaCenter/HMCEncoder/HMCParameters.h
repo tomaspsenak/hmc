@@ -45,8 +45,8 @@ class HMCParameters : public CUnknown, public IHMCEncoder
 
 	private:	enum Container m_container;
 				char m_containerStr[10];
-				CodecID m_audioCodec;
-				CodecID m_videoCodec;
+				AVCodecID m_audioCodec;
+				AVCodecID m_videoCodec;
 				BOOL m_streamable;
 
 				int m_audioBitrate;
@@ -63,6 +63,7 @@ class HMCParameters : public CUnknown, public IHMCEncoder
 				int m_videoBitrateMax;
 				int m_videoBitrateMin;
 				int m_videoQuality;
+				int m_videoBufferSize;
 				enum BitrateMode m_videoMode;
 				BOOL m_videoInterlaced;
 };
