@@ -2,14 +2,12 @@
 #include "AVEncoder.h"
 #include <dvdmedia.h>
 
-#define MAX_AUDIO_PACKET_SIZE	(128 * 1024)
-#define MAX_VIDEO_PACKET_SIZE	(224 * 1024 + 4)
 #define AV_PKT_FLAG_KEY			0x0001
 #define FF_COMPLIANCE_EXPERIMENTAL	-2
 
 AVEncoder::AVEncoder(void) : m_formatContext(NULL), m_audioStream(NULL), m_videoStream(NULL), m_audioResample(NULL), m_audioInChannels(0),
-	m_audioInBuf(NULL), m_audioOutBuf(NULL), m_audioOutBufSize(0), m_audioFIFO(NULL), m_audioFrame(NULL), m_pictureFormat(PIX_FMT_UYVY422), 
-	m_pictureContext(NULL), m_pictureInFrame(NULL), m_pictureOutFrame(NULL), m_videoOutBufSize(0), m_videoOutBuf(NULL), m_isStopped(FALSE)
+	m_audioInSampleRate(0), m_audioInBuf(NULL), m_audioFIFO(NULL), m_audioFrame(NULL), m_pictureFormat(PIX_FMT_UYVY422), 
+	m_pictureContext(NULL), m_pictureInFrame(NULL), m_pictureOutFrame(NULL), m_isStopped(FALSE)
 {
 	av_register_all();
 }
@@ -103,55 +101,64 @@ HRESULT AVEncoder::Stop(BOOL isEOS)
 	CAutoLock cAutoLock2(&this->m_videoLock);
 	CAutoLock cAutoLock3(&this->m_mainLock);
 
-	if (this->m_videoStream)
+	AVPacket * pkt = new AVPacket();
+
+	if (pkt)
 	{
-		//Zapis nespracovane video snimky
-		AVCodecContext * pCodec = this->m_videoStream->codec;
-
-		for (;;)
+		if (this->m_videoStream)
 		{
-			AVPacket pkt;
-			av_init_packet(&pkt);
-			pkt.data = this->m_videoOutBuf;
-			pkt.size = this->m_videoOutBufSize;
+			//Zapis nespracovane video snimky
+			AVCodecContext * c = this->m_videoStream->codec;
 
-			int got_packet;
-			int nOutSize = avcodec_encode_video2(pCodec, &pkt, NULL, &got_packet);
-			if (nOutSize < 0 || !got_packet)
-				break;
+			for (;;)
+			{
+				av_init_packet(pkt);
 
-			pkt.stream_index = this->m_videoStream->index;
+				int got_packet;
+				int nOutSize = avcodec_encode_video2(c, pkt, NULL, &got_packet);
+				if (nOutSize < 0 || !got_packet)
+					break;
 
-			if (pkt.pts != AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(pkt.pts, pCodec->time_base, this->m_videoStream->time_base);
-			if (pkt.dts != AV_NOPTS_VALUE)
-				pkt.dts = av_rescale_q(pkt.dts, pCodec->time_base, this->m_videoStream->time_base);
+				pkt->stream_index = this->m_videoStream->index;
 
-			av_interleaved_write_frame(this->m_formatContext, &pkt);
+				if (pkt->pts != AV_NOPTS_VALUE)
+					pkt->pts = av_rescale_q(pkt->pts, c->time_base, this->m_videoStream->time_base);
+				if (pkt->dts != AV_NOPTS_VALUE)
+					pkt->dts = av_rescale_q(pkt->dts, c->time_base, this->m_videoStream->time_base);
+
+				av_interleaved_write_frame(this->m_formatContext, pkt);
+
+				av_free_packet(pkt);
+			}
 		}
-	}
 
-	if (this->m_audioStream)
-	{
-		//Zapis nespracovane audio snimky
-		AVCodecContext* pCodec = this->m_audioStream->codec;
-
-		for (;;)
+		if (this->m_audioStream)
 		{
-			AVPacket pkt;
-			av_init_packet(&pkt);
-			pkt.data = this->m_audioOutBuf;
-			pkt.size = this->m_audioOutBufSize;
+			//Zapis nespracovane audio snimky
+			AVCodecContext* c = this->m_audioStream->codec;
 
-			int got_packet;
-			int nOutSize = avcodec_encode_audio2(pCodec, &pkt, NULL, &got_packet);
-			if (nOutSize < 0 || !got_packet)
-				break;
+			//Ak bol dosiahnuty koniec streamu, zapisu sa buffrovane audio packety
+			if (isEOS)
+				EncodeAudio(NULL, 0);
 
-			pkt.stream_index= this->m_audioStream->index;
+			for (;;)
+			{
+				av_init_packet(pkt);
 
-			av_interleaved_write_frame(this->m_formatContext, &pkt);
+				int got_packet;
+				int nOutSize = avcodec_encode_audio2(c, pkt, NULL, &got_packet);
+				if (nOutSize < 0 || !got_packet)
+					break;
+
+				pkt->stream_index= this->m_audioStream->index;
+
+				av_interleaved_write_frame(this->m_formatContext, pkt);
+
+				av_free_packet(pkt);
+			}
 		}
+
+		delete pkt;
 	}
 
 	if (this->m_formatContext)
@@ -195,15 +202,12 @@ AVStream * AVEncoder::AddAudio(HMCParameters * params, AM_MEDIA_TYPE * audioMT)
     c = st->codec;
 	c->codec_id = this->m_formatContext->oformat->audio_codec;
     c->codec_type = AVMEDIA_TYPE_AUDIO;
-	c->sample_fmt = AV_SAMPLE_FMT_S16;
+	c->sample_fmt = c->codec_id == AV_CODEC_ID_MP3 ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16;
 
 	c->sample_rate = params->m_audioSamplerate;
 
 	c->channels = params->m_audioChannels;
-	if (params->m_audioChannels == 1)
-		c->channel_layout = AV_CH_LAYOUT_MONO;
-	else if (params->m_audioChannels == 2)
-		c->channel_layout = AV_CH_LAYOUT_STEREO;
+	c->channel_layout = av_get_default_channel_layout(params->m_audioChannels);
 
 	c->bit_rate = params->m_audioBitrate;
 	if (params->m_audioMode == BitrateMode_VBR)
@@ -220,25 +224,37 @@ AVStream * AVEncoder::AddAudio(HMCParameters * params, AM_MEDIA_TYPE * audioMT)
 	if (avcodec_open2(c, codec, NULL) < 0)
         return NULL;
 
-	this->m_audioOutBufSize = 4 * MAX_AUDIO_PACKET_SIZE;
-    this->m_audioOutBuf = (uint8_t *)av_malloc(this->m_audioOutBufSize);
-	this->m_audioInBuf = (uint8_t *)av_malloc(2 * MAX_AUDIO_PACKET_SIZE);
-	this->m_audioFIFO = av_fifo_alloc(2 * MAX_AUDIO_PACKET_SIZE);
+	this->m_audioFIFO = av_audio_fifo_alloc(c->sample_fmt, c->channels, c->frame_size);
 	this->m_audioFrame = avcodec_alloc_frame();
 
-	if (!this->m_audioOutBufSize || !this->m_audioOutBuf || !this->m_audioInBuf || !this->m_audioFIFO || !this->m_audioFrame)
+	if (av_samples_alloc_array_and_samples(&this->m_audioInBuf, NULL, c->channels, c->frame_size, c->sample_fmt, 0) < 0 ||
+		!this->m_audioFIFO || !this->m_audioFrame)
 	{
 		avcodec_close(st->codec);
 		return NULL;
 	}
 
-	if (params->m_audioChannels != inputFormat->nChannels || params->m_audioSamplerate != inputFormat->nSamplesPerSec) 
-	{
-		this->m_audioInChannels = inputFormat->nChannels;
+	this->m_audioInChannels = inputFormat->nChannels;
+	this->m_audioInSampleRate = inputFormat->nSamplesPerSec;
 
-		this->m_audioResample = av_audio_resample_init(params->m_audioChannels, inputFormat->nChannels, params->m_audioSamplerate, 
-			inputFormat->nSamplesPerSec, AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_S16, 16, 10, 0, 0.8);
+	if (params->m_audioChannels != inputFormat->nChannels || params->m_audioSamplerate != inputFormat->nSamplesPerSec ||
+		c->sample_fmt != AV_SAMPLE_FMT_S16) 
+	{
+		this->m_audioResample = swr_alloc();
 		if(!this->m_audioResample)
+		{
+			avcodec_close(st->codec);
+			return NULL;
+		}
+
+		av_opt_set_int(this->m_audioResample, "in_channel_layout", av_get_default_channel_layout(inputFormat->nChannels), 0);
+		av_opt_set_int(this->m_audioResample, "out_channel_layout", c->channel_layout, 0);
+		av_opt_set_int(this->m_audioResample, "in_sample_rate", inputFormat->nSamplesPerSec, 0);
+		av_opt_set_int(this->m_audioResample, "out_sample_rate", c->sample_rate, 0);
+		av_opt_set_sample_fmt(this->m_audioResample, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+		av_opt_set_sample_fmt(this->m_audioResample, "out_sample_fmt", c->sample_fmt, 0);
+
+		if(swr_init(this->m_audioResample) < 0)
 		{
 			avcodec_close(st->codec);
 			return NULL;
@@ -263,6 +279,8 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 		this->m_pictureFormat = PIX_FMT_YUYV422;
 	else if (videoMT->subtype == MEDIASUBTYPE_RGB24)
 		this->m_pictureFormat = PIX_FMT_BGR24;
+	else if (videoMT->subtype == MEDIASUBTYPE_YV12)
+		this->m_pictureFormat = PIX_FMT_YUV420P;
 	else
 		return NULL;
 
@@ -314,12 +332,22 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 		c->rc_max_rate = params->m_videoBitrateMax;
 		c->rc_min_rate = params->m_videoBitrateMin;
 		c->flags |= CODEC_FLAG_QSCALE;
+		c->rc_buffer_size = params->m_videoBufferSize;
 	}
 	else
 	{
-		c->rc_max_rate = params->m_videoBitrate;
-		c->rc_min_rate = params->m_videoBitrate;
+		if (c->codec_id == CODEC_ID_MPEG2VIDEO)
+		{
+			c->rc_buffer_size = params->m_videoBufferSize;
+			c->rc_max_rate = c->rc_min_rate = params->m_videoBitrate;
+		}
+		else
+		{
+			c->rc_max_rate = c->rc_buffer_size = params->m_videoBitrate * 2;
+		}
 	}
+
+	c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3 / 4; 
 
 	if (params->m_videoInterlaced)
 	{
@@ -335,9 +363,6 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 		}
 	}
 
-	c->rc_buffer_size = 224 /*400*/ * 1024 * 8;
-	c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3 / 4; 
-
 	c->gop_size = params->m_videoGopSize;
 	if (params->m_videoBFrames)
 	{
@@ -351,20 +376,27 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 	if (avcodec_open2(c, codec, NULL) < 0)
 		return NULL;
 
-	this->m_videoOutBufSize = MAX_VIDEO_PACKET_SIZE;
-    this->m_videoOutBuf = (uint8_t *)av_malloc(this->m_videoOutBufSize);
-	this->m_pictureInFrame = CreateFrame(this->m_pictureFormat, inputFormat->biWidth, inputFormat->biHeight);
-    this->m_pictureOutFrame = CreateFrame(c->pix_fmt, inputFormat->biWidth, inputFormat->biHeight);
-	this->m_pictureContext = sws_getContext(inputFormat->biWidth, inputFormat->biHeight, this->m_pictureFormat, inputFormat->biWidth, 
-		inputFormat->biHeight, c->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
-
-    if (!this->m_videoOutBuf || !this->m_pictureInFrame || !this->m_pictureOutFrame || !this->m_pictureContext)
+	this->m_pictureOutFrame = CreateFrame(c->pix_fmt, c->width, c->height);
+	if (!this->m_pictureOutFrame)
 	{
 		avcodec_close(st->codec);
         return NULL;
 	}
-
 	this->m_pictureOutFrame->quality = c->global_quality;
+
+	if (this->m_pictureFormat != PIX_FMT_YUV420P || c->width != inputFormat->biWidth || c->height != inputFormat->biHeight)
+	{
+		//Ak vstupny format sa nezhoduje s vystupnym - je potrebna konverzia cez sws
+
+		this->m_pictureInFrame = CreateFrame(this->m_pictureFormat, inputFormat->biWidth, inputFormat->biHeight);
+		this->m_pictureContext = sws_getContext(inputFormat->biWidth, inputFormat->biHeight, this->m_pictureFormat, inputFormat->biWidth, 
+			inputFormat->biHeight, c->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+		if (!this->m_pictureInFrame || !this->m_pictureContext)
+		{
+			avcodec_close(st->codec);
+			return NULL;
+		}
+	}
 
 	return st;
 }
@@ -401,21 +433,16 @@ HRESULT AVEncoder::FreeContext(void)
 		this->m_formatContext = NULL;
 	}
 
-	if (this->m_audioOutBuf)
-	{
-		av_free(this->m_audioOutBuf);
-		this->m_audioOutBuf = NULL;
-	}
-
 	if (this->m_audioInBuf)
 	{
-		av_free(this->m_audioInBuf);
-		this->m_audioInBuf = NULL;
+		if (this->m_audioInBuf[0])
+			av_freep(&this->m_audioInBuf[0]);
+		av_freep(&this->m_audioInBuf);
 	}
 
 	if (this->m_audioFIFO)
 	{
-		av_fifo_free(this->m_audioFIFO);
+		av_audio_fifo_free(this->m_audioFIFO);
 		this->m_audioFIFO = NULL;
 	}
 
@@ -427,14 +454,8 @@ HRESULT AVEncoder::FreeContext(void)
 	
 	if (this->m_audioResample)
 	{
-		audio_resample_close(this->m_audioResample);
+		swr_free(&this->m_audioResample);
 		this->m_audioResample = NULL;
-	}
-
-	if (this->m_videoOutBuf)
-	{
-		av_free(this->m_videoOutBuf);
-		this->m_videoOutBuf = NULL;
 	}
 
 	if (this->m_pictureInFrame)
@@ -478,9 +499,53 @@ AVFrame * AVEncoder::CreateFrame(PixelFormat pix_fmt, int width, int height)
         return NULL;
     }
 
+	frame->width = width;
+	frame->height = height;
     avpicture_fill((AVPicture *)frame, buffer, pix_fmt, width, height);
 
     return frame;
+}
+
+//Nahrada za (libavformat/mux.c):
+//int ff_interleave_packet_per_dts(AVFormatContext *s, AVPacket *out, AVPacket *pkt, int flush)
+//funkcia urobi flush nad packetmi
+int AVEncoder::ff_interleave_packet_per_dts(AVFormatContext * s, AVPacket * out)
+{
+    AVPacketList * pktl;
+    int stream_count = 0, noninterleaved_count = 0;
+    unsigned int i;
+
+    for (i = 0; i < s->nb_streams; i++)
+	{
+        if (s->streams[i]->last_in_packet_buffer)
+			++stream_count;
+		else if (s->streams[i]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE)
+			++noninterleaved_count;
+    }
+
+    if (stream_count)
+	{
+        AVStream * st;
+        pktl = s->packet_buffer;
+        *out = pktl->pkt;
+        st   = s->streams[out->stream_index];
+
+        s->packet_buffer = pktl->next;
+        if (!s->packet_buffer)
+            s->packet_buffer_end = NULL;
+
+        if (st->last_in_packet_buffer == pktl)
+            st->last_in_packet_buffer = NULL;
+        av_freep(&pktl);
+
+        return 1;
+    }
+	else
+	{
+        av_init_packet(out);
+    }
+
+	return 0;
 }
 
 int AVEncoder::FreeInterleavePackets(AVFormatContext * s)
@@ -494,7 +559,7 @@ int AVEncoder::FreeInterleavePackets(AVFormatContext * s)
 		if (s->oformat->interleave_packet)
 			ret = s->oformat->interleave_packet(s, &pkt, NULL, 1);
 		else
-			ret = av_interleave_packet_per_dts(s, &pkt, NULL, 1);
+			ret = ff_interleave_packet_per_dts(s, &pkt);
 
 		if(ret < 0)
              return ret;
@@ -532,81 +597,123 @@ HRESULT AVEncoder::CheckStream(AVStream* & stream, CCritSec & streamLock)
 
 HRESULT AVEncoder::EncodeAudio(BYTE * buffer, long length)
 {
-	CAutoLock cAutoLock(&this->m_audioLock);
+	AVCodecContext * c = NULL;
+	AVPacket * pkt = NULL;
 	HRESULT hr = S_OK;
+
+	CAutoLock cAutoLock(&this->m_audioLock);
 
 	if (this->m_isStopped)
 		return E_FAIL;
 	CHECK_HR(hr = CheckStream(this->m_audioStream, this->m_audioLock));
+	//m_audioStream uz moze byt NULL, preto zistovat codec az po kontrole streamu
+	c = this->m_audioStream->codec;
 
-	AVCodecContext * pCodec = this->m_audioStream->codec;
-	//Nastavenie bytov na sample
-	int bps = av_get_bytes_per_sample(pCodec->sample_fmt);
-	//Nastavenie velkosti paketu, ktory sa bude enkodovat
-	long packetLength = pCodec->frame_size * bps * pCodec->channels;
+	if (!(pkt = new AVPacket()))
+		CHECK_HR(hr = E_OUTOFMEMORY);
+	av_init_packet(pkt);
 
-	if (this->m_audioResample)
+	//Pocet samplov vo vstupnom buffery
+	int inSamples = length / (this->m_audioInChannels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+
+	if (inSamples == 0)
 	{
-		//Uprava audia - ak nesedi pocet kanalov a samplerate
-		long inSamples = length / (this->m_audioInChannels * bps);
+		//Nezapisuje sa nic do FIFO
+	}
+	else if (this->m_audioResample)
+	{
+		//Uprava audia - ak nesedi pocet kanalov, samplerate alebo vystupny format
+		uint8_t ** output = NULL;
+		int outSamples = av_rescale_rnd(swr_get_delay(this->m_audioResample, this->m_audioInSampleRate) + inSamples, 
+			c->sample_rate, this->m_audioInSampleRate, AV_ROUND_UP);
 
-		int outSamples = audio_resample(this->m_audioResample, (short *)this->m_audioInBuf, (short * )buffer, inSamples);
-		if (outSamples <= 0)
+		if (av_samples_alloc_array_and_samples(&output, NULL, c->channels, outSamples, c->sample_fmt, 0) < 0)
 			CHECK_HR(hr = E_FAIL);
 
-		length = outSamples * pCodec->channels * bps;
-		buffer = this->m_audioInBuf;
+		outSamples = swr_convert(this->m_audioResample, output, outSamples, (const uint8_t **)&buffer, inSamples);
+		if (outSamples < 0)
+		{
+			if (output[0])
+				av_freep(&output[0]);
+			av_freep(&output);
+
+			CHECK_HR(hr = E_FAIL);
+		}
+
+		av_audio_fifo_write(this->m_audioFIFO, (void **)output, outSamples);
+		
+		if (output[0])
+			av_freep(&output[0]);
+		av_freep(&output);
+	}
+	else
+	{
+		//Bez upravi audia - zapis buffer tak ako je
+		av_audio_fifo_write(this->m_audioFIFO, (void **)&buffer, inSamples);
 	}
 
-	av_fifo_generic_write(this->m_audioFIFO, buffer, length, NULL);
-
-	//Nacitava FIFO pokial nie je pozadovana velkost paketu
-	while (av_fifo_size(this->m_audioFIFO) >= packetLength)
+	//Nacitava FIFO pokial nie je pozadovana velkost paketu (frame_size) alebo koniec streamu (inSamples == 0)
+	while (av_audio_fifo_size(this->m_audioFIFO) >= c->frame_size || inSamples == 0)
 	{
-		av_fifo_generic_read(this->m_audioFIFO, this->m_audioInBuf, packetLength, NULL);
+		int outSamples = av_audio_fifo_read(this->m_audioFIFO, (void **)this->m_audioInBuf, c->frame_size);
+		if (outSamples <= 0)
+			break;
 
-		AVPacket pkt;
-		av_init_packet(&pkt);
-		pkt.data = this->m_audioOutBuf;
-		pkt.size = this->m_audioOutBufSize;
+		int audioInBufSize = av_samples_get_buffer_size(NULL, c->channels, outSamples, c->sample_fmt, 0);
 
-		this->m_audioFrame->nb_samples  = packetLength / (pCodec->channels * bps);
-		this->m_audioFrame->pts = av_rescale_q(pCodec->frame_number * this->m_audioFrame->nb_samples, pCodec->time_base, this->m_audioStream->time_base);
-		this->m_audioFrame->data[0] = this->m_audioInBuf;
-		this->m_audioFrame->linesize[0] = packetLength;
-		this->m_audioFrame->extended_data = this->m_audioFrame->data;
+		this->m_audioFrame->nb_samples  = outSamples;
+		//nie je potrebne nastavit pts - nastavi sa automaticky
+		//this->m_audioFrame->pts = av_rescale_q(c->frame_number * this->m_audioFrame->nb_samples, c->time_base, this->m_audioStream->time_base);
+
+		avcodec_fill_audio_frame(this->m_audioFrame, c->channels, c->sample_fmt, this->m_audioInBuf[0], audioInBufSize, 0);
+
+		av_init_packet(pkt);
 
 		int got_packet;
-		int nOutSize = avcodec_encode_audio2(pCodec, &pkt, this->m_audioFrame, &got_packet);
+		int nOutSize = avcodec_encode_audio2(c, pkt, this->m_audioFrame, &got_packet);
 		if (nOutSize < 0)
 			CHECK_HR(hr = E_FAIL);
 
 		if (!got_packet)
 			continue;
 
-		pkt.stream_index= this->m_audioStream->index;
-		
+		pkt->stream_index= this->m_audioStream->index;
+
 		CAutoLock cAutoLock2(&this->m_mainLock);
-		if (av_interleaved_write_frame(this->m_formatContext, &pkt) != 0)
+		if (av_interleaved_write_frame(this->m_formatContext, pkt) != 0)
 		{
 			CHECK_HR(hr = E_FAIL);
 		}
+
+		av_free_packet(pkt);
     }
 
 done:
+
+	av_free_packet(pkt);
+	if (pkt)
+		delete pkt;
+
 	return hr;
 }
 
 HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 {
-	CAutoLock cAutoLock(&this->m_videoLock);
+	AVCodecContext * c = NULL;
+	AVPacket * pkt = NULL;
 	HRESULT hr = S_OK;
+
+	CAutoLock cAutoLock(&this->m_videoLock);
 
 	if (this->m_isStopped)
 		return E_FAIL;
 	CHECK_HR(hr = CheckStream(this->m_videoStream, this->m_videoLock));
+	//m_videoStream uz moze byt NULL, preto zistovat codec az po kontrole streamu
+	c = this->m_videoStream->codec;
 
-	AVCodecContext * pCodec = this->m_videoStream->codec;
+	if (!(pkt = new AVPacket()))
+		CHECK_HR(hr = E_OUTOFMEMORY);
+	av_init_packet(pkt);
 
 	switch (this->m_pictureFormat)
 	{
@@ -615,15 +722,15 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 			//RGB obraz z DirectShow je prevrateny - preloz riadky
 
 			int linesize = this->m_pictureInFrame->linesize[0];
-			for (long i = 0; i < pCodec->height; i++)
+			for (long i = 0; i < this->m_pictureInFrame->height; i++)
 			{
 				long srcPos = i * linesize;
 				long dstPos = (length - srcPos) - linesize;
-				memcpy(this->m_pictureInFrame->data[0]  + dstPos, buffer + srcPos, linesize);
+				memcpy(this->m_pictureInFrame->data[0] + dstPos, buffer + srcPos, linesize);
 			}
 
-			sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, pCodec->height, 
-				this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
+			sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, 
+				this->m_pictureInFrame->height, this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
 
 			break;
 		}
@@ -633,10 +740,29 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 			uint8_t * tmpData = this->m_pictureInFrame->data[0];
 			this->m_pictureInFrame->data[0] = buffer;
 
-			sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, pCodec->height, 
-				this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
+			sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, 
+				this->m_pictureInFrame->height, this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
 
 			this->m_pictureInFrame->data[0] = tmpData;
+
+			break;
+		}
+		case PIX_FMT_YUV420P: //MEDIASUBTYPE_YV12
+		{
+			//Ak nie je potrebne menit format alebo velkost cez sws_scale, zapise sa rovno do vystupneho frame-u 
+			AVFrame * frame = (this->m_pictureContext) ? this->m_pictureInFrame : this->m_pictureOutFrame;
+
+			//Preloz planes z directshow do AVFrame (PIX_FMT_YUV420P ma 3 planes)
+			memcpy(frame->data[0], buffer, frame->width * frame->height);
+			memcpy(frame->data[2], buffer + (frame->width * frame->height), (frame->width * frame->height) >> 2);
+			memcpy(frame->data[1], buffer + (frame->width * frame->height) + ((frame->width * frame->height) >> 2), 
+				(frame->width * frame->height) >> 2);
+
+			if (this->m_pictureContext)
+			{
+				sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, c->height, 
+					this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
+			}
 
 			break;
 		}
@@ -644,34 +770,34 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 			CHECK_HR(hr = E_FAIL);
 	}
 
-	AVPacket pkt;
-	av_init_packet(&pkt);
-	pkt.data = this->m_videoOutBuf;
-	pkt.size = this->m_videoOutBufSize;
-
-	this->m_pictureOutFrame->pts = pCodec->frame_number;
+	this->m_pictureOutFrame->pts = c->frame_number;
 
 	int got_packet;
-	int nOutSize = avcodec_encode_video2(pCodec, &pkt, this->m_pictureOutFrame, &got_packet);
+	int nOutSize = avcodec_encode_video2(c, pkt, this->m_pictureOutFrame, &got_packet);
 	if (nOutSize < 0)
 		CHECK_HR(hr = E_FAIL);
 
 	if (got_packet) 
 	{
-		pkt.stream_index = this->m_videoStream->index;
+		pkt->stream_index = this->m_videoStream->index;
 
-		if (pkt.pts != AV_NOPTS_VALUE)
-			pkt.pts = av_rescale_q(pkt.pts, pCodec->time_base, this->m_videoStream->time_base);
-		if (pkt.dts != AV_NOPTS_VALUE)
-			pkt.dts = av_rescale_q(pkt.dts, pCodec->time_base, this->m_videoStream->time_base);
+		if (pkt->pts != AV_NOPTS_VALUE)
+			pkt->pts = av_rescale_q(pkt->pts, c->time_base, this->m_videoStream->time_base);
+		if (pkt->dts != AV_NOPTS_VALUE)
+			pkt->dts = av_rescale_q(pkt->dts, c->time_base, this->m_videoStream->time_base);
 		
 		CAutoLock cAutoLock2(&this->m_mainLock);
-		if (av_interleaved_write_frame(this->m_formatContext, &pkt) != 0)
+		if (av_interleaved_write_frame(this->m_formatContext, pkt) != 0)
 		{	
 			CHECK_HR(hr = E_FAIL);
 		}
 	}
 
 done:
+
+	av_free_packet(pkt);
+	if (pkt)
+		delete pkt;
+
 	return hr;
 }

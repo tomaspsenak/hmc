@@ -60,6 +60,9 @@
 
 /**
  * Return the flags which specify extensions supported by the CPU.
+ * The returned value is affected by av_force_cpu_flags() if that was used
+ * before. So av_get_cpu_flags() can easily be used in a application to
+ * detect the enabled cpu flags.
  */
 int av_get_cpu_flags(void);
 
@@ -87,6 +90,7 @@ attribute_deprecated void av_set_cpu_flags_mask(int mask);
  * Please use av_parse_cpu_caps() when possible.
  * @return a combination of AV_CPU_* flags, negative on error.
  */
+attribute_deprecated
 int av_parse_cpu_flags(const char *s);
 
 /**
@@ -95,6 +99,11 @@ int av_parse_cpu_flags(const char *s);
  * @return negative on error.
  */
 int av_parse_cpu_caps(unsigned *flags, const char *s);
+
+/**
+ * @return the number of logical CPU cores present.
+ */
+int av_cpu_count(void);
 
 /* The following CPU-specific functions shall not be called directly. */
 int ff_get_cpu_flags_arm(void);

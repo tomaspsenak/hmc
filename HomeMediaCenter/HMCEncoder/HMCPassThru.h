@@ -27,6 +27,8 @@ class HMCPassThru : public CPosPassThru
 				HRESULT GetPeer(IMediaPosition ** ppMP);
 				HRESULT GetPeerSeeking(IMediaSeeking ** ppMS);
 
+				STDMETHODIMP GetCurrentPosition(LONGLONG * pCurrent);
+
 	protected:	IPin * m_audioPin;
 };
 

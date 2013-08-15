@@ -41,26 +41,24 @@ class AVEncoder
 				static AVFrame * CreateFrame(PixelFormat pix_fmt, int width, int height);
 				static HRESULT CheckStream(AVStream* & stream, CCritSec & streamLock);
 				static int FreeInterleavePackets(AVFormatContext * s);
+				static int ff_interleave_packet_per_dts(AVFormatContext * s, AVPacket * out);
 		
 				AVFormatContext * m_formatContext;
 				AVStream * m_audioStream;
 				AVStream * m_videoStream;
 				BOOL m_isStopped;
 
-				ReSampleContext * m_audioResample;
+				SwrContext * m_audioResample;
 				int m_audioInChannels;
-				uint8_t * m_audioInBuf;
-				uint8_t * m_audioOutBuf;
-				int m_audioOutBufSize;
-				AVFifoBuffer * m_audioFIFO;
+				int m_audioInSampleRate;
+				uint8_t ** m_audioInBuf;
+				AVAudioFifo * m_audioFIFO;
 				AVFrame * m_audioFrame;
 
 				PixelFormat m_pictureFormat;
 				SwsContext * m_pictureContext;
 				AVFrame * m_pictureInFrame;
 				AVFrame * m_pictureOutFrame;
-				int m_videoOutBufSize;
-				uint8_t * m_videoOutBuf;
 
 				CCritSec m_audioLock;
 				CCritSec m_videoLock;

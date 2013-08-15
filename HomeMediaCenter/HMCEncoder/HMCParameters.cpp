@@ -22,6 +22,7 @@ HRESULT HMCParameters::SetContainer(enum Container container)
 			this->m_videoInterlaced = true;
 			this->m_videoBFrames = false;
 			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
 
 			SetAudioCBR(128 * 1000);
 			this->m_audioSamplerate = 48000;
@@ -32,18 +33,36 @@ HRESULT HMCParameters::SetContainer(enum Container container)
 			break;
 		case Container_MPEG2TS:
 			strcpy_s(this->m_containerStr, "mpegts");
-			this->m_audioCodec = CODEC_ID_NONE;
-			this->m_videoCodec = CODEC_ID_NONE;
+			this->m_audioCodec = AV_CODEC_ID_MP2;
+			this->m_videoCodec = AV_CODEC_ID_MPEG2VIDEO;
 			this->m_streamable = true;
 			this->m_videoInterlaced = true;
 			this->m_videoBFrames = false;
 			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
 
 			SetAudioCBR(128 * 1000);
 			this->m_audioSamplerate = 48000;
 			this->m_audioChannels = 2;
 
 			SetVideoCBR(4000 * 1000);
+
+			break;
+		case Container_MPEG2TSH264:
+			strcpy_s(this->m_containerStr, "mpegts");
+			this->m_audioCodec = AV_CODEC_ID_AAC;
+			this->m_videoCodec = AV_CODEC_ID_H264;
+			this->m_streamable = true;
+			this->m_videoInterlaced = false;
+			this->m_videoBFrames = false;
+			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
+
+			SetAudioCBR(128 * 1000);
+			this->m_audioSamplerate = 44100;
+			this->m_audioChannels = 2;
+
+			SetVideoCBR(800 * 1000);
 
 			break;
 		case Container_MP3:
@@ -65,6 +84,7 @@ HRESULT HMCParameters::SetContainer(enum Container container)
 			this->m_videoInterlaced = false;
 			this->m_videoBFrames = false;
 			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
 
 			SetAudioCBR(128 * 1000);
 			this->m_audioSamplerate = 44100;
@@ -81,6 +101,7 @@ HRESULT HMCParameters::SetContainer(enum Container container)
 			this->m_videoInterlaced = false;
 			this->m_videoBFrames = false;
 			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
 
 			SetAudioCBR(128 * 1000);
 			this->m_audioSamplerate = 44100;
@@ -97,12 +118,30 @@ HRESULT HMCParameters::SetContainer(enum Container container)
 			this->m_videoInterlaced = false;
 			this->m_videoBFrames = false;
 			this->m_videoGopSize = 15;
+			this->m_videoBufferSize = 224 * 1024 * 8;
 
 			SetAudioCBR(128 * 1000);
 			this->m_audioSamplerate = 44100;
 			this->m_audioChannels = 2;
 
 			SetVideoCBR(4000 * 1000);
+
+			break;
+		case Container_ASF:
+			strcpy_s(this->m_containerStr, "asf");
+			this->m_audioCodec = AV_CODEC_ID_WMAV2;
+			this->m_videoCodec = AV_CODEC_ID_WMV2;
+			this->m_streamable = true;
+			this->m_videoInterlaced = false;
+			this->m_videoBFrames = false;
+			this->m_videoGopSize = 12;
+			this->m_videoBufferSize = 224 * 1024 * 8;
+
+			SetAudioCBR(40 * 1000);
+			this->m_audioSamplerate = 32000;
+			this->m_audioChannels = 2;
+
+			SetVideoCBR(400 * 1000);
 
 			break;
 		default:
@@ -128,8 +167,10 @@ HRESULT HMCParameters::SetStreamable(BOOL streamable)
 	{
 		case Container_MPEG2PS:
 		case Container_MPEG2TS:
+		case Container_MPEG2TSH264:
 		case Container_MP3:
 		case Container_FLV:
+		case Container_ASF:
 			this->m_streamable = streamable;
 			return S_OK;
 		default:
@@ -219,6 +260,7 @@ HRESULT HMCParameters::SetVideoBFrames(BOOL bFrames)
 	{
 		case Container_MPEG2PS:
 		case Container_MPEG2TS:
+		case Container_MPEG2TSH264:
 		case Container_AVI:
 		case Container_MP4:
 			this->m_videoBFrames = bFrames;
@@ -246,6 +288,7 @@ HRESULT HMCParameters::SetVideoGopSize(int gopSize)
 	{
 		case Container_MPEG2PS:
 		case Container_MPEG2TS:
+		case Container_MPEG2TSH264:
 		case Container_AVI:
 		case Container_MP4:
 		case Container_FLV:

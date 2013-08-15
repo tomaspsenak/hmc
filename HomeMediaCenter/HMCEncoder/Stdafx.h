@@ -32,10 +32,12 @@
 
 extern "C" {
 	#include "libavformat\avio.h"
-	#include "libavutil\fifo.h"
+	#include "libavutil\audio_fifo.h"
 	#include "libavcodec\avcodec.h"
 	#include "libavformat\avformat.h"
 	#include "libswscale\swscale.h"
+	#include "libswresample\swresample.h"
+	#include "libavutil\opt.h"
 };
 
 #ifndef CHECK_HR

@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "VideoInputPin.h"
+#include <dvdmedia.h>
 
 VideoInputPin::VideoInputPin(HMCFilter * pFilter, CCritSec * pLock, HRESULT * phr) : 
 	AsyncInputPin(L"Video Input", pFilter, pLock, phr)
@@ -18,11 +19,34 @@ HRESULT VideoInputPin::CheckMediaType(const CMediaType * pmt)
 
 	if (pmt->majortype == MEDIATYPE_Video)
 	{
-		if (pmt->subtype == MEDIASUBTYPE_YUY2 || pmt->subtype == MEDIASUBTYPE_UYVY || pmt->subtype == MEDIASUBTYPE_RGB24)
+		if (pmt->subtype == MEDIASUBTYPE_YUY2 || pmt->subtype == MEDIASUBTYPE_UYVY || pmt->subtype == MEDIASUBTYPE_RGB24 || 
+			pmt->subtype == MEDIASUBTYPE_YV12)
 		{
-			if (pmt->formattype == FORMAT_VideoInfo || pmt->formattype == FORMAT_VideoInfo2)
+			if (pmt->formattype == FORMAT_VideoInfo)
 			{
-				return S_OK;
+				if (pmt->subtype == MEDIASUBTYPE_YV12)
+				{
+					VIDEOINFOHEADER * vih = (VIDEOINFOHEADER *)pmt->pbFormat;
+					if (vih->bmiHeader.biPlanes == 3 && vih->bmiHeader.biCompression == MAKEFOURCC('Y','V','1','2'))
+						return S_OK;
+				}
+				else
+				{
+					return S_OK;
+				}
+			}
+			else if (pmt->formattype == FORMAT_VideoInfo2)
+			{
+				if (pmt->subtype == MEDIASUBTYPE_YV12)
+				{
+					VIDEOINFOHEADER2 * vih = (VIDEOINFOHEADER2 *)pmt->pbFormat;
+					if (vih->bmiHeader.biPlanes == 3 && vih->bmiHeader.biCompression == MAKEFOURCC('Y','V','1','2'))
+						return S_OK;
+				}
+				else
+				{
+					return S_OK;
+				}
 			}
 		}
 	}
