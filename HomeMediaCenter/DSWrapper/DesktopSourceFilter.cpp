@@ -2,8 +2,19 @@
 #include "DesktopSourceFilter.h"
 
 DesktopSourceFilter::DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr, UINT32 fps) 
-	: CSource(L"DesktopSourceFilter", pUnk, CLSID_NULL), m_sourcePin(NULL), m_sourceAudioPin(NULL), m_rtLastFrame(0), m_isTimeSet(FALSE)
+	: CSource(L"DesktopSourceFilter", pUnk, CLSID_NULL), m_sourcePin(NULL), m_sourceAudioPin(NULL)
 {
+	this->m_signaled[0] = FALSE;
+	this->m_signaled[1] = FALSE;
+
+	this->m_syncEvent[0] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, NULL); 
+	this->m_syncEvent[1] = CreateEvent(NULL, TRUE, FALSE /*nesignalovy stav*/, NULL); 
+	if (this->m_syncEvent[0] == NULL || this->m_syncEvent[1] == NULL)
+	{
+		*phr = E_OUTOFMEMORY;
+		return;
+	}
+
 	this->m_sourcePin = new DesktopSourcePin(L"DesktopSourcePin", phr, this, L"Out", fps);
 	if (this->m_sourcePin == NULL)
 	{
@@ -38,23 +49,31 @@ DesktopSourceFilter::~DesktopSourceFilter(void)
 		delete this->m_sourcePin;
 	if (this->m_sourceAudioPin != NULL)
 		delete this->m_sourceAudioPin;
+
+	CloseHandle(this->m_syncEvent[0]);
+	CloseHandle(this->m_syncEvent[1]);
 }
 
-void DesktopSourceFilter::SyncPins(DWORD index, REFERENCE_TIME & rtSyncTime)
+void DesktopSourceFilter::SyncPins(DWORD index)
 {
-	CAutoLock cAutoLock(&this->m_syncSection);
+	if (this->m_sourcePin->IsConnected() && this->m_sourceAudioPin->IsConnected())
+	{
+		SetEvent(this->m_syncEvent[index]);
 
-	if (index == 1)
-	{
-		//Audio pin
-		this->m_isTimeSet = TRUE;
-		this->m_rtLastFrame = rtSyncTime;
-	}
-	else if (this->m_isTimeSet)
-	{
-		//Video pin a ak je nastaveny synchronizacny cas
-		this->m_isTimeSet = FALSE;
-		rtSyncTime = this->m_rtLastFrame;
+		//Caka, pokial audio aj video signalizuju, maximalne ale cas v konstante WaitToSync
+		WaitForMultipleObjects(2, this->m_syncEvent, TRUE, WaitToSync);
+
+		CAutoLock cAutoLock(&this->m_syncSection);
+
+		this->m_signaled[index] = TRUE;
+		if (this->m_signaled[0] && this->m_signaled[1])
+		{
+			//Ak audio aj video signalizovali, zmen do nesignaloveho stavu
+			ResetEvent(this->m_syncEvent[0]);
+			ResetEvent(this->m_syncEvent[1]);
+			this->m_signaled[0] = FALSE;
+			this->m_signaled[1] = FALSE;
+		}
 	}
 }
 

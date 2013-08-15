@@ -21,6 +21,8 @@ private class DesktopSourcePin : public CSourceStream
 					return E_FAIL;
 				}
 
+	protected:	HRESULT DoBufferProcessingLoop(void);
+
 	private:	RECT GetDesktopResolution(void);
 				void GetWidthHeight(const AM_MEDIA_TYPE * type, LONG * width, LONG * height); 
 				void GetBitmapInfo(const AM_MEDIA_TYPE * type, BITMAPINFOHEADER * bitmapInfo);
@@ -30,8 +32,6 @@ private class DesktopSourcePin : public CSourceStream
 				CCritSec m_cSharedState;
 				IMediaObject * m_colorConverter;
 				BITMAPINFOHEADER m_bitmapInfo;
-				DWORD m_nextTick;
-				DWORD m_lastSync;
 };
 
 private class CMediaBuffer : public IMediaBuffer

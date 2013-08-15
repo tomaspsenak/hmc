@@ -16,7 +16,7 @@ using namespace System::Security::Permissions;
 [assembly:AssemblyConfigurationAttribute("")];
 [assembly:AssemblyCompanyAttribute("Tomáš Pšenák")];
 [assembly:AssemblyProductAttribute("DSWrapper")];
-[assembly:AssemblyCopyrightAttribute("Copyright © Tomáš Pšenák 2012")];
+[assembly:AssemblyCopyrightAttribute("Copyright © Tomáš Pšenák 2013")];
 [assembly:AssemblyTrademarkAttribute("")];
 [assembly:AssemblyCultureAttribute("")];
 
@@ -31,7 +31,7 @@ using namespace System::Security::Permissions;
 // You can specify all the value or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
 
-[assembly:AssemblyVersionAttribute("2.0.*")];
+[assembly:AssemblyVersionAttribute("2.5.*")];
 
 [assembly:ComVisible(false)];
 

@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "MediaFile.h"
 #include "DSWrapper.h"
+#include "DSException.h"
 
 namespace DSWrapper 
 {
@@ -8,15 +9,19 @@ namespace DSWrapper
 	{
 	}
 
-	Boolean MediaFile::GetVideoInfo(IO::FileInfo ^ file, TimeSpan% duration, String ^% resolution)
+	HRESULT MediaFile::GetVideoInfo(IO::FileInfo ^ file, TimeSpan% duration, String ^% resolution, Int32% audioStreamsCount, System::Collections::Generic::List<String^> ^% subtitlesStreams)
 	{
 		DSEncoder ^ enc = nullptr;
+		HRESULT hr = S_OK;
+
 		try
 		{
 			enc = gcnew DSEncoder();
 			enc->SetInput(file->FullName, true);
 
 			duration = TimeSpan::FromMilliseconds((Double)enc->GetDuration());
+			audioStreamsCount = 0;
+			subtitlesStreams = gcnew System::Collections::Generic::List<String^>();
 
 			for each(PinInfoItem ^ item in enc->SourcePins)
 			{
@@ -26,34 +31,87 @@ namespace DSWrapper
 					LONG height = ((PinVideoItem ^)item)->Height;
 
 					resolution = width + "x" + height;
-					break;
+				}
+				else if (item->MediaType == PinMediaType::Audio)
+				{
+					audioStreamsCount++;
+				}
+				else if (item->MediaType == PinMediaType::Subtitle)
+				{
+					String ^ langName = ((PinSubtitleItem^)item)->LangName;
+					if (langName == String::Empty || langName == nullptr)
+						subtitlesStreams->Add((subtitlesStreams->Count + 1).ToString());
+					else
+						subtitlesStreams->Add(langName);
 				}
 			}
 
-			return true;
+			return S_OK;
+		}
+		catch (DSWrapper::DSException ^ ex)
+		{
+			hr = ex->Result;
 		}
 		catch (Exception ^)
 		{
-			duration = TimeSpan::Zero;
-			resolution = "0x0";
-
-			return false;
+			hr = E_FAIL;
 		}
 		finally
 		{
 			if (enc != nullptr) delete enc;
 		}
+
+		duration = TimeSpan::Zero;
+		resolution = "0x0";
+		audioStreamsCount = 0;
+		subtitlesStreams = gcnew System::Collections::Generic::List<String^>();
+
+		return hr;
 	}
 
-	Boolean MediaFile::GetAudioDuration(IO::FileInfo ^ file, TimeSpan% duration)
+	HRESULT MediaFile::GetAudioDuration(IO::FileInfo ^ file, TimeSpan% duration, Int32% audioStreamsCount)
 	{
-		if (Environment::OSVersion->Version->Major < 6)
-			return TimeSpan::TryParse(GetValue(file, 21, String::Empty), duration);
+		DSEncoder ^ enc = nullptr;
+		HRESULT hr = S_OK;
 
-		return TimeSpan::TryParse(GetValue(file, 27, String::Empty), duration);
+		try
+		{
+			enc = gcnew DSEncoder();
+			enc->SetInput(file->FullName, true);
+
+			duration = TimeSpan::FromMilliseconds((Double)enc->GetDuration());
+			audioStreamsCount = 0;
+
+			for each(PinInfoItem ^ item in enc->SourcePins)
+			{
+				if (item->MediaType == PinMediaType::Audio)
+				{
+					audioStreamsCount++;
+				}
+			}
+
+			return S_OK;
+		}
+		catch (DSWrapper::DSException ^ ex)
+		{
+			hr = ex->Result;
+		}
+		catch (Exception ^)
+		{
+			hr = E_FAIL;
+		}
+		finally
+		{
+			if (enc != nullptr) delete enc;
+		}
+
+		duration = TimeSpan::Zero;
+		audioStreamsCount = 0;
+
+		return hr;
 	}
 
-	String ^ MediaFile::GetImageResolution(IO::FileInfo ^ file)
+	Boolean MediaFile::GetImageResolution(IO::FileInfo ^ file, String ^% resolution)
 	{
 		String ^ width, ^ height;
 
@@ -73,7 +131,15 @@ namespace DSWrapper
 			height = Regex::Match(GetValue(file, 165, "0"), "\\d+")->Value;
 		}
 
-		return width + "x" + height;
+		if (width == nullptr || width == String::Empty || width == "0" ||
+			height == nullptr || height == String::Empty || height == "0")
+		{
+			resolution = "0x0";
+			return false;
+		}
+
+		resolution = width + "x" + height;
+		return true;
 	}
 
 	String ^ MediaFile::GetAudioArtist(IO::FileInfo ^ file)

@@ -19,6 +19,10 @@ namespace DSWrapper
 						UINT32 percentQuality, UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath,
 						bool keepAspectRatio, MpaLayer mpaLayer, UINT32 audBitrate);
 
+					static ContainerType ^ MPEG2_TS_H264(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, 
+						UINT32 percentQuality, UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath,
+						bool keepAspectRatio, UINT32 audBitrate);
+
 					static ContainerType ^ WEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
 
@@ -48,8 +52,10 @@ namespace DSWrapper
 					static System::Boolean IsWEBMInstalled(void);
 					static System::Boolean IsWMVInstalled(void);
 					static System::Boolean IsFFDSHOWInstalled(void);
+					static System::Boolean IsHMCInstalled(void);
 
-		internal:	virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) = 0;
+		internal:	virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) = 0;
 
 					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter);
 
@@ -80,7 +86,8 @@ namespace DSWrapper
 						ContainerType(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), 
 						m_scanType(scanType), m_mpaLayer(mpaLayer), m_audBitrate(audBitrate) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
 
 					virtual GUID GetSubtype() override { return MEDIASUBTYPE_MPEG2_PROGRAM; }
 
@@ -104,7 +111,8 @@ namespace DSWrapper
 						System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, WebmMuxMode muxMode) : ContainerType(width, height, bitrateMode, vidBitrate, 
 						percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate), m_muxMode(muxMode) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
 
 					virtual GUID GetSubtype() override;
 
@@ -118,7 +126,8 @@ namespace DSWrapper
 						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, UINT32 audBitrate) : ContainerType(width, height, BitrateMode::CBR, vidBitrate, 
 						percentQuality, fps, intSubtitles, intSubtitlesPath, FALSE), m_audBitrate(audBitrate), m_videoSubtype(videoSubtype) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
 
 					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter) override;
 
@@ -135,7 +144,8 @@ namespace DSWrapper
 						height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate), m_container(container), 
 						m_streamable(streamable), m_scanType(scanType) { }
 
-					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, IPin * writerPin) override;
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
 
 					virtual GUID GetSubtype() override { return GUID_NULL; }
 
