@@ -12,7 +12,7 @@
 #include "dibhelper.h"
 
 
-HBITMAP CopyScreenToBitmap(LPRECT lpRect, BYTE *pData, BITMAPINFO *pHeader)
+HBITMAP CopyScreenToBitmap(LPRECT lpRect, BYTE *pData, BITMAPINFO *pHeader, BOOL writeCursor)
 {
     HDC         hScrDC, hMemDC;         // screen DC and memory DC
     HBITMAP     hBitmap, hOldBitmap;    // handles to deice-dependent bitmaps
@@ -60,6 +60,19 @@ HBITMAP CopyScreenToBitmap(LPRECT lpRect, BYTE *pData, BITMAPINFO *pHeader)
 
     // bitblt screen DC to memory DC
     BitBlt(hMemDC, 0, 0, nWidth, nHeight, hScrDC, nX, nY, SRCCOPY);
+
+	// write cursor to output bitmap
+	if (writeCursor)
+	{
+		CURSORINFO pci;
+		pci.cbSize = sizeof(CURSORINFO);
+
+		if(GetCursorInfo(&pci))
+		{
+			POINT point = pci.ptScreenPos;
+			DrawIconEx(hMemDC, point.x, point.y, pci.hCursor, 0, 0, 0, NULL, DI_NORMAL);
+		}
+	}
 
     // select old bitmap back into memory DC and get handle to
     // bitmap of the screen   

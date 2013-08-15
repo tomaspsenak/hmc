@@ -16,7 +16,7 @@ DEFINE_GUID(SubtitleInfo, 0xA33D2F7D, 0x96BC, 0x4337, 0xB2, 0x3B, 0xA8, 0xB9, 0x
 
 namespace DSWrapper 
 {
-	DSEncoder::DSEncoder(void) : m_filterGraph(NULL), m_outputStream(nullptr), m_sourceFilter(NULL), m_demuxFilter(NULL), m_containerType(nullptr),
+	DSEncoder::DSEncoder(void) : m_graphBuilder(NULL), m_outputStream(nullptr), m_sourceFilter(NULL), m_demuxFilter(NULL), m_containerType(nullptr),
 		m_continueEncode(FALSE), m_startTime(0), m_endTime(0)
 	{
 		this->m_sourcePins = gcnew System::Collections::Generic::List<PinInfoItem^>();
@@ -47,7 +47,6 @@ namespace DSWrapper
 
 		IBaseFilter * sourceFilter = NULL;
 		IGraphBuilder * graphBuilder = NULL;
-		IFilterGraph * filterGraph = NULL;
 		IFileSourceFilter * fileSource = NULL;
 
 		System::Collections::Generic::List<PinInfoItem^>^ sourcePins = nullptr;
@@ -94,9 +93,8 @@ namespace DSWrapper
 			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
 		}
 
-		//Vytvorenie zakladnych objektov
+		//Vytvorenie manazera grafu
 		CHECK_HR(hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graphBuilder));
-		CHECK_HR(hr = graphBuilder->QueryInterface(IID_IFilterGraph, (void **)&filterGraph));
 
 		if (demuxFilter == NULL)
 		{
@@ -119,7 +117,7 @@ namespace DSWrapper
 					CHECK_HR(hr = FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, FALSE));
 				}
 
-				sourcePins = GetPinInfo(demuxFilter, PINDIR_OUTPUT);
+				sourcePins = GetPinsInfo(demuxFilter, PINDIR_OUTPUT);
 				for each (PinInfoItem^ item in sourcePins)
 				{
 					if (item->MediaType != PinMediaType::Unknown)
@@ -140,21 +138,21 @@ namespace DSWrapper
 		else
 		{
 			CHECK_SUCCEED(hr = graphBuilder->AddFilter(demuxFilter, NULL));
-			sourcePins = GetPinInfo(demuxFilter, PINDIR_OUTPUT);
+			sourcePins = GetPinsInfo(demuxFilter, PINDIR_OUTPUT);
 		}
 
 		this->m_sourcePins = sourcePins;
 
 		//Vycisti predchadzajuci nastaveny objekt, priradi novy
-		pin_ptr<IFilterGraph*> pFilterGraph = &this->m_filterGraph;
-		SafeRelease<IFilterGraph>(pFilterGraph);
+		pin_ptr<IGraphBuilder*> pGraphBuilder = &this->m_graphBuilder;
+		SafeRelease<IGraphBuilder>(pGraphBuilder);
 		pin_ptr<IBaseFilter*> pSourceFilter = &this->m_sourceFilter;
 		SafeRelease<IBaseFilter>(pSourceFilter);
 		pin_ptr<IBaseFilter*> pDemuxFilter = &this->m_demuxFilter;
 		SafeRelease<IBaseFilter>(pDemuxFilter);
 
-		this->m_filterGraph = filterGraph;
-		filterGraph = NULL;
+		this->m_graphBuilder = graphBuilder;
+		graphBuilder = NULL;
 		this->m_sourceFilter = sourceFilter;
 		sourceFilter = NULL;
 		this->m_demuxFilter = demuxFilter;
@@ -165,7 +163,6 @@ namespace DSWrapper
 		SAFE_RELEASE(sourceFilter);
 		SAFE_RELEASE(fileSource);
 		SAFE_RELEASE(graphBuilder);
-		SAFE_RELEASE(filterGraph);
 
 		SAFE_RELEASE(demuxFilter);
 		SAFE_RELEASE(outputPin);
@@ -179,7 +176,6 @@ namespace DSWrapper
 		HRESULT hr = S_OK;
 
 		IGraphBuilder * graphBuilder = NULL;
-		IFilterGraph * filterGraph = NULL;
 		IBaseFilter * sourceFilter = NULL;
 		IAMGraphStreams * graphStreams = NULL;
 
@@ -188,7 +184,6 @@ namespace DSWrapper
 
 		//Vytvorenie zakladnych objektov
 		CHECK_HR(hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void **)&graphBuilder));
-		CHECK_HR(hr = graphBuilder->QueryInterface(IID_IFilterGraph, (void **)&filterGraph));
 		CHECK_HR(hr = graphBuilder->QueryInterface(IID_IAMGraphStreams, (void **)&graphStreams));
 		//Nastavenie synchronizacie pre live sources
 		graphStreams->SyncUsingStreamOffset(TRUE);
@@ -197,25 +192,24 @@ namespace DSWrapper
 		
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(sourceFilter, NULL));
 
-		this->m_sourcePins = GetPinInfo(sourceFilter, PINDIR_OUTPUT);
+		this->m_sourcePins = GetPinsInfo(sourceFilter, PINDIR_OUTPUT);
 
 		//Vycisti predchadzajuci nastaveny objekt, priradi novy
-		pin_ptr<IFilterGraph*> pFilterGraph = &this->m_filterGraph;
-		SafeRelease<IFilterGraph>(pFilterGraph);
+		pin_ptr<IGraphBuilder*> pGraphBuilder = &this->m_graphBuilder;
+		SafeRelease<IGraphBuilder>(pGraphBuilder);
 		pin_ptr<IBaseFilter*> pSourceFilter = &this->m_sourceFilter;
 		SafeRelease<IBaseFilter>(pSourceFilter);
 		pin_ptr<IBaseFilter*> pDemuxFilter = &this->m_demuxFilter;
 		SafeRelease<IBaseFilter>(pDemuxFilter);
 
-		this->m_filterGraph = filterGraph;
-		filterGraph = NULL;
+		this->m_graphBuilder = graphBuilder;
+		graphBuilder = NULL;
 		this->m_demuxFilter = sourceFilter;
 		sourceFilter = NULL;
 
 	done:
 
 		SAFE_RELEASE(graphBuilder);
-		SAFE_RELEASE(filterGraph);
 		SAFE_RELEASE(sourceFilter);
 		SAFE_RELEASE(graphStreams);
 
@@ -252,11 +246,12 @@ namespace DSWrapper
 	{
 		HRESULT hr = S_OK;
 
-		IGraphBuilder * graphBuilder = NULL;
 		IMediaControl * mediaControl = NULL;
 		IMediaEvent * mediaEvent = NULL;
 		IMediaSeeking * mediaSeeking = NULL;
+		IMediaSeeking * mediaSeekingMux = NULL;
 		IBaseFilter * writerFilter = NULL;
+		IAMStreamSelect * streamSelect = NULL;
 
 		IPin * videoPin = NULL;
 		IPin * audioPin = NULL;
@@ -265,24 +260,42 @@ namespace DSWrapper
 
 		CHECK_HR(hr = (this->m_outputStream == nullptr) ? E_FAIL : S_OK);
 		CHECK_HR(hr = (this->m_containerType == nullptr) ? E_FAIL : S_OK);
-		CHECK_HR(hr = (this->m_filterGraph == NULL) ? E_FAIL : S_OK);
+		CHECK_HR(hr = (this->m_graphBuilder == NULL) ? E_FAIL : S_OK);
 		CHECK_HR(hr = (this->m_demuxFilter == NULL) ? E_FAIL : S_OK);
 
-		CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IGraphBuilder, (void **)&graphBuilder));
-		CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IMediaControl, (void **)&mediaControl));
-		CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IMediaEvent, (void **)&mediaEvent));
-		CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));
+		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaControl, (void **)&mediaControl));
+		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaEvent, (void **)&mediaEvent));
+		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));
 		
 		//Vycisti graf a zisti audio a video pin podla nastavenia a demultiplexora
-		CHECK_HR(hr = ClearGraphFrom(this->m_filterGraph, this->m_demuxFilter));
+		CHECK_HR(hr = ClearGraphFrom(this->m_graphBuilder, this->m_demuxFilter));
 		CHECK_HR(hr = GetSourcePins(&videoPin, &audioPin, &subtitlePin));
 
 		//Ziska writerFilter podla kontajnera, prida ho do grafu a zisti jeho vstupny pin
-		CHECK_HR(hr = this->m_containerType->GetWriter(this->m_outputStream, graphBuilder, &writerFilter));
+		CHECK_HR(hr = this->m_containerType->GetWriter(this->m_outputStream, this->m_graphBuilder, &writerFilter));
 		writerPin = GetFirstPin(writerFilter, PINDIR_INPUT);
 
 		//Nastavi spojenie decoder -> coder -> muxer -> writer
-		CHECK_HR(hr = this->m_containerType->ConfigureContainer(graphBuilder, videoPin, audioPin, subtitlePin, writerPin));
+		CHECK_HR(hr = this->m_containerType->ConfigureContainer(this->m_graphBuilder, videoPin, audioPin, subtitlePin, writerPin, &mediaSeekingMux));
+		if (mediaSeekingMux == NULL)
+		{
+			mediaSeekingMux = mediaSeeking;
+			mediaSeekingMux->AddRef();
+		}
+
+		//Ak demultiplexor podporuje IAMStreamSelect, aktivuju sa streami
+		//Pri vacsine demultiplexeroch funguje az po pripojeni pinov
+		if (this->m_demuxFilter->QueryInterface(IID_IAMStreamSelect, (void **)&streamSelect) == S_OK)
+		{
+			for each (PinInfoItem ^ pii in this->m_sourcePins)
+			{
+				if (pii->IsStream && pii->IsSelected)
+				{
+					//AMSTREAMSELECTENABLE_ENABLE - Enable only this stream within the given group and disable all others.
+					streamSelect->Enable(pii->Index, AMSTREAMSELECTENABLE_ENABLE);
+				}
+			}
+		}
 
 		long evCode;
 		LONG_PTR param1, param2;
@@ -329,7 +342,7 @@ namespace DSWrapper
 			}
 
 			//Zisti priblizne (hlavne pri variabile bitrate) spracovanie
-			mediaSeeking->GetCurrentPosition(&position);
+			mediaSeekingMux->GetCurrentPosition(&position);
 			progress = (System::Double)(position - startTime) / (System::Double)(endTime - startTime);
 			progress = progress > 1.0 ? System::Double::PositiveInfinity : progress;
 			OnProgressChange(gcnew ProgressChangeEventArgs(progress));
@@ -343,18 +356,23 @@ namespace DSWrapper
 			mediaControl->Stop();
 
 		SAFE_RELEASE(writerFilter);
-		SAFE_RELEASE(graphBuilder);
 		SAFE_RELEASE(mediaControl);
 		SAFE_RELEASE(mediaEvent);
 		SAFE_RELEASE(mediaSeeking);
+		SAFE_RELEASE(mediaSeekingMux);
+		SAFE_RELEASE(streamSelect);
 
 		SAFE_RELEASE(writerPin);
 		SAFE_RELEASE(subtitlePin);
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
 
-		if(hr != S_OK)
+		if (hr != S_OK)
+		{
+			if (hr == VFW_E_CANNOT_CONNECT)
+				throw gcnew DSException(L"No combination of intermediate filters could be found to make the connection", hr);
 			throw gcnew DSException(L"Unable to recode entire input", hr);
+		}
 	}
 
 	void DSEncoder::StopEncode(void)
@@ -369,7 +387,6 @@ namespace DSWrapper
 
 		IPin * retPin = NULL;
 		IEnumPins * enumPins = NULL;
-		IGraphBuilder * graphBuilder = NULL;
 		IMediaSeeking * mediaSeeking = NULL;
 
 		if (this->m_demuxFilter == NULL)
@@ -377,8 +394,7 @@ namespace DSWrapper
 
 		if (this->m_demuxFilter->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking) < 0)
 		{
-			CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IGraphBuilder, (void **)&graphBuilder));
-			CHECK_HR(hr = this->m_filterGraph->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));
+			CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));
 
 			CHECK_HR(hr = this->m_demuxFilter->EnumPins(&enumPins));
 			CHECK_HR(hr = enumPins->Reset());
@@ -390,7 +406,7 @@ namespace DSWrapper
 
 				if (pinDir == PINDIR_OUTPUT)
 				{
-					if (graphBuilder->Render(retPin) >= 0)
+					if (this->m_graphBuilder->Render(retPin) >= 0)
 						break;
 				}
 
@@ -408,7 +424,6 @@ namespace DSWrapper
 
 		SAFE_RELEASE(retPin);
 		SAFE_RELEASE(enumPins);
-		SAFE_RELEASE(graphBuilder);
 		SAFE_RELEASE(mediaSeeking);
 
 		return val;
@@ -422,8 +437,8 @@ namespace DSWrapper
 		SafeRelease<IBaseFilter>(demuxFilter);
 		pin_ptr<IBaseFilter*> pSourceFilter = &this->m_sourceFilter;
 		SafeRelease<IBaseFilter>(pSourceFilter);
-		pin_ptr<IFilterGraph*> pFilterGraph = &this->m_filterGraph;
-		SafeRelease<IFilterGraph>(pFilterGraph);
+		pin_ptr<IGraphBuilder*> pGraphBuilder = &this->m_graphBuilder;
+		SafeRelease<IGraphBuilder>(pGraphBuilder);
 	}
 
 	//*************** Private ***************\\
@@ -451,14 +466,16 @@ namespace DSWrapper
 
 			for each (PinInfoItem ^ pii in this->m_sourcePins)
 			{
-				if (pii->Index == pinIdx)
+				//Viacej PinInfoItem moze mat rovnaky PinIndex - obsahuju streami
+				//Prehladava piny s rovnakym indexom a najde prvy ktory je selected
+				if (pii->PinIndex == pinIdx && pii->IsSelected)
 				{
 					item = pii;
 					break;
 				}
 			}
 
-			if (item != nullptr && item->IsSelected)
+			if (item != nullptr)
 			{
 				if (item->MediaType == PinMediaType::Video && (*videoPin) == NULL)
 				{
@@ -508,7 +525,8 @@ namespace DSWrapper
 		arrayLength = GetTypesArray(outputPin, arrayInTypes, arrayLength);
 
 		CHECK_HR(hr = CoCreateInstance(CLSID_FilterMapper2, NULL, CLSCTX_INPROC, IID_IFilterMapper2, (void **)&filterMapper));
-		CHECK_HR(hr = filterMapper->EnumMatchingFilters(&enumMoniker, 0, TRUE, MERIT_DO_NOT_USE + 1, TRUE, arrayLength, arrayInTypes, 
+		//nezvysovat merit - problem s LAV filtrom
+		CHECK_HR(hr = filterMapper->EnumMatchingFilters(&enumMoniker, 0, TRUE, MERIT_DO_NOT_USE, TRUE, arrayLength, arrayInTypes, 
 			NULL, NULL, FALSE, TRUE, 0, NULL, NULL, NULL));
 		
 		//Najdenie vhodneho demultiplexora
@@ -634,16 +652,19 @@ namespace DSWrapper
 		return retPin;
 	}
 
-	System::Collections::Generic::List<PinInfoItem^>^ DSEncoder::GetPinInfo(IBaseFilter * filter, PIN_DIRECTION direction)
+	System::Collections::Generic::List<PinInfoItem^>^ DSEncoder::GetPinsInfo(IBaseFilter * filter, PIN_DIRECTION direction)
 	{
 		HRESULT hr = S_OK;
-		DWORD pinIdx = 0;
+		DWORD pinIdx = 0, streamCount = 0, streamFlags = 0, audioPinCount = 0, videoPinCount = 0, subtitlePinCount = 0;
 
 		IPin * retPin = NULL;
 		IPin * connPin = NULL;
 		IEnumPins * enumPins = NULL;
 		AM_MEDIA_TYPE * mediaType = NULL;
 		IEnumMediaTypes * enumTypes = NULL;
+		IAMStreamSelect * streamSelect = NULL;
+
+		PinInfoItem ^ audioPin = nullptr, ^ videoPin = nullptr, ^ subtitlePin = nullptr;
 		System::Collections::Generic::List<PinInfoItem^>^ pinInfo = gcnew System::Collections::Generic::List<PinInfoItem^>();
 
 		if (filter == NULL)
@@ -670,55 +691,32 @@ namespace DSWrapper
 					if (enumTypes->Next(1, &mediaType, NULL) != 0)
 						break;
 
-					if (mediaType->majortype == MEDIATYPE_Video)
-					{
-						BITMAPINFOHEADER bitmap;
-						ZeroMemory(&bitmap, sizeof(BITMAPINFOHEADER));
-
-						if (mediaType->formattype == FORMAT_VideoInfo)
-						{
-							VIDEOINFOHEADER * header = (VIDEOINFOHEADER *)mediaType->pbFormat;
-							bitmap = header->bmiHeader;
-						}
-						else if (mediaType->formattype == FORMAT_VideoInfo2)
-						{
-							VIDEOINFOHEADER2 * header = (VIDEOINFOHEADER2 *)mediaType->pbFormat;
-							bitmap = header->bmiHeader;
-						}
-						else if (mediaType->formattype == FORMAT_MPEG2_VIDEO)
-						{
-							MPEG2VIDEOINFO * header = (MPEG2VIDEOINFO *)mediaType->pbFormat;
-							bitmap = header->hdr.bmiHeader;
-						}
-
-						item = gcnew PinVideoItem(pinIdx, connPin != NULL, bitmap.biWidth, bitmap.biHeight);
-					}
-					else if (mediaType->majortype == MEDIATYPE_Audio)
-					{
-						item = gcnew PinInfoItem(pinIdx, connPin != NULL, PinMediaType::Audio);
-					}
-					else if (mediaType->majortype == MEDIATYPE_Subtitle)
-					{
-						System::String ^ langName = System::String::Empty;
-						if (mediaType->formattype == SubtitleInfo)
-						{
-							SUBTITLEINFO * info = (SUBTITLEINFO *)mediaType->pbFormat;
-							langName = System::Runtime::InteropServices::Marshal::PtrToStringAnsi(static_cast<System::IntPtr>(info->IsoLang));
-						}
-
-						item = gcnew PinSubtitleItem(pinIdx, connPin != NULL, langName);
-					}
+					item = GetPinInfo(pinIdx, connPin != NULL, mediaType, nullptr);
 
 					DeleteMediaType(mediaType);
 					mediaType = NULL;
 
-					if (item != nullptr)
+					if (item->MediaType == PinMediaType::Video)
+					{
+						videoPinCount++;
+						videoPin = item;
 						break;
+					}
+					else if (item->MediaType == PinMediaType::Audio)
+					{
+						audioPinCount++;
+						audioPin = item;
+						break;
+					}
+					else if (item->MediaType == PinMediaType::Subtitle)
+					{
+						subtitlePinCount++;
+						subtitlePin = item;
+						break;
+					}
 				}
 
-				if (item == nullptr)
-					pinInfo->Add(gcnew PinInfoItem(pinIdx, connPin != NULL, PinMediaType::Unknown));
-				else
+				if (item != nullptr)
 					pinInfo->Add(item);
 
 				SAFE_RELEASE(enumTypes);
@@ -729,15 +727,103 @@ namespace DSWrapper
 			SAFE_RELEASE(retPin);
 		}
 
+		//IAMStreamSelect umoznuje vyber streamu. Jeden pin moze mat viacej streamov (audio,...)
+		//Vyberaju sa iba tie piny, ktorych typy sa uz neopakuju - daju sa sparovat so streamami
+		if ((audioPinCount == 1 || videoPinCount == 1 || subtitlePinCount == 1) &&
+			(filter->QueryInterface(IID_IAMStreamSelect, (void **)&streamSelect) == S_OK))
+		{
+			if (streamSelect->Count(&streamCount) != S_OK)
+				streamCount = 0;
+
+			for (DWORD i = 0; i < streamCount; i++)
+			{
+				if (streamSelect->Info(i, &mediaType, &streamFlags, NULL, NULL, NULL, NULL, NULL) != S_OK)
+					break;
+
+				if (mediaType->majortype == MEDIATYPE_Video)
+				{
+					if (videoPinCount == 1)
+					{
+						pinInfo->Remove(videoPin);
+						pinInfo->Add(GetPinInfo(i, streamFlags != 0, mediaType, videoPin));
+					}
+				}
+				else if (mediaType->majortype == MEDIATYPE_Audio)
+				{
+					if (audioPinCount == 1)
+					{
+						pinInfo->Remove(audioPin);
+						pinInfo->Add(GetPinInfo(i, streamFlags != 0, mediaType, audioPin));
+					}
+				}
+				else if (mediaType->majortype == MEDIATYPE_Subtitle)
+				{
+					if (subtitlePinCount == 1)
+					{
+						pinInfo->Remove(subtitlePin);
+						pinInfo->Add(GetPinInfo(i, streamFlags != 0, mediaType, subtitlePin));
+					}
+				}
+
+				DeleteMediaType(mediaType);
+				mediaType = NULL;
+			}
+		}
+
 	done:
 
 		SAFE_RELEASE(enumTypes);
 		SAFE_RELEASE(enumPins);
 		SAFE_RELEASE(retPin);
 		SAFE_RELEASE(connPin);
+		SAFE_RELEASE(streamSelect);
 		DeleteMediaType(mediaType);
 		
 		return pinInfo;
+	}
+
+	PinInfoItem^ DSEncoder::GetPinInfo(DWORD index, BOOL selected, AM_MEDIA_TYPE * mediaType, PinInfoItem ^ streamPin)
+	{
+		if (mediaType->majortype == MEDIATYPE_Video)
+		{
+			BITMAPINFOHEADER bitmap;
+			ZeroMemory(&bitmap, sizeof(BITMAPINFOHEADER));
+
+			if (mediaType->formattype == FORMAT_VideoInfo)
+			{
+				VIDEOINFOHEADER * header = (VIDEOINFOHEADER *)mediaType->pbFormat;
+				bitmap = header->bmiHeader;
+			}
+			else if (mediaType->formattype == FORMAT_VideoInfo2)
+			{
+				VIDEOINFOHEADER2 * header = (VIDEOINFOHEADER2 *)mediaType->pbFormat;
+				bitmap = header->bmiHeader;
+			}
+			else if (mediaType->formattype == FORMAT_MPEG2_VIDEO)
+			{
+				MPEG2VIDEOINFO * header = (MPEG2VIDEOINFO *)mediaType->pbFormat;
+				bitmap = header->hdr.bmiHeader;
+			}
+
+			return gcnew PinVideoItem(index, selected, streamPin, bitmap.biWidth, bitmap.biHeight);
+		}
+		else if (mediaType->majortype == MEDIATYPE_Audio)
+		{
+			return gcnew PinInfoItem(index, selected, PinMediaType::Audio, streamPin);
+		}
+		else if (mediaType->majortype == MEDIATYPE_Subtitle)
+		{
+			System::String ^ langName = System::String::Empty;
+			if (mediaType->formattype == SubtitleInfo)
+			{
+				SUBTITLEINFO * info = (SUBTITLEINFO *)mediaType->pbFormat;
+				langName = System::Runtime::InteropServices::Marshal::PtrToStringAnsi(static_cast<System::IntPtr>(info->IsoLang));
+			}
+
+			return gcnew PinSubtitleItem(index, selected, streamPin, langName);
+		}
+
+		return gcnew PinInfoItem(index, selected, PinMediaType::Unknown, streamPin);
 	}
 
 	DWORD DSEncoder::GetTypesArray(IPin * pin, GUID * typesArray, DWORD maxLength)
@@ -765,6 +851,7 @@ namespace DSWrapper
 
 	done:
 
+		SAFE_RELEASE(enumTypes);
 		DeleteMediaType(mediaType);
 
 		return actIndex;

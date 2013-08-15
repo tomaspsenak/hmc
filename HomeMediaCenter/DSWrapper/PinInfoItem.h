@@ -14,6 +14,11 @@ namespace DSWrapper
 						DWORD get() { return m_index; }
 					}
 
+					property DWORD PinIndex
+					{
+						DWORD get() { return m_streamPin == nullptr ? m_index : m_streamPin->m_index; }
+					}
+			
 					property PinMediaType MediaType
 					{
 						PinMediaType get() { return m_mediaType; }
@@ -25,15 +30,21 @@ namespace DSWrapper
 						void set(System::Boolean value) { m_selected = (value) ? TRUE : FALSE; }
 					}
 
-					virtual System::String^ ToString(void) override
+					property System::Boolean IsStream
 					{
-						return System::String::Format(L"{0} pin ({1}) - {2}", m_mediaType, m_index, IsSelected);
+						System::Boolean get() { return m_streamPin == nullptr ? false : true; }
 					}
 
-		internal:	PinInfoItem(DWORD index, BOOL selected, PinMediaType mediaType) : m_index(index), m_selected(selected), 
-						m_mediaType(mediaType) { };
+					virtual System::String^ ToString(void) override
+					{
+						return System::String::Format(L"{0} pin ({1}) - {2}", m_mediaType, PinIndex, IsSelected);
+					}
 
-		private:	PinMediaType m_mediaType;
+		internal:	PinInfoItem(DWORD index, BOOL selected, PinMediaType mediaType, PinInfoItem ^ streamPin) : m_index(index), 
+						m_selected(selected), m_mediaType(mediaType), m_streamPin(streamPin) { };
+
+		private:	PinInfoItem ^ m_streamPin;
+					PinMediaType m_mediaType;
 					BOOL m_selected;
 					DWORD m_index;
 	};
@@ -50,8 +61,8 @@ namespace DSWrapper
 						return System::String::Format(L"{0} - {1}", PinInfoItem::ToString(), m_langName);
 					}
 
-		internal:	PinSubtitleItem(DWORD index, BOOL selected, System::String^ langName) : 
-						PinInfoItem(index, selected, PinMediaType::Subtitle), m_langName(langName) { };
+		internal:	PinSubtitleItem(DWORD index, BOOL selected, PinInfoItem ^ streamPin, System::String^ langName) : 
+						PinInfoItem(index, selected, PinMediaType::Subtitle, streamPin), m_langName(langName) { };
 
 		private:	System::String^ m_langName;
 	};
@@ -73,8 +84,8 @@ namespace DSWrapper
 						return System::String::Format(L"{0} - {1}x{2}", PinInfoItem::ToString(), m_width, m_height);
 					}
 
-		internal:	PinVideoItem(DWORD index, BOOL selected, LONG width, LONG height) : 
-						PinInfoItem(index, selected, PinMediaType::Video), m_width(width), m_height(height) { };
+		internal:	PinVideoItem(DWORD index, BOOL selected, PinInfoItem ^ streamPin, LONG width, LONG height) : 
+						PinInfoItem(index, selected, PinMediaType::Video, streamPin), m_width(width), m_height(height) { };
 
 		private:	LONG m_width;
 					LONG m_height;

@@ -244,12 +244,14 @@
     <ClInclude Include="Extern\IVorbisEncodeSettings.h" />
     <ClInclude Include="MediaFile.h" />
     <ClInclude Include="PinInfoItem.h" />
+    <ClInclude Include="PreFilter.h" />
     <ClInclude Include="ProgressChangeEventArgs.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SinkFilterGraph.h" />
     <ClInclude Include="SinkSourceFilter.h" />
     <ClInclude Include="SourceFilter.h" />
     <ClInclude Include="Stdafx.h" />
+    <ClInclude Include="WMPreFilter.h" />
     <ClInclude Include="WMSinkWriter.h" />
   </ItemGroup>
   <ItemGroup>
@@ -267,6 +269,7 @@
     <ClCompile Include="FramerateFilter.cpp" />
     <ClCompile Include="InputType.cpp" />
     <ClCompile Include="MediaFile.cpp" />
+    <ClCompile Include="PreFilter.cpp" />
     <ClCompile Include="SinkFilterGraph.cpp" />
     <ClCompile Include="SinkSourceFilter.cpp" />
     <ClCompile Include="SourceFilter.cpp" />
@@ -276,6 +279,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="WMPreFilter.cpp" />
     <ClCompile Include="WMSinkWriter.cpp" />
   </ItemGroup>
   <ItemGroup>

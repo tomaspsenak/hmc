@@ -14,18 +14,18 @@ private class DesktopSourceFilter : public CSource, public IAMFilterMiscFlags
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
 
-				void SyncPins(DWORD index, REFERENCE_TIME & rtSyncTime);
+				void SyncPins(DWORD index);
 				//IAMFilterMiscFlags
 				ULONG STDMETHODCALLTYPE GetMiscFlags(void);
 
-				//Synchronizacia audia a videa v milisekundach, nedavat male cislo
-				static const DWORD SyncTime = 5000;
+				//Maximalna dlzka cakania na synchronizaciu
+				static const DWORD WaitToSync = 10000;
 
 	private:	DesktopSourcePin * m_sourcePin;
 				DesktopSourceAudioPin * m_sourceAudioPin;
 				CCritSec m_syncSection;
-				REFERENCE_TIME m_rtLastFrame;
-				BOOL m_isTimeSet;
+				HANDLE m_syncEvent[2];
+				BOOL m_signaled[2];
 };
 
 #endif //DESKTOPSOURCEFILTER_DSWRAPPER_INCLUDED

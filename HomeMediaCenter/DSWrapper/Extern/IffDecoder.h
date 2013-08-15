@@ -70,7 +70,8 @@ DEFINE_GUID(CLSID_FFDSHOW , 0x04fe9017, 0xf873, 0x410e, 0x87, 0x1e, 0xab, 0x91, 
 
 #define IDFF_isResize            701 //is resizing active (or will be resizing active)
 #define IDFF_resizeDx            702 //new width
-#define IDFF_resizeDy            705 //new height, 5?
+#define IDFF_resizeDy            705 //new height
+#define IDFF_resizeDy_real       766
 #define IDFF_resizeAspect        704 //0 - no aspect ratio correctio, 1 - keep original aspect, 2 - aspect ration is set in IDFF_aspectRatio
 #define IDFF_resizeIsDy0         703 //0 - horizontal and vertical, 1 - horizontal, 3?
 #define IDFF_resizeMethod        706
@@ -89,6 +90,8 @@ DEFINE_GUID(CLSID_FFDSHOW , 0x04fe9017, 0xf873, 0x410e, 0x87, 0x1e, 0xab, 0x91, 
 #define IDFF_autocrop            719
 #define IDFF_magnificationY      720
 #define IDFF_magnificationLocked 721
+#define IDFF_resizeMode          728 //0 - exact size, 1 - aspect ratio , 2 - multiply of , 3 - multiply,
+#define IDFF_resizeIf            733 //0 - always, 1 - size, 2 - number of pixels,
 
 #define IDFF_isSubtitles         801
 #define IDFF_orderSubtitles      815

@@ -13,7 +13,7 @@ namespace DSWrapper
 					{
 						virtual System::String ^ get(void) override 
 						{ 
-							return System::String::Format(L"{0} HRESULT=0x{1:x16}", System::Exception::Message, m_hr); 
+							return System::String::Format(L"{0} HRESULT=0x{1:x8}", System::Exception::Message, m_hr); 
 						}
 					}
 

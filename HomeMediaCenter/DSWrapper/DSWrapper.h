@@ -45,7 +45,8 @@ namespace DSWrapper
 		internal:	static IPin * GetFirstPin(IBaseFilter * filter, PIN_DIRECTION direction);
 					static IPin * GetPin(IBaseFilter * filter, PIN_DIRECTION direction, DWORD index);
 					static BOOL IsConnected(IPin * pin);
-					static System::Collections::Generic::List<PinInfoItem^>^ GetPinInfo(IBaseFilter * filter, PIN_DIRECTION direction);
+					static System::Collections::Generic::List<PinInfoItem^>^ GetPinsInfo(IBaseFilter * filter, PIN_DIRECTION direction);
+					static PinInfoItem^ GetPinInfo(DWORD index, BOOL selected, AM_MEDIA_TYPE * mediaType, PinInfoItem ^ streamPin);
 					static DWORD GetTypesArray(IPin * pin, GUID * typesArray, DWORD maxLength);
 					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter);
 					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter, BOOL removeFilter);
@@ -60,7 +61,7 @@ namespace DSWrapper
 					LONGLONG m_startTime;
 					LONGLONG m_endTime;
 
-					IFilterGraph * m_filterGraph;
+					IGraphBuilder * m_graphBuilder;
 					IBaseFilter * m_sourceFilter;
 					IBaseFilter * m_demuxFilter;
 					System::IO::Stream ^ m_outputStream;

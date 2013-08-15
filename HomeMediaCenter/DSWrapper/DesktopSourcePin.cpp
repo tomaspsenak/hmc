@@ -5,7 +5,7 @@
 #include "DesktopSourceFilter.h"
 
 DesktopSourcePin::DesktopSourcePin(TCHAR * pObjectName, HRESULT * phr, CSource * pms, LPCWSTR pName, UINT32 fps) 
-	: CSourceStream(pObjectName, phr, pms, pName), m_rtLastFrame(0), m_rtFrameLength(UNITS / fps), m_colorConverter(NULL), m_nextTick(0), m_lastSync(0)
+	: CSourceStream(pObjectName, phr, pms, pName), m_rtLastFrame(0), m_rtFrameLength(UNITS / fps), m_colorConverter(NULL)
 {
 	//Ak sa neda vytvorit ColorConvertDMO, bude NULL - bude sa pouzivat iba RGB
 	//CoCreateInstance(__uuidof(CColorConvertDMO), NULL, CLSCTX_INPROC_SERVER, __uuidof(IMediaObject), (void**)&this->m_colorConverter);
@@ -129,14 +129,14 @@ HRESULT DesktopSourcePin::CheckMediaType(const CMediaType * pMediaType)
 	SetRectEmpty(&screenRect);
 
     if((*pMediaType->Type() != MEDIATYPE_Video) || (!pMediaType->IsFixedSize()) || (pMediaType->Subtype() == NULL) || (pMediaType->Format() == NULL))
-		CHECK_HR(hr = E_INVALIDARG);                                             
+		CHECK_HR(hr = VFW_E_NO_ACCEPTABLE_TYPES);                                             
 
     subType = *pMediaType->Subtype();
 
 	if (this->m_colorConverter == NULL)
 	{
 		if (/*subType != MEDIASUBTYPE_RGB24 &&*/ subType != MEDIASUBTYPE_RGB32)
-			CHECK_HR(hr = E_INVALIDARG);
+			CHECK_HR(hr = VFW_E_NO_ACCEPTABLE_TYPES);
 	}
 	else
 	{
@@ -185,7 +185,7 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 	HRESULT hr = S_OK;
 	RECT screenRect;
 	BYTE * sampleData, * inBuffer;
-    DWORD sampleDataCount, status, nowTick;
+    DWORD sampleDataCount, status;
 	ULONG writeCount = 0;
 
 	DMO_MEDIA_TYPE dmoType;
@@ -231,14 +231,8 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 		CHECK_HR(inMediaBuffer->SetLength(dmoType.lSampleSize));
 	}
 
-	//Spomalenie snimkovania podla stanoveneho FPS
-	nowTick = GetTickCount();
-	if (nowTick < this->m_nextTick)
-		Sleep((DWORD)(this->m_nextTick - nowTick));
-	this->m_nextTick = (DWORD)(this->m_nextTick + (this->m_rtFrameLength / 10000));
-
 	//Skopirovanie plochy do buffera
-    HDIB hDib = CopyScreenToBitmap(&screenRect, inBuffer, (BITMAPINFO *)&this->m_bitmapInfo);
+    HDIB hDib = CopyScreenToBitmap(&screenRect, inBuffer, (BITMAPINFO *)&this->m_bitmapInfo, TRUE);
 	if (hDib)
         DeleteObject(hDib);
 	
@@ -250,18 +244,6 @@ HRESULT DesktopSourcePin::FillBuffer(IMediaSample * pSample)
 		outMediaBuffers[0].pBuffer->GetBufferAndLength(NULL, &writeCount);
 	}
 
-	//Synchronizacia audio / video
-	if (nowTick > (this->m_lastSync + DesktopSourceFilter::SyncTime))
-	{
-		((DesktopSourceFilter*)this->m_pFilter)->SyncPins(0, this->m_rtLastFrame);
-		this->m_lastSync = this->m_nextTick = nowTick = GetTickCount();
-	}
-
-    REFERENCE_TIME rtStart = this->m_rtLastFrame;
-    REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
-	this->m_rtLastFrame = rtStop;
-
-    CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
     CHECK_HR(hr = pSample->SetSyncPoint(TRUE));
 	CHECK_HR(hr = pSample->SetActualDataLength(writeCount));
 	
@@ -272,6 +254,128 @@ done:
 	SAFE_RELEASE(outMediaBuffers[0].pBuffer);
 
     return hr;
+}
+
+//***************  Protected   ***************\\
+
+HRESULT DesktopSourcePin::DoBufferProcessingLoop(void)
+{
+	Command com;
+	HRESULT hr = S_OK;
+	DWORD lastTick = 0;
+	REFERENCE_TIME rtRealTime = 0;
+	IMediaSample * pSample = NULL;
+	this->m_rtLastFrame = 0;
+
+    OnThreadStartPlay();
+
+	//Synchronizacia audio / video
+	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(0);
+
+	lastTick = GetTickCount();
+
+    do
+	{
+		while (!CheckRequest(&com))
+		{
+			BOOL isNewSample;
+
+			if (pSample == NULL)
+			{
+				if (FAILED(GetDeliveryBuffer(&pSample, NULL, NULL, 0)))
+				{
+					Sleep(1);
+					continue;	// go round again. Perhaps the error will go away
+								// or the allocator is decommited & we will be asked to
+								// exit soon.
+				}
+
+				isNewSample = TRUE;
+			}
+			else
+			{
+				isNewSample = FALSE;
+			}
+
+			//Spomalenie snimkovania podla stanoveneho FPS v realnom case
+			DWORD tick = GetTickCount();
+			rtRealTime += ((tick - lastTick) * 10000);
+			lastTick = tick;
+
+			if (this->m_rtLastFrame >= rtRealTime)
+			{
+				//Snimka musi pockat stanoveny cas - sleepTime
+				if (!isNewSample)
+				{
+					SAFE_RELEASE(pSample);
+					continue;
+				}
+
+				DWORD sleepTime = (DWORD)((this->m_rtLastFrame - rtRealTime) / 10000);
+				Sleep(sleepTime);
+			}
+
+			if (isNewSample)
+				hr = FillBuffer(pSample);
+			else
+				hr = S_OK;
+
+			REFERENCE_TIME rtStart = this->m_rtLastFrame;
+			REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
+			this->m_rtLastFrame = rtStop;
+
+			pSample->SetTime(&rtStart, &rtStop);
+
+			if (hr == S_OK)
+			{
+				hr = Deliver(pSample);
+				SAFE_RELEASE(pSample);
+
+				// downstream filter returns S_FALSE if it wants us to
+				// stop or an error if it's reporting an error.
+				if(hr != S_OK)
+				{
+					DbgLog((LOG_TRACE, 2, TEXT("Deliver() returned %08x; stopping"), hr));
+					return S_OK;
+				}
+
+			}
+			else if (hr == S_FALSE)
+			{
+				// derived class wants us to stop pushing data
+				SAFE_RELEASE(pSample);
+				DeliverEndOfStream();
+				return S_OK;
+			} 
+			else 
+			{
+				// derived class encountered an error
+				SAFE_RELEASE(pSample);
+				DbgLog((LOG_ERROR, 1, TEXT("Error %08lX from FillBuffer!!!"), hr));
+				DeliverEndOfStream();
+				m_pFilter->NotifyEvent(EC_ERRORABORT, hr, 0);
+				return hr;
+			}
+
+			// all paths release the sample
+		}
+
+		// For all commands sent to us there must be a Reply call!
+
+		if (com == CMD_RUN || com == CMD_PAUSE)
+		{
+			Reply(NOERROR);
+		} 
+		else if (com != CMD_STOP)
+		{
+			Reply((DWORD) E_UNEXPECTED);
+			DbgLog((LOG_ERROR, 1, TEXT("Unexpected command!!!")));
+		}
+    } while (com != CMD_STOP);
+
+	SAFE_RELEASE(pSample);
+
+    return S_FALSE;
 }
 
 //***************    Private    ***************\\

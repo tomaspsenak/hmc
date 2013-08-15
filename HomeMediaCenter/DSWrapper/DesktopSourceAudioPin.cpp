@@ -183,6 +183,9 @@ HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 	CHECK_SUCCEED(hr = this->m_audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, this->m_rtFrameLength, 0, waveFormat, NULL));
 	CHECK_SUCCEED(hr = this->m_audioClient->GetService(__uuidof(IAudioCaptureClient), (void**)&captureClient)); 
 
+	//Synchronizacia casovej peciatky s audio / video
+	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(1);
+
 	//Spusti nahravanie
 	CHECK_SUCCEED(hr = this->m_audioClient->Start());
 
@@ -260,9 +263,6 @@ HRESULT DesktopSourceAudioPin::FillBuffer(IMediaSample * pSample)
 	REFERENCE_TIME rtStart = this->m_rtLastFrame;
     REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
 	this->m_rtLastFrame = rtStop;
-
-	//Synchronizacia casovej peciatky s audio / video
-	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(1, this->m_rtLastFrame);
 
     CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
 	CHECK_HR(hr = pSample->SetSyncPoint(TRUE));
