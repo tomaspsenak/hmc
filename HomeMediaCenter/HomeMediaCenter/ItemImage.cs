@@ -58,12 +58,12 @@ namespace HomeMediaCenter
 
         public override string GetFileFeature(MediaSettings settings)
         {
-            return (this.Mime == "image/jpeg" ? "DLNA.ORG_PN=JPEG_MED;" : string.Empty) + settings.ImageFileFeature;
+            return (this.Mime == "image/jpeg" ? "DLNA.ORG_PN=JPEG_MED;" : string.Empty) + settings.Image.FileFeature;
         }
 
         public override string GetEncodeFeature(MediaSettings settings)
         {
-            return settings.ImageEncodeFeature;
+            return settings.Image.EncodeFeature;
         }
 
         public override void RemoveMe(DataContext context)
@@ -76,7 +76,7 @@ namespace HomeMediaCenter
             return type == MediaType.Image;
         }
 
-        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
         {
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
             if (this.Resolution == null)
@@ -85,10 +85,10 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
         {
-            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Image));
+            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Image).Id);
         }
 
-        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             writer.WriteStartElement("item");
 
@@ -117,7 +117,7 @@ namespace HomeMediaCenter
 
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
-                if (settings.ImageNativeFile)
+                if (settings.Image.NativeFile)
                 {
                     writer.WriteStartElement("res");
 
@@ -132,14 +132,14 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (EncoderBuilder sett in settings.ImageEncode)
+                foreach (EncoderBuilder sett in settings.Image.Encode)
                 {
                     writer.WriteStartElement("res");
 
                     if (sett.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.ImageEncodeFeature));
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.Image.EncodeFeature));
                     writer.WriteValue(host + "/encode/image?id=" + this.Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }

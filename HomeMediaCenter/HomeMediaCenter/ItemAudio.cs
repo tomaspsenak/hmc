@@ -87,12 +87,12 @@ namespace HomeMediaCenter
 
         public override string GetFileFeature(MediaSettings settings)
         {
-            return (this.Mime == "audio/mpeg" ? "DLNA.ORG_PN=MP3;" : string.Empty) + settings.AudioFileFeature;
+            return (this.Mime == "audio/mpeg" ? "DLNA.ORG_PN=MP3;" : string.Empty) + settings.Audio.FileFeature;
         }
 
         public override string GetEncodeFeature(MediaSettings settings)
         {
-            return settings.AudioEncodeFeature;
+            return settings.Audio.EncodeFeature;
         }
 
         public override void RemoveMe(DataContext context)
@@ -105,7 +105,7 @@ namespace HomeMediaCenter
             return type == MediaType.Audio;
         }
 
-        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
         {
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
             if (!this.DurationTicks.HasValue)
@@ -114,10 +114,10 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
         {
-            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Audio));
+            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Audio).Id);
         }
 
-        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             writer.WriteStartElement("item");
 
@@ -149,7 +149,7 @@ namespace HomeMediaCenter
 
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
-                if (settings.AudioNativeFile)
+                if (settings.Audio.NativeFile)
                 {
                     writer.WriteStartElement("res");
 
@@ -168,7 +168,7 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (EncoderBuilder sett in settings.AudioEncode)
+                foreach (EncoderBuilder sett in settings.Audio.Encode)
                 {
                     writer.WriteStartElement("res");
 
@@ -179,7 +179,7 @@ namespace HomeMediaCenter
                     if (sett.AudBitrate != null && (filterSet == null || filterSet.Contains("res@bitrate")))
                         writer.WriteAttributeString("bitrate", sett.AudBitrate);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.AudioEncodeFeature));
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.Audio.EncodeFeature));
                     writer.WriteValue(host + "/encode/audio?id=" + this.Id + sett.GetParamString());
                     writer.WriteEndElement();
                 }

@@ -13,6 +13,7 @@ struct SUBTITLEINFO
 };
 DEFINE_GUID(MEDIATYPE_Subtitle, 0xE487EB08, 0x6B26, 0x4be9, 0x9D, 0xD3, 0x99, 0x34, 0x34, 0xD3, 0x13, 0xFD);
 DEFINE_GUID(SubtitleInfo, 0xA33D2F7D, 0x96BC, 0x4337, 0xB2, 0x3B, 0xA8, 0xB9, 0xFB, 0xC2, 0x95, 0xE9);
+DEFINE_GUID(CLSID_LAVSource, 0xB98D13E7, 0x55DB, 0x4385, 0xA3, 0x3D, 0x09, 0xFD, 0x1B, 0xA2, 0x63, 0x38);
 
 namespace DSWrapper 
 {
@@ -88,8 +89,10 @@ namespace DSWrapper
 			//Zdroj je URL adresa
 			pin_ptr<const wchar_t> pFilePath = PtrToStringChars(uri->AbsoluteUri);
 
-			CHECK_HR(hr = CoCreateInstance(CLSID_URLReader, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&sourceFilter));
-			CHECK_HR(hr = sourceFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
+			//CHECK_HR(hr = CoCreateInstance(CLSID_URLReader, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&sourceFilter));
+			//CHECK_HR(hr = sourceFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
+			CHECK_HR(hr = CoCreateInstance(CLSID_LAVSource, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&demuxFilter));
+			CHECK_HR(hr = demuxFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
 			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
 		}
 

@@ -21,6 +21,9 @@ namespace HomeMediaCenter
 
         protected readonly List<UpnpService> services = new List<UpnpService>();
         protected readonly UpnpServer server;
+        protected bool settingsChanged;
+
+        private bool started;
 
         private readonly Action asyncStartDel;
         private readonly Action asyncStopDel;
@@ -60,12 +63,23 @@ namespace HomeMediaCenter
         public string FriendlyName
         {
             get { return this.friendlyName; }
-            set { this.friendlyName = value; }
+            set
+            {
+                CheckStopped();
+
+                this.friendlyName = value;
+                SettingsChanged();
+            }
         }
 
         public UpnpServer Server
         {
             get { return this.server; }
+        }
+
+        public bool Started
+        {
+            get { return this.started; }
         }
 
         public virtual void WriteDescription(XmlTextWriter descWriter)
@@ -106,7 +120,18 @@ namespace HomeMediaCenter
 
         public virtual void Start()
         {
-            this.server.Start();
+            try
+            {
+                this.started = true;
+                this.server.Start();
+            }
+            catch
+            {
+                try { Stop(); }
+                catch { }
+
+                throw;
+            }
         }
 
         public void StartAsync()
@@ -117,6 +142,7 @@ namespace HomeMediaCenter
         public virtual void Stop()
         {
             this.server.Stop();
+            this.started = false;
         }
 
         public void StopAsync()
@@ -168,6 +194,17 @@ namespace HomeMediaCenter
             catch (Exception ex) { exc = ex; }
 
             OnExceptionEvent(exc, AsyncStopEnd);
+        }
+
+        internal void CheckStopped()
+        {
+            if (this.started)
+                throw new MediaCenterException("Server must be stopped to perform this operation");
+        }
+
+        internal void SettingsChanged()
+        {
+            this.settingsChanged = true;
         }
     }
 }

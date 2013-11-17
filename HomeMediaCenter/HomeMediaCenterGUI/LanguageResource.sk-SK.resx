@@ -309,4 +309,22 @@
   <data name="EnablePortForwarding" xml:space="preserve">
     <value>Povoliť UPnP presmerovanie portu</value>
   </data>
+  <data name="Title" xml:space="preserve">
+    <value>Titul</value>
+  </data>
+  <data name="URLAddress" xml:space="preserve">
+    <value>URL Adresa</value>
+  </data>
+  <data name="StreamSources" xml:space="preserve">
+    <value>Zdroje stream-ov</value>
+  </data>
+  <data name="EnableDesktopStreaming" xml:space="preserve">
+    <value>Povoliť streaming pracovnej plochy</value>
+  </data>
+  <data name="EnableWebcamStreaming" xml:space="preserve">
+    <value>Povoliť streaming webkamery</value>
+  </data>
+  <data name="RemoveFolderQuestion" xml:space="preserve">
+    <value>Chcete odobrať priečinok  „{0}“ z knižnice?</value>
+  </data>
 </root>

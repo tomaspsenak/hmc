@@ -12,9 +12,8 @@ namespace HomeMediaCenter
     {
         public ItemStream() : base(null, null, null) { }
 
-        public ItemStream(string title, string path, ItemContainer parent, EncoderBuilder encBuilder)
-            : base(string.Format("{0} {1} {2}kBps {3}", title, encBuilder.Resolution, 
-            encBuilder.Video ? encBuilder.VidBitrate : encBuilder.AudBitrate, encBuilder.Audio ? "+Audio" : "-Audio"), path, parent)
+        public ItemStream(string title, ItemContainer parent, EncoderBuilder encBuilder)
+            : base(GetTitle(title, encBuilder.Resolution, encBuilder.Video ? encBuilder.VidBitrate : encBuilder.AudBitrate, encBuilder.Audio), null, parent)
         {
             this.Mime = encBuilder.GetMime();
             this.Date = DateTime.Now;
@@ -63,20 +62,6 @@ namespace HomeMediaCenter
             get; set;
         }
 
-        public override bool Equals(object obj)
-        {
-            if (obj is string)
-                return this.SubtitlesPath == (string)obj;
-            return base.Equals(obj);
-        }
-
-        public override int GetHashCode()
-        {
-            if (this.SubtitlesPath == null)
-                return 0;
-            return this.SubtitlesPath.GetHashCode();
-        }
-
         public override string GetMime()
         {
             return this.Mime;
@@ -84,7 +69,7 @@ namespace HomeMediaCenter
 
         public override string GetPath()
         {
-            return this.Path;
+            return this.Parent.Path;
         }
 
         public override TimeSpan? GetDuration()
@@ -95,9 +80,9 @@ namespace HomeMediaCenter
         public override string GetEncodeFeature(MediaSettings settings)
         {
             if (this.Audio)
-                return settings.AudioStreamFeature;
+                return settings.Audio.StreamFeature;
             else if (this.Video)
-                return settings.VideoStreamFeature;
+                return settings.Video.StreamFeature;
             return string.Empty;
         }
 
@@ -118,10 +103,10 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
         {
-            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.Id.ToString());
+            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.Id);
         }
 
-        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             EncoderBuilder encBuilder = EncoderBuilder.GetEncoder(this.SubtitlesPath);
 
@@ -151,7 +136,7 @@ namespace HomeMediaCenter
                     if (encBuilder.AudBitrate != null && (filterSet == null || filterSet.Contains("res@bitrate")))
                         writer.WriteAttributeString("bitrate", encBuilder.AudBitrate);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", this.Mime, encBuilder.GetDlnaType(), settings.AudioStreamFeature));
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", this.Mime, encBuilder.GetDlnaType(), settings.Audio.StreamFeature));
                     writer.WriteValue(host + "/encode/audio?id=" + this.Id + this.SubtitlesPath);
                 }
                 else
@@ -162,7 +147,7 @@ namespace HomeMediaCenter
                     if (this.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                         writer.WriteAttributeString("resolution", this.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", this.Mime, encBuilder.GetDlnaType(), settings.VideoStreamFeature));
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", this.Mime, encBuilder.GetDlnaType(), settings.Video.StreamFeature));
                     writer.WriteValue(host + "/encode/video?id=" + this.Id + this.SubtitlesPath);
                 }
                 writer.WriteEndElement();
@@ -185,6 +170,11 @@ namespace HomeMediaCenter
                 ItemAudio.WriteHTMLPlayer(xmlWriter, this.Id.ToString(), GetDuration(), urlParams);
             else
                 ItemVideo.WriteHTMLPlayer(xmlWriter, this.Id.ToString(), GetDuration(), urlParams, null);
+        }
+
+        public static string GetTitle(string title, string resolution, string bitrate, bool audio)
+        {
+            return string.Format("{0} {1} {2}kBps {3}", title, resolution, bitrate, audio ? "+Audio" : "-Audio");
         }
     }
 }
