@@ -11,6 +11,11 @@ namespace HomeMediaCenter
 {
     public class ItemContainerVideo : ItemContainer
     {
+        protected class SubtitlesPathItemEqualityComparer : ItemEqualityComparer<ItemVideo>
+        {
+            public override object GetValue(ItemVideo item) { return item.SubtitlesPath; }
+        }
+
         public ItemContainerVideo() : base() { }
 
         public ItemContainerVideo(FileInfo file, string mime, ItemContainer parent) : base(file.Name, file.Name, parent)
@@ -58,12 +63,12 @@ namespace HomeMediaCenter
             get; set;
         }
 
-        public override string GetParentId(MediaType type)
+        public override ItemContainer GetParentItem(MediaType type)
         {
             if (this.Items.Count > 1)
-                return base.GetParentId(type);
+                return base.GetParentItem(type);
             else
-                return this.Parent.GetParentId(type);
+                return this.Parent.GetParentItem(type);
         }
 
         public override bool IsType(MediaType type)
@@ -75,14 +80,14 @@ namespace HomeMediaCenter
                 return false;
         }
 
-        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
         {
             //Rozdielova obnova video suborov ktore maju titulky v samostatnom subore
             string[] files = new DirectoryInfo(this.Parent.Path).GetFiles(System.IO.Path.GetFileNameWithoutExtension(this.Path) + "*.*").Where(
-                a => subtitleExt.Contains(a.Extension)).Select(a => a.Name).ToArray();
+                a => manager.ContainsSubtitleExt(a.Extension)).Select(a => a.Name).ToArray();
 
             Item[] toRemove = this.Items.OfType<ItemVideo>().Where(a => a.SubtitlesPath != null).Cast<object>().Except(
-                files, new ObjectEqualityComparer()).Cast<Item>().ToArray();
+                files, new SubtitlesPathItemEqualityComparer()).Cast<Item>().ToArray();
             string[] toAdd = files.Except(this.Items.OfType<ItemVideo>().Where(a => a.SubtitlesPath != null).Select(
                 a => a.SubtitlesPath)).ToArray();
 
@@ -106,7 +111,7 @@ namespace HomeMediaCenter
                 AssignValues(new FileInfo(System.IO.Path.Combine(this.Parent.Path, this.Path)));
         }
 
-        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             if (this.Items.Count > 1)
                 base.BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, parentId);

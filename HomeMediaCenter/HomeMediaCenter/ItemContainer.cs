@@ -11,14 +11,44 @@ namespace HomeMediaCenter
 {
     public class ItemContainer : Item
     {
-        protected class ObjectEqualityComparer : IEqualityComparer<object>
+        protected abstract class ItemEqualityComparer<T> : IEqualityComparer<object> where T : class
         {
-            public new bool Equals(object x, object y) { return y.Equals(x); }
+            public new bool Equals(object x, object y)
+            {
+                T itemY = y as T;
+                if (itemY == null)
+                    return y.Equals(x);
 
-            public int GetHashCode(object obj) { return obj.GetHashCode(); }
+                return object.Equals(x, GetValue(itemY));
+            }
+
+            public int GetHashCode(object obj)
+            {
+                T item = obj as T;
+                if (item == null)
+                    return obj.GetHashCode();
+
+                object value = GetValue(item);
+                if (value == null)
+                    return 0;
+
+                return value.GetHashCode();
+            }
+
+            public abstract object GetValue(T item);
         }
 
-        protected class PathMime
+        protected class PathItemEqualityComparer : ItemEqualityComparer<Item>
+        {
+            public override object GetValue(Item item) { return item.Path; }
+        }
+
+        private class PathMimeEqualityComparer : ItemEqualityComparer<PathMime>
+        {
+            public override object GetValue(PathMime item) { return item.Path; }
+        }
+
+        private class PathMime
         {
             public string Path
             {
@@ -28,20 +58,6 @@ namespace HomeMediaCenter
             public HttpMime Mime
             {
                 get; set;
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (obj is string)
-                    return this.Path == (string)obj;
-                return base.Equals(obj);
-            }
-
-            public override int GetHashCode()
-            {
-                if (this.Path == null)
-                    return 0;
-                return this.Path.GetHashCode();
             }
         }
 
@@ -110,17 +126,17 @@ namespace HomeMediaCenter
             switch (type)
             {
                 case MediaType.Audio:
-                    if (this.Items.OfType<ItemContainer>().Any(a => a.Audio) || this.Items.OfType<ItemAudio>().Any())
+                    if (this.Items.Any(a => a.IsType(MediaType.Audio)))
                         return;
                     this.Audio = false;
                     break;
                 case MediaType.Image:
-                    if (this.Items.OfType<ItemContainer>().Any(a => a.Image) || this.Items.OfType<ItemImage>().Any())
+                    if (this.Items.Any(a => a.IsType(MediaType.Image)))
                         return;
                     this.Image = false;
                     break;
                 case MediaType.Video:
-                    if (this.Items.OfType<ItemContainer>().Any(a => a.Video) || this.Items.OfType<ItemVideo>().Any())
+                    if (this.Items.Any(a => a.IsType(MediaType.Video)))
                         return;
                     this.Video = false;
                     break;
@@ -129,7 +145,7 @@ namespace HomeMediaCenter
             this.Parent.CheckMediaType(type);
         }
 
-        public virtual string GetParentId(MediaType type)
+        public virtual ItemContainer GetParentItem(MediaType type)
         {
             IEnumerable<Item> items = this.Parent.Items.Where(a => a.IsType(type));
             if (items.Count() == 1)
@@ -137,10 +153,10 @@ namespace HomeMediaCenter
                 //Ak je jediny prvok adresar - vynecha sa a nastavi sa predchodca
                 ItemContainer parent = items.OfType<ItemContainer>().FirstOrDefault();
                 if (parent != null)
-                    return this.Parent.GetParentId(type);
+                    return this.Parent.GetParentItem(type);
             }
 
-            return this.Id.ToString();
+            return this;
         }
 
         public string GetItemCount(MediaType type)
@@ -171,16 +187,16 @@ namespace HomeMediaCenter
             }
         }
 
-        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
         {
             try
             {
                 //Rozdielova obnova adresarov
-                directories = new DirectoryInfo(this.Path).GetDirectories().Where(a => (a.Attributes & FileAttributes.Hidden) == 0).Select(
-                    a => a.FullName).ToArray();
+                IEnumerable<string> directories = new DirectoryInfo(this.Path).GetDirectories().Where(
+                    a => (a.Attributes & FileAttributes.Hidden) == 0).Select(a => a.FullName).ToArray();
 
                 Item[] toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Cast<object>().Except(
-                    directories, new ObjectEqualityComparer()).Cast<Item>().ToArray();
+                    directories, new PathItemEqualityComparer()).Cast<Item>().ToArray();
                 string[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Select(a => a.Path)).ToArray();
 
                 foreach (Item item in toRemove)
@@ -195,22 +211,22 @@ namespace HomeMediaCenter
                     Item item = new ItemContainer(System.IO.Path.GetFileName(path), path, this);
                     //Ak nie je rekurzia - obnovia sa iba nove adresare
                     if (!recursive)
-                        item.RefresMe(context, directories, mimeTypes, settings, subtitleExt, false);
+                        item.RefresMe(context, manager, false);
                 }
 
                 //Rozdielova obnova suborov
                 IEnumerable<PathMime> files = new DirectoryInfo(this.Path).GetFiles().Where(a => (a.Attributes & FileAttributes.Hidden) == 0).Select(
                     delegate(FileInfo a) {
-                        HttpMime mime = mimeTypes[a.Extension];
+                        HttpMime mime = manager.GetMimeType(a.Extension);
                         if (mime == null || mime.MediaType == MediaType.Other)
                             return null;
                         return new PathMime() { Path = a.Name, Mime = mime };
                     }).Where(a => a != null).ToArray();
 
                 toRemove = this.Items.Where(a => a.GetType() != typeof(ItemContainer)).Cast<object>().Except(
-                    files.Select(a => a.Path), new ObjectEqualityComparer()).Cast<Item>().ToArray();
+                    files.Select(a => a.Path), new PathItemEqualityComparer()).Cast<Item>().ToArray();
                 PathMime[] toAddFile = files.Cast<object>().Except(this.Items.Where(a => a.GetType() != typeof(ItemContainer)).Select(
-                    a => a.Path), new ObjectEqualityComparer()).Cast<PathMime>().ToArray();
+                    a => a.Path), new PathMimeEqualityComparer()).Cast<PathMime>().ToArray();
 
                 foreach (Item item in toRemove)
                 {
@@ -235,7 +251,7 @@ namespace HomeMediaCenter
 
                         //Ak nie je rekurzia - obnovia sa iba nove adresare a prvky
                         if (!recursive)
-                            item.RefresMe(context, directories, mimeTypes, settings, subtitleExt, false);
+                            item.RefresMe(context, manager, false);
                     }
                     catch { }
                 }
@@ -244,7 +260,13 @@ namespace HomeMediaCenter
                 {
                     //Volanie obnovy do adresarov a prvkov
                     foreach (Item item in this.Items)
-                        item.RefresMe(context, directories, mimeTypes, settings, subtitleExt, true);
+                        item.RefresMe(context, manager, true);
+                }
+                else
+                {
+                    //Volanie obnovy pre subory vratane ItemContainerVideo - overenie ci sa nezmenil titulkovy subor
+                    foreach (Item item in this.items.Where(a => a.GetType() != typeof(ItemContainer)))
+                        item.RefresMe(context, manager, false);
                 }
             }
             catch { }
@@ -316,7 +338,7 @@ namespace HomeMediaCenter
             requestedCount = (requestedCount == 0) ? int.MaxValue : requestedCount;
             foreach (Item item in items.Skip((int)startingIndex).Take((int)requestedCount))
             {
-                item.BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, skippedItem == null ? this.Id.ToString() : skippedItem.Id.ToString());
+                item.BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, skippedItem == null ? this.Id : skippedItem.Id);
                 count++;
             }
             numberReturned = count.ToString();
@@ -326,18 +348,18 @@ namespace HomeMediaCenter
         {
             switch (idParams)
             {
-                case AudioIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Audio));
+                case AudioIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Audio).Id);
                     break;
-                case ImageIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Image));
+                case ImageIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Image).Id);
                     break;
-                case VideoIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Video));
+                case VideoIndex: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Video).Id);
                     break;
-                default: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Other));
+                default: BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Other).Id);
                     break;
             }
         }
 
-        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             switch (idParams)
             {
@@ -350,7 +372,7 @@ namespace HomeMediaCenter
                 case VideoIndex: WriteDIDL(xmlWriter, filterSet, this.Id.ToString() + "_3", parentId + "_3", GetItemCount(MediaType.Video), 
                     this.Title, MediaType.Video);
                     break;
-                default: WriteDIDL(xmlWriter, filterSet, this.Id.ToString(), parentId, GetItemCount(MediaType.Other), 
+                default: WriteDIDL(xmlWriter, filterSet, this.Id.ToString(), parentId.ToString(), GetItemCount(MediaType.Other), 
                     this.Title, MediaType.Other);
                     break;
             }
@@ -388,7 +410,7 @@ namespace HomeMediaCenter
             switch (idParams)
             {
                 case AudioIndex:
-
+                {
                     xmlWriter.WriteStartElement("table");
 
                     xmlWriter.WriteStartElement("thead");
@@ -404,6 +426,7 @@ namespace HomeMediaCenter
                     xmlWriter.WriteEndElement();
 
                     xmlWriter.WriteStartElement("tbody");
+                    WriteAudioVideoBackFolder(xmlWriter, GetParentItem(MediaType.Audio), idParams);
                     foreach (Item item in items.OrderBy(a => !(a.IsType(MediaType.Other))).ThenBy(a => a.Title))
                     {
                         item.BrowseWebMetadata(xmlWriter, settings, idParams);
@@ -412,9 +435,9 @@ namespace HomeMediaCenter
 
                     xmlWriter.WriteEndElement();
                     break;
-
+                }
                 case ImageIndex:
-
+                {
                     xmlWriter.WriteStartElement("script");
                     xmlWriter.WriteAttributeString("type", "text/javascript");
                     xmlWriter.WriteValue("\r\n//");
@@ -426,10 +449,27 @@ $(function () {{ $('#gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
 
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("class", "galleryFolders");
+
+                    Item parent = GetParentItem(MediaType.Image);
+                    if (parent.Parent != null)
+                    {
+                        //Vlozenie odkazu na predchadzajucu polozku
+                        xmlWriter.WriteStartElement("a");
+
+                        xmlWriter.WriteAttributeString("href", "/web/page.html?id=" + parent.Parent.Id + "_" + idParams);
+                        xmlWriter.WriteRaw(@"<img src=""/web/images/folderback.png"" alt="""" />");
+                        xmlWriter.WriteStartElement("span");
+                        xmlWriter.WriteValue(parent.Parent.Title);
+                        xmlWriter.WriteEndElement();
+
+                        xmlWriter.WriteEndElement();
+                    }
+
                     foreach (Item item in items.Where(a => a.IsType(MediaType.Other)).OrderBy(a => a.Title))
                     {
                         item.BrowseWebMetadata(xmlWriter, settings, idParams);
                     }
+
                     xmlWriter.WriteFullEndElement();
 
                     xmlWriter.WriteStartElement("div");
@@ -441,9 +481,9 @@ $(function () {{ $('#gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
                     }
                     xmlWriter.WriteFullEndElement();
                     break;
-
+                }
                 case VideoIndex:
-
+                {
                     xmlWriter.WriteStartElement("table");
 
                     xmlWriter.WriteStartElement("thead");
@@ -457,6 +497,7 @@ $(function () {{ $('#gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
                     xmlWriter.WriteEndElement();
 
                     xmlWriter.WriteStartElement("tbody");
+                    WriteAudioVideoBackFolder(xmlWriter, GetParentItem(MediaType.Video), idParams);
                     foreach (Item item in items.OrderBy(a => !(a.IsType(MediaType.Other))).ThenBy(a => a.Title))
                     {
                         item.BrowseWebMetadata(xmlWriter, settings, idParams);
@@ -465,7 +506,7 @@ $(function () {{ $('#gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
 
                     xmlWriter.WriteEndElement();
                     break;
-
+                }
                 default: xmlWriter.WriteElementString("p", LanguageResource.UnknownID);
                     break;
             }
@@ -587,6 +628,39 @@ $(function () {{ $('#gallery a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxH
             }
 
             xmlWriter.WriteEndElement();
+        }
+
+        protected static void WriteAudioVideoBackFolder(XmlWriter xmlWriter, Item parent, string idParams)
+        {
+            if (parent.Parent != null)
+            {
+                xmlWriter.WriteStartElement("tr");
+
+                xmlWriter.WriteStartElement("td");
+                xmlWriter.WriteRaw(@"<img src=""/web/images/folderback.png"" alt="""" title="""" border=""0"" width=""18"" height=""18"" align=""right"" />");
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteStartElement("td");
+                xmlWriter.WriteStartElement("a");
+                xmlWriter.WriteAttributeString("href", "/web/page.html?id=" + parent.Parent.Id + "_" + idParams);
+                xmlWriter.WriteValue(parent.Parent.Title);
+                xmlWriter.WriteEndElement();
+                xmlWriter.WriteEndElement();
+
+                if (idParams == AudioIndex)
+                {
+                    xmlWriter.WriteStartElement("td");
+                    xmlWriter.WriteFullEndElement();
+                    xmlWriter.WriteStartElement("td");
+                    xmlWriter.WriteFullEndElement();
+                }
+                xmlWriter.WriteStartElement("td");
+                xmlWriter.WriteFullEndElement();
+                xmlWriter.WriteStartElement("td");
+                xmlWriter.WriteFullEndElement();
+
+                xmlWriter.WriteEndElement();
+            }
         }
     }
 }

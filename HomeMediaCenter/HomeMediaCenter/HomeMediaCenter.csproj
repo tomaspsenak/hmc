@@ -96,6 +96,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BindingListStreamSources.cs" />
     <Compile Include="ChunkedStream.cs" />
     <Compile Include="ConnectionManagerService.cs" />
     <Compile Include="ContentDirectoryService.cs" />
@@ -115,6 +116,8 @@
     <Compile Include="ItemContainer.cs" />
     <Compile Include="ItemContainerRoot.cs" />
     <Compile Include="ItemContainerStream.cs" />
+    <Compile Include="ItemContainerStreamCustom.cs" />
+    <Compile Include="ItemContainerStreamRoot.cs" />
     <Compile Include="ItemContainerVideo.cs" />
     <Compile Include="ItemImage.cs" />
     <Compile Include="ItemManager.cs" />
@@ -133,6 +136,7 @@
     <Compile Include="LogEventArgs.cs" />
     <Compile Include="MediaCenterException.cs" />
     <Compile Include="MediaFoundationEncoder.cs" />
+    <Compile Include="MediaReceiverRegistrarService.cs" />
     <Compile Include="MediaServerDevice.cs" />
     <Compile Include="MediaSettings.cs" />
     <Compile Include="Program.cs" />
@@ -246,6 +250,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\folder.png" />
+    <EmbeddedResource Include="Resources\folderback.png" />
     <Content Include="System.Data.SqlServerCe.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

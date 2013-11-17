@@ -32,6 +32,7 @@ namespace HomeMediaCenter
 
             this.services.Add(new ConnectionManagerService(this, this.server));
             this.services.Add(new ContentDirectoryService(this, this.server));
+            this.services.Add(new MediaReceiverRegistrarService(this, this.server));
 
             this.server.HttpServer.AddRoute("HEAD", "/Files/", new HttpRouteDelegate(GetFile));
             this.server.HttpServer.AddRoute("GET", "/Files/", new HttpRouteDelegate(GetFile));
@@ -51,6 +52,7 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.8.18.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/folder.png", new HttpRouteDelegate(GetWebPng));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/folderback.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmllogo.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlarrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlorangearrow.gif", new HttpRouteDelegate(GetWebGif));
@@ -81,17 +83,29 @@ namespace HomeMediaCenter
         public bool MinimizeToTray
         {
             get { return this.minimizeToTray; }
-            set { this.minimizeToTray = value; }
+            set
+            {
+                this.minimizeToTray = value;
+                SettingsChanged();
+            }
         }
 
         public bool TryToForwardPort
         {
             get { return this.tryToForwardPort; }
-            set { this.tryToForwardPort = value; }
+            set
+            {
+                CheckStopped();
+
+                this.tryToForwardPort = value;
+                SettingsChanged();
+            }
         }
 
         public void LoadSettings(string settingsPath, string databasePath)
         {
+            CheckStopped();
+
             bool reThrow = true;
             try
             {
@@ -142,7 +156,7 @@ namespace HomeMediaCenter
 
                     this.server.LoadSettings(xmlReader);
 
-                    this.itemManager.LoadSync(xmlReader, databasePath);
+                    this.itemManager.LoadSettings(xmlReader, databasePath);
                 }
             }
             catch
@@ -150,7 +164,10 @@ namespace HomeMediaCenter
                 try { File.Delete(databasePath); }
                 catch { }
 
-                this.itemManager.LoadSync(null, databasePath);
+                //treba nanovo zapisat settings kedze sa ho nepodarilo precitat
+                this.settingsChanged = true;
+
+                this.itemManager.LoadSettings(null, databasePath);
 
                 if (reThrow)
                     throw;
@@ -159,6 +176,9 @@ namespace HomeMediaCenter
 
         public void SaveSettings(string settingsPath, string databasePath)
         {
+            if (!this.settingsChanged)
+                return;
+
             using (FileStream file = new FileStream(settingsPath, FileMode.Create, FileAccess.Write))
             using (XmlWriter xmlWriter = XmlWriter.Create(file, new XmlWriterSettings() { Indent = true }))
             {
@@ -175,11 +195,13 @@ namespace HomeMediaCenter
 
                 this.server.SaveSettings(xmlWriter);
 
-                this.itemManager.SaveSettingsSync(xmlWriter);
+                this.itemManager.SaveSettings(xmlWriter);
 
                 xmlWriter.WriteEndElement();
                 xmlWriter.WriteEndDocument();
             }
+
+            this.settingsChanged = false;
         }
 
         public override void Start()
@@ -287,13 +309,7 @@ namespace HomeMediaCenter
         {
             HttpResponse response = request.GetResponse();
 
-            if (request.UrlParams.ContainsKey("source"))
-            {
-                //Ak je nastaveny source - id sa ignoruje
-                if (request.UrlParams["source"].Contains('\\'))
-                    throw new HttpException(400, "Parameter contains invalid characters");
-            }
-            else if (request.UrlParams.ContainsKey("id"))
+            if (request.UrlParams.ContainsKey("id"))
             {
                 //Zisti zdroj podla id
                 TimeSpan? duration;

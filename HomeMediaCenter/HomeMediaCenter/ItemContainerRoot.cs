@@ -20,17 +20,18 @@ namespace HomeMediaCenter
 
         public override void CheckMediaType(MediaType type) { /* Zastavenie zistovania pri korenovom prvku */ }
 
-        public override string GetParentId(MediaType type) { return "0"; }
+        public override ItemContainer GetParentItem(MediaType type) { return this; }
 
-        public override void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive)
+        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
         {
             //Overenie ci existuje stream container
-            if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStream)))
-                new ItemContainerStream(this);
+            if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStreamRoot)))
+                new ItemContainerStreamRoot(this);
 
             //Rozdielova obnova adresarov zadanych uzivatelom
+            IEnumerable<string> directories = manager.GetWorkingDirectories();
             Item[] toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Cast<object>().Except(
-                directories, new ObjectEqualityComparer()).Cast<Item>().ToArray();
+                directories, new PathItemEqualityComparer()).Cast<Item>().ToArray();
             string[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Select(a => a.Path)).ToArray();
 
             foreach (Item item in toRemove)
@@ -42,17 +43,18 @@ namespace HomeMediaCenter
 
             foreach (string path in toAdd)
             {
-                Item item = new ItemContainer(path, path, this);
+                //Title musi byt bez znaku '\' - problem so Samsung DLNA
+                Item item = new ItemContainer(path.Replace(":\\", "_").Replace('\\', '_'), path, this);
                 //Ak nie je rekurzia - obnovia sa iba nove adresare
                 if (!recursive)
-                    item.RefresMe(context, directories, mimeTypes, settings, subtitleExt, false);
+                    item.RefresMe(context, manager, false);
             }
 
             if (recursive)
             {
                 //Volanie obnovy do podadresarov
                 foreach (Item item in this.Items)
-                    item.RefresMe(context, directories, mimeTypes, settings, subtitleExt, true);
+                    item.RefresMe(context, manager, true);
             }
         }
 
@@ -81,7 +83,7 @@ namespace HomeMediaCenter
                 requestedCount = (requestedCount == 0) ? int.MaxValue : requestedCount;
                 foreach (KeyValuePair<string, string> item in items.Skip((int)startingIndex).Take((int)requestedCount))
                 {
-                    BrowseMetadata(xmlWriter, settings, host, item.Key, filterSet, null);
+                    BrowseMetadata(xmlWriter, settings, host, item.Key, filterSet, 0);
                     count++;
                 }
 
@@ -97,12 +99,12 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
         {
-            BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, null);
+            BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, 0);
         }
 
-        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
-            //parentId nepouzivat - moze byt null
+            //parentId nepouzivat
 
             switch (idParams)
             {

@@ -79,6 +79,8 @@ namespace HomeMediaCenter
                 !Enum.TryParse(BrowseFlag, true, out browseFlag))
                 throw new SoapException(402, "Invalid Args");
 
+            SortCriteria = (SortCriteria == string.Empty) ? "+dc:title" : SortCriteria;
+
             this.device.ItemManager.Browse(request.Headers, ObjectID, browseFlag, Filter, startingIndex, requestedCount, SortCriteria,
                 out Result, out NumberReturned, out TotalMatches);
 

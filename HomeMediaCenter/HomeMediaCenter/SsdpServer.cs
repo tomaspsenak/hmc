@@ -12,9 +12,8 @@ namespace HomeMediaCenter
     {
         private readonly UpnpServer upnpServer;
         private Thread[] listenerThreads;
-        private MySocket[] listenerSockets;
         private Timer[] notifyTimers;
-        private MySocket[] notifySockets;
+        private MySocket[] sockets;
 
         private readonly Random rn = new Random();
         private readonly int maxAge = 1800;
@@ -26,7 +25,8 @@ namespace HomeMediaCenter
 
         private class MySocket
         {
-            public Socket Socket { get; set; }
+            public Socket ListenerSocket { get; set; }
+            public Socket NotifySocket { get; set; }
             public IPAddress Address { get; set; }
         }
 
@@ -34,21 +34,19 @@ namespace HomeMediaCenter
         {
             if (this.listenerThreads == null)
             {
-                this.listenerSockets = GetSockets(true);
-                this.listenerThreads = new Thread[this.listenerSockets.Length];
-                for (int i = 0; i < this.listenerThreads.Length; i++)
+                this.sockets = GetSockets().ToArray();
+
+                this.listenerThreads = new Thread[this.sockets.Length];
+                this.notifyTimers = new Timer[this.sockets.Length];
+
+                for (int i = 0; i < this.sockets.Length; i++)
                 {
                     this.listenerThreads[i] = new Thread(new ParameterizedThreadStart(ListenNotify));
-                    this.listenerThreads[i].Start(this.listenerSockets[i]);
-                }
+                    this.listenerThreads[i].Start(this.sockets[i]);
 
-                this.notifySockets = GetSockets(false);
-                this.notifyTimers = new Timer[this.notifySockets.Length];
-                for (int i = 0; i < this.notifySockets.Length; i++)
-                {
                     //Oznamuje v pravidelnych intervaloch pritomnost, zaciatok je oneskoreny o sekundu
                     //Sprava sa posiela o nieco skor ako maxAge, preto nie je * 1000
-                    this.notifyTimers[i] = new Timer(new TimerCallback(OnNotifyTimeout), this.notifySockets[i], 1000, this.maxAge * 900);
+                    this.notifyTimers[i] = new Timer(new TimerCallback(OnNotifyTimeout), this.sockets[i], 1000, this.maxAge * 900);
                 }
             }
         }
@@ -57,24 +55,18 @@ namespace HomeMediaCenter
         {
             if (this.listenerThreads != null)
             {
-                foreach (MySocket socket in this.listenerSockets)
-                    socket.Socket.Close();
-
                 foreach (Timer timer in this.notifyTimers)
                     timer.Dispose();
 
-                foreach (MySocket socket in this.notifySockets)
-                {
-                    SendNotify(socket.Socket, socket.Address.ToString(), false);
-                    socket.Socket.Close();
-                }
+                //Uzavre ListenerSocket a tym aj funkcia ListenNotify odosle spravu "byebye" a uzavre NotifySocket
+                foreach (MySocket socket in this.sockets)
+                    socket.ListenerSocket.Close();
 
                 foreach (Thread thread in this.listenerThreads)
                     thread.Join();
 
-                this.listenerSockets = null;
+                this.sockets = null;
                 this.listenerThreads = null;
-                this.notifySockets = null;
                 this.notifyTimers = null;
             }
         }
@@ -82,10 +74,10 @@ namespace HomeMediaCenter
         private void OnNotifyTimeout(object socketObj)
         {
             MySocket socket = (MySocket)socketObj;
-            SendNotify(socket.Socket, socket.Address.ToString(), true);
+            SendNotify(socket.NotifySocket, socket.Address.ToString(), true);
         }
 
-        private MySocket[] GetSockets(bool bind)
+        private MySocket[] GetSockets()
         {
             IEnumerable<IPAddress> addresses;
 
@@ -96,22 +88,24 @@ namespace HomeMediaCenter
 
             return addresses.Select(delegate(IPAddress address) {
 
-                    Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                    Socket listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                    listenerSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    listenerSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
                     //TTL pre SSDP je potrebne nastavit na aspon 2
-                    socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
+                    listenerSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
+                    listenerSocket.Bind(new IPEndPoint(address, 1900));
+                    //AddMembership by mal byt az za Bind-om
+                    listenerSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
+                        new MulticastOption(IPAddress.Parse("239.255.255.250"), address));
 
-                    if (bind)
-                    {
-                        socket.Bind(new IPEndPoint(address, 1900));
+                    Socket notifySocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                    notifySocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    notifySocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                    //TTL pre SSDP je potrebne nastavit na aspon 2
+                    notifySocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
+                    notifySocket.Bind(new IPEndPoint(address, 1900));
 
-                        //AddMembership by mal byt az za Bind-om
-                        socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
-                            new MulticastOption(IPAddress.Parse("239.255.255.250"), address));
-                    }
-
-                    return new MySocket() { Socket = socket, Address = address };
+                    return new MySocket() { ListenerSocket = listenerSocket, NotifySocket = notifySocket, Address = address };
 
                 }).ToArray();
         }
@@ -163,7 +157,7 @@ USN: uuid:{8}{9}
             {
                 EndPoint receivePoint = new IPEndPoint(IPAddress.Any, 0);
 
-                try { length = socket.Socket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref receivePoint); }
+                try { length = socket.ListenerSocket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref receivePoint); }
                 catch { break; }
 
                 string[] lines = Encoding.ASCII.GetString(buffer, 0, length).Split(new string[] { "\r\n" }, 
@@ -210,12 +204,12 @@ USN: uuid:{8}{9}
                         //Pri ssdp:all treba informovat o vsetkych zariadeniach a sluzbach
                         Thread.Sleep(rn.Next(mx * 850));
 
-                        SendResponseMessage(socket.Socket, receivePoint, localEndPoint, "upnp:rootdevice", usn);
-                        SendResponseMessage(socket.Socket, receivePoint, localEndPoint, usn, usn);
-                        SendResponseMessage(socket.Socket, receivePoint, localEndPoint, this.upnpServer.RootDevice.DeviceType, usn);
+                        SendResponseMessage(socket.ListenerSocket, receivePoint, localEndPoint, "upnp:rootdevice", usn);
+                        SendResponseMessage(socket.ListenerSocket, receivePoint, localEndPoint, usn, usn);
+                        SendResponseMessage(socket.ListenerSocket, receivePoint, localEndPoint, this.upnpServer.RootDevice.DeviceType, usn);
                             
                         foreach (UpnpService service in this.upnpServer.RootDevice.Services)
-                            SendResponseMessage(socket.Socket, receivePoint, localEndPoint, service.ServiceType, usn);
+                            SendResponseMessage(socket.ListenerSocket, receivePoint, localEndPoint, service.ServiceType, usn);
 
                         continue;
                     }
@@ -229,9 +223,13 @@ USN: uuid:{8}{9}
                     //mx sa nenasobi * 1000 - znizenie o cas potrebny na vykonanie funkcie
                     Thread.Sleep(rn.Next(mx * 850));
 
-                    SendResponseMessage(socket.Socket, receivePoint, localEndPoint, st, usn);
+                    SendResponseMessage(socket.ListenerSocket, receivePoint, localEndPoint, st, usn);
                 }
             }
+
+            //Odosle spravu "byebye" a uzavre NotifySocket
+            SendNotify(socket.NotifySocket, socket.Address.ToString(), false);
+            socket.NotifySocket.Close();
 
             this.upnpServer.RootDevice.OnLogEvent("SSDP server stopped");
         }

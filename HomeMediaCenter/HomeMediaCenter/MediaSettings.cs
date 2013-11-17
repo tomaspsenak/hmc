@@ -3,241 +3,243 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using System.Collections.ObjectModel;
 
 namespace HomeMediaCenter
 {
     public class MediaSettings
     {
-        private bool audioNativeFile = true;
-        private string audioFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private string audioEncodeFeature = "DLNA.ORG_OP=10;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private string audioStreamFeature = "DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private List<EncoderBuilder> audioEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100") };
+        public class MediaSettingsBase
+        {
+            protected readonly string prefix;
+            protected readonly MediaServerDevice device;
 
-        private bool imageNativeFile = true;
-        private string imageFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000";
-        private string imageEncodeFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000";
-        private List<EncoderBuilder> imageEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=jpeg&width=160&height=160&keepaspect") };
+            private ReadOnlyCollection<EncoderBuilder> encode;
 
-        private bool videoNativeFile = true;
-        private string videoFileFeature = "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private string videoEncodeFeature = "DLNA.ORG_OP=10;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private string videoStreamFeature = "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000";
-        private List<EncoderBuilder> videoEncode = new List<EncoderBuilder>() {
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25") };
+            public MediaSettingsBase(MediaServerDevice device, string prefix, params EncoderBuilder[] encode)
+            {
+                this.prefix = prefix;
+                this.device = device;
 
-        private List<EncoderBuilder> streamEncode = new List<EncoderBuilder>() { 
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"), 
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0"),
-            EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0"),
-            EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100") };
+                this.encode = new ReadOnlyCollection<EncoderBuilder>(encode);
+            }
+
+            public ReadOnlyCollection<EncoderBuilder> Encode
+            {
+                get { return this.encode; }
+                set
+                {
+                    this.device.CheckStopped();
+
+                    this.encode = value;
+                    this.device.SettingsChanged();
+                }
+            }
+
+            public void SaveSettings(XmlWriter xmlWriter)
+            {
+                xmlWriter.WriteStartElement(this.prefix);
+
+                SaveSpecificSettings(xmlWriter);
+
+                xmlWriter.WriteStartElement("Parameters");
+                foreach (string par in this.encode.Select(a => a.GetParamString()))
+                    xmlWriter.WriteElementString("string", par);
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteEndElement();
+            }
+
+            public void LoadSettings(XmlDocument xmlReader)
+            {
+                this.encode = xmlReader.SelectNodes("/HomeMediaCenter/" + this.prefix + "/Parameters/*").Cast<XmlNode>().Select(
+                    a => EncoderBuilder.GetEncoder(a.InnerText)).ToList().AsReadOnly();
+
+                LoadSpecificSettings(xmlReader);
+            }
+
+            protected virtual void SaveSpecificSettings(XmlWriter xmlWriter) { }
+            protected virtual void LoadSpecificSettings(XmlDocument xmlReader) { }
+        }
+
+        public class MediaSettingsIMG : MediaSettingsBase
+        {
+            private bool nativeFile;
+            private string fileFeature;
+            private string encodeFeature;
+
+            public MediaSettingsIMG(MediaServerDevice device, string prefix, bool nativeFile, string fileFeature, string encodeFeature, params EncoderBuilder[] encode) :
+                base(device, prefix, encode)
+            {
+                this.nativeFile = nativeFile;
+                this.fileFeature = fileFeature;
+                this.encodeFeature = encodeFeature;
+            }
+
+            public bool NativeFile
+            {
+                get { return this.nativeFile; }
+                set
+                {
+                    this.device.CheckStopped();
+
+                    this.nativeFile = value;
+                    this.device.SettingsChanged();
+                }
+            }
+
+            public string FileFeature
+            {
+                get { return this.fileFeature; }
+                set
+                {
+                    this.device.CheckStopped();
+
+                    this.fileFeature = value;
+                    this.device.SettingsChanged();
+                }
+            }
+
+            public string EncodeFeature
+            {
+                get { return this.encodeFeature; }
+                set
+                {
+                    this.device.CheckStopped();
+
+                    this.encodeFeature = value;
+                    this.device.SettingsChanged();
+                }
+            }
+
+            protected override void SaveSpecificSettings(XmlWriter xmlWriter)
+            {
+                xmlWriter.WriteElementString("NativeFile", this.nativeFile.ToString());
+                xmlWriter.WriteElementString("FileFeature", this.fileFeature);
+                xmlWriter.WriteElementString("EncodeFeature", this.encodeFeature);
+            }
+
+            protected override void LoadSpecificSettings(XmlDocument xmlReader)
+            {
+                XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/" + this.prefix + "/NativeFile");
+                if (node != null)
+                    bool.TryParse(node.InnerText, out this.nativeFile);
+                node = xmlReader.SelectSingleNode("/HomeMediaCenter/" + this.prefix + "/FileFeature");
+                if (node != null)
+                    this.fileFeature = node.InnerText;
+                node = xmlReader.SelectSingleNode("/HomeMediaCenter/" + this.prefix + "/EncodeFeature");
+                if (node != null)
+                    this.encodeFeature = node.InnerText;
+            }
+        }
+
+        public class MediaSettingsAV : MediaSettingsIMG
+        {
+            private string streamFeature;
+
+            public MediaSettingsAV(MediaServerDevice device, string prefix, bool nativeFile, string fileFeature, string encodeFeature, string streamFeature, params EncoderBuilder[] encode)
+                : base(device, prefix, nativeFile, fileFeature, encodeFeature, encode)
+            {
+                this.streamFeature = streamFeature;
+            }
+
+            public string StreamFeature
+            {
+                get { return this.streamFeature; }
+                set
+                {
+                    this.device.CheckStopped();
+
+                    this.streamFeature = value;
+                    this.device.SettingsChanged();
+                }
+            }
+
+            protected override void SaveSpecificSettings(XmlWriter xmlWriter)
+            {
+                base.SaveSpecificSettings(xmlWriter);
+
+                xmlWriter.WriteElementString("StreamFeature", this.streamFeature);
+            }
+
+            protected override void LoadSpecificSettings(XmlDocument xmlReader)
+            {
+                base.LoadSpecificSettings(xmlReader);
+
+                XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/" + this.prefix + "/StreamFeature");
+                if (node != null)
+                    this.streamFeature = node.InnerText;
+            }
+        }
+
+        private readonly MediaSettingsAV audio;
+        private readonly MediaSettingsIMG image;
+        private readonly MediaSettingsAV video;
+        private readonly MediaSettingsBase stream;
+
+        public MediaSettings(MediaServerDevice upnpDevice)
+        {
+            this.audio = new MediaSettingsAV(upnpDevice, "AudioSettings",
+                true,
+                "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                "DLNA.ORG_OP=10;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                "DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100"));
+
+            this.image = new MediaSettingsIMG(upnpDevice, "ImageSettings",
+                true,
+                "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000",
+                "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=00d00000000000000000000000000000",
+                EncoderBuilder.GetEncoder("&codec=jpeg&width=160&height=160&keepaspect"));
+
+            this.video = new MediaSettingsAV(upnpDevice, "VideoSettings",
+                true,
+                "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                "DLNA.ORG_OP=10;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000",
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"));
+
+            this.stream = new MediaSettingsBase(upnpDevice, "StreamSettings",
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"),
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0"),
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0"),
+                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100"));
+        }
+
+        public MediaSettingsAV Audio
+        {
+            get { return this.audio; }
+        }
+
+        public MediaSettingsIMG Image
+        {
+            get { return this.image; }
+        }
+
+        public MediaSettingsAV Video
+        {
+            get { return this.video; }
+        }
+
+        public MediaSettingsBase Stream
+        {
+            get { return this.stream; }
+        }
 
         public void SaveSettings(XmlWriter xmlWriter)
         {
-            //Zapisanie audio
-            xmlWriter.WriteStartElement("AudioSettings");
-
-            xmlWriter.WriteElementString("NativeFile", this.audioNativeFile.ToString());
-            xmlWriter.WriteElementString("FileFeature", this.audioFileFeature);
-            xmlWriter.WriteElementString("EncodeFeature", this.audioEncodeFeature);
-            xmlWriter.WriteElementString("StreamFeature", this.audioStreamFeature);
-
-            xmlWriter.WriteStartElement("Parameters");
-            foreach (string par in this.audioEncode.Select(a => a.GetParamString()))
-                xmlWriter.WriteElementString("string", par);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
-
-            //Zapisanie image
-            xmlWriter.WriteStartElement("ImageSettings");
-
-            xmlWriter.WriteElementString("NativeFile", this.imageNativeFile.ToString());
-            xmlWriter.WriteElementString("FileFeature", this.imageFileFeature);
-            xmlWriter.WriteElementString("EncodeFeature", this.imageEncodeFeature);
-
-            xmlWriter.WriteStartElement("Parameters");
-            foreach (string par in this.imageEncode.Select(a => a.GetParamString()))
-                xmlWriter.WriteElementString("string", par);
-            xmlWriter.WriteEndElement();
- 
-            xmlWriter.WriteEndElement();
-
-            //Zapisanie video
-            xmlWriter.WriteStartElement("VideoSettings");
-
-            xmlWriter.WriteElementString("NativeFile", this.videoNativeFile.ToString());
-            xmlWriter.WriteElementString("FileFeature", this.videoFileFeature);
-            xmlWriter.WriteElementString("EncodeFeature", this.videoEncodeFeature);
-            xmlWriter.WriteElementString("StreamFeature", this.videoStreamFeature);
-
-            xmlWriter.WriteStartElement("Parameters");
-            foreach (string par in this.videoEncode.Select(a => a.GetParamString()))
-                xmlWriter.WriteElementString("string", par);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
-
-            //Zapisanie streamu
-            xmlWriter.WriteStartElement("StreamSettings");
-
-            xmlWriter.WriteStartElement("Parameters");
-            foreach (string par in this.streamEncode.Select(a => a.GetParamString()))
-                xmlWriter.WriteElementString("string", par);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
+            this.audio.SaveSettings(xmlWriter);
+            this.image.SaveSettings(xmlWriter);
+            this.video.SaveSettings(xmlWriter);
+            this.stream.SaveSettings(xmlWriter);
         }
 
         public void LoadSettings(XmlDocument xmlReader)
         {
-            //Nacitanie audio
-            XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/NativeFile");
-            if (node != null)
-                bool.TryParse(node.InnerText, out this.audioNativeFile);
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/FileFeature");
-            if (node != null)
-                this.audioFileFeature = node.InnerText;
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/EncodeFeature");
-            if (node != null)
-                this.audioEncodeFeature = node.InnerText;
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/AudioSettings/StreamFeature");
-            if (node != null)
-                this.audioStreamFeature = node.InnerText;
-
-            this.audioEncode.Clear();
-            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/AudioSettings/Parameters/*"))
-                this.audioEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
-
-            //Nacitanie image
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/ImageSettings/NativeFile");
-            if (node != null)
-                bool.TryParse(node.InnerText, out this.imageNativeFile);
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/ImageSettings/FileFeature");
-            if (node != null)
-                this.imageFileFeature = node.InnerText;
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/ImageSettings/EncodeFeature");
-            if (node != null)
-                this.imageEncodeFeature = node.InnerText;
-
-            this.imageEncode.Clear();
-            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/ImageSettings/Parameters/*"))
-                this.imageEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
-
-            //Nacitanie video
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/VideoSettings/NativeFile");
-            if (node != null)
-                bool.TryParse(node.InnerText, out this.videoNativeFile);
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/VideoSettings/FileFeature");
-            if (node != null)
-                this.videoFileFeature = node.InnerText;
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/VideoSettings/EncodeFeature");
-            if (node != null)
-                this.videoEncodeFeature = node.InnerText;
-            node = xmlReader.SelectSingleNode("/HomeMediaCenter/VideoSettings/StreamFeature");
-            if (node != null)
-                this.videoStreamFeature = node.InnerText;
-
-            this.videoEncode.Clear();
-            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/VideoSettings/Parameters/*"))
-                this.videoEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
-
-            //Nacitanie streamu
-            this.streamEncode.Clear();
-            foreach (XmlNode param in xmlReader.SelectNodes("/HomeMediaCenter/StreamSettings/Parameters/*"))
-                this.streamEncode.Add(EncoderBuilder.GetEncoder(param.InnerText));
-        }
-
-        public bool AudioNativeFile
-        {
-            get { return this.audioNativeFile; }
-            set { this.audioNativeFile = value; }
-        }
-
-        public List<EncoderBuilder> AudioEncode
-        {
-            get { return this.audioEncode; }
-            set { this.audioEncode = value; }
-        }
-
-        public string AudioFileFeature
-        {
-            get { return this.audioFileFeature; }
-            set { this.audioFileFeature = value; }
-        }
-
-        public string AudioEncodeFeature
-        {
-            get { return this.audioEncodeFeature; }
-            set { this.audioEncodeFeature = value; }
-        }
-
-        public string AudioStreamFeature
-        {
-            get { return this.audioStreamFeature; }
-            set { this.audioStreamFeature = value; }
-        }
-
-        public bool ImageNativeFile
-        {
-            get { return this.imageNativeFile; }
-            set { this.imageNativeFile = value; }
-        }
-
-        public string ImageFileFeature
-        {
-            get { return this.imageFileFeature; }
-            set { this.imageFileFeature = value; }
-        }
-
-        public string ImageEncodeFeature
-        {
-            get { return this.imageEncodeFeature; }
-            set { this.imageEncodeFeature = value; }
-        }
-
-        public List<EncoderBuilder> ImageEncode
-        {
-            get { return this.imageEncode; }
-            set { this.imageEncode = value; }
-        }
-
-        public bool VideoNativeFile
-        {
-            get { return this.videoNativeFile; }
-            set { this.videoNativeFile = value; }
-        }
-
-        public List<EncoderBuilder> StreamEncode
-        {
-            get { return this.streamEncode; }
-            set { this.streamEncode = value; }
-        }
-
-        public List<EncoderBuilder> VideoEncode
-        {
-            get { return this.videoEncode; }
-            set { this.videoEncode = value; }
-        }
-
-        public string VideoFileFeature
-        {
-            get { return this.videoFileFeature; }
-            set { this.videoFileFeature = value; }
-        }
-
-        public string VideoEncodeFeature
-        {
-            get { return this.videoEncodeFeature; }
-            set { this.videoEncodeFeature = value; }
-        }
-
-        public string VideoStreamFeature
-        {
-            get { return this.videoStreamFeature; }
-            set { this.videoStreamFeature = value; }
+            this.audio.LoadSettings(xmlReader);
+            this.image.LoadSettings(xmlReader);
+            this.video.LoadSettings(xmlReader);
+            this.stream.LoadSettings(xmlReader);
         }
     }
 }

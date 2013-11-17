@@ -17,6 +17,8 @@ namespace HomeMediaCenter
     [InheritanceMapping(Code = 5, Type = typeof(ItemImage))]
     [InheritanceMapping(Code = 6, Type = typeof(ItemVideo))]
     [InheritanceMapping(Code = 7, Type = typeof(ItemStream))]
+    [InheritanceMapping(Code = 8, Type = typeof(ItemContainerStreamRoot))]
+    [InheritanceMapping(Code = 9, Type = typeof(ItemContainerStreamCustom))]
     public abstract class Item
     {
         public const string AudioIndex = "1";
@@ -51,7 +53,7 @@ namespace HomeMediaCenter
             get; set;
         }
 
-        [Column(IsPrimaryKey = false, DbType = "nvarchar(255)", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
+        [Column(IsPrimaryKey = false, DbType = "nvarchar(1024)", CanBeNull = true, UpdateCheck = UpdateCheck.Never)]
         public string Path
         {
             get; set;
@@ -81,20 +83,6 @@ namespace HomeMediaCenter
             set { }
         }
 
-        public override bool Equals(object obj)
-        {
-            if (obj is string)
-                return this.Path == (string)obj;
-            return base.Equals(obj);
-        }
-
-        public override int GetHashCode()
-        {
-            if (this.Path == null)
-                return 0;
-            return this.Path.GetHashCode();
-        }
-
         public virtual string GetMime() { return null; }
 
         public virtual string GetPath() { return this.Path; }
@@ -107,7 +95,7 @@ namespace HomeMediaCenter
 
         public virtual string GetEncodeFeature(MediaSettings settings) { return string.Empty; }
 
-        public virtual void RefresMe(DataContext context, IEnumerable<string> directories, HttpMimeDictionary mimeTypes, MediaSettings settings, HashSet<string> subtitleExt, bool recursive) { }
+        public virtual void RefresMe(DataContext context, ItemManager manager, bool recursive) { }
 
         public virtual void RemoveMe(DataContext context) { }
 
@@ -126,7 +114,7 @@ namespace HomeMediaCenter
 
         public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet);
 
-        public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId);
+        public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId);
 
         public abstract void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams);
     }

@@ -46,7 +46,13 @@ namespace HomeMediaCenter
         public int HttpPort
         {
             get { return this.httpPort; }
-            set { this.httpPort = value; }
+            set
+            {
+                this.rootDevice.CheckStopped();
+
+                this.httpPort = value;
+                this.rootDevice.SettingsChanged();
+            }
         }
 
         public void Start()

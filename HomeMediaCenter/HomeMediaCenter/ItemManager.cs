@@ -21,27 +21,29 @@ namespace HomeMediaCenter
             public FileSystemWatcher Watcher { get; set; }
         }
 
+        private bool enableWebcamStreaming = true;
+        private bool enableDesktopStreaming = true;
         private bool realTimeDatabaseRefresh = true;
-        private List<Dir> directories = new List<Dir>();
-        private MediaSettings settings = new MediaSettings();
-        private HttpMimeDictionary mimeTypes = HttpMime.GetDefaultMime();
+        private HttpMimeDictionary mimeTypes = HttpMimeDictionary.GetDefaults();
         private HashSet<string> subtitleExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
             ".srt", ".sub", ".ssa", ".txt" };
 
+        private readonly MediaSettings settings;
+        private readonly MediaServerDevice upnpDevice;
+        private readonly List<Dir> directories = new List<Dir>();
         private readonly HashSet<string> changedPaths = new HashSet<string>();
         private Thread watcherThread;
-        
-        private readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
-        private string dbConnectionString;
 
-        private readonly Action asyncBuildDatabaseDel;
+        private readonly object dbWriteLock = new object();
+        private string dbConnectionString;
 
         public event EventHandler<ExceptionEventArgs> AsyncBuildDatabaseStart;
         public event EventHandler<ExceptionEventArgs> AsyncBuildDatabaseEnd;
 
         public ItemManager(MediaServerDevice upnpDevice)
         {
-            this.asyncBuildDatabaseDel = new Action(BuildDatabaseSync);
+            this.upnpDevice = upnpDevice;
+            this.settings = new MediaSettings(upnpDevice);
         }
 
         public MediaSettings MediaSettings
@@ -54,10 +56,11 @@ namespace HomeMediaCenter
             get { return this.realTimeDatabaseRefresh; }
             set
             {
+                this.upnpDevice.CheckStopped();
+
                 this.realTimeDatabaseRefresh = value;
 
-                this.rwLock.EnterWriteLock();
-                try
+                lock (this.directories)
                 {
                     foreach (Dir dir in this.directories)
                     {
@@ -65,84 +68,122 @@ namespace HomeMediaCenter
                         catch { }
                     }
                 }
-                finally { this.rwLock.ExitWriteLock(); }
+
+                this.upnpDevice.SettingsChanged();
             }
         }
 
-        public string[] AddDirectorySync(string directory)
+        public bool EnableDesktopStreaming
         {
-            this.rwLock.EnterWriteLock();
-            try
+            get { return this.enableDesktopStreaming; }
+            set
             {
-                AddDirectory(directory);
+                this.upnpDevice.CheckStopped();
+
+                this.enableDesktopStreaming = value;
+                this.upnpDevice.SettingsChanged();
+            }
+        }
+
+        public bool EnableWebcamStreaming
+        {
+            get { return this.enableWebcamStreaming; }
+            set
+            {
+                this.upnpDevice.CheckStopped();
+
+                this.enableWebcamStreaming = value;
+                this.upnpDevice.SettingsChanged();
+            }
+        }
+
+        public string[] AddDirectory(string directory)
+        {
+            lock (this.directories)
+            {
+                AddDirectoryInt(directory);
+
+                WatcherChanged("*");
+
+                this.upnpDevice.SettingsChanged();
+
                 return this.directories.Select(a => a.Path).ToArray();
             }
-            finally { this.rwLock.ExitWriteLock(); }
         }
 
-        public string[] RemoveDirectorySync(string directory)
+        public string[] RemoveDirectory(string directory)
         {
-            this.rwLock.EnterWriteLock();
-            try
+            lock (this.directories)
             {
-                RemoveDirectory(directory);
+                RemoveDirectoryInt(directory);
+
+                WatcherChanged("*");
+
+                this.upnpDevice.SettingsChanged();
+
                 return this.directories.Select(a => a.Path).ToArray();
             }
-            finally { this.rwLock.ExitWriteLock(); }
         }
 
-        public string[] GetDirectoriesSync()
+        public string[] GetDirectories()
         {
-            this.rwLock.EnterReadLock();
-            try
+            lock (this.directories)
             {
                 return this.directories.Select(a => a.Path).ToArray();
             }
-            finally { this.rwLock.ExitReadLock(); }
         }
 
-        public void AddSubtitleExtensionSync(string extension)
+        public string[] GetWorkingDirectories()
         {
-            this.rwLock.EnterWriteLock();
-            try
+            lock (this.directories)
             {
-                this.subtitleExt.Add(extension);
+                return this.directories.Where(a => !a.Skip).Select(a => a.Path).ToArray();
             }
-            finally { this.rwLock.ExitWriteLock(); }
+        }
+
+        public HttpMime GetMimeType(string key)
+        {
+            return this.mimeTypes.GetValue(key);
+        }
+
+        public bool ContainsSubtitleExt(string ext)
+        {
+            return this.subtitleExt.Contains(ext);
         }
 
         public void BuildDatabaseAsync()
         {
-            OnAsyncBuildDatabaseStart(null);
-            this.asyncBuildDatabaseDel.BeginInvoke(new AsyncCallback(AsyncBuildDatabaseResult), null);
+            WatcherChanged("*");
         }
 
-        public void BuildDatabaseSync()
+        public void BuildDatabase()
         {
-            this.rwLock.EnterWriteLock();
-            try
+            using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+            using (DataContext context = new DataContext(conn))
             {
-                using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
-                using (DataContext context = new DataContext(conn))
+                lock (this.dbWriteLock)
                 {
                     Item root = context.GetTable<Item>().Single(a => a.Id == 0);
-                    root.RefresMe(context, GetWorkingDirectories(), this.mimeTypes, this.settings, this.subtitleExt, true);
+                    root.RefresMe(context, this, true);
 
                     context.SubmitChanges();
                 }
             }
-            finally { this.rwLock.ExitWriteLock(); }
+        }
+
+        public void BuildDatabaseAsync(string path)
+        {
+            WatcherChanged(path);
         }
 
         public void BuildDatabaseSync(string path)
         {
             path = path.TrimEnd('\\');
 
-            this.rwLock.EnterWriteLock();
-            try
+            using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+            using (DataContext context = new DataContext(conn))
             {
-                using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
-                using (DataContext context = new DataContext(conn))
+                lock (this.dbWriteLock)
                 {
                     Item item = context.GetTable<Item>().FirstOrDefault(a => a.Path == path);
                     if (item == null)
@@ -158,13 +199,13 @@ namespace HomeMediaCenter
                             if (children == null)
                             {
                                 //V nadradenom adresari (kontajner) sa nasiel subor (polozka) 
-                                item.RefresMe(context, GetWorkingDirectories(), this.mimeTypes, this.settings, this.subtitleExt, false);
+                                item.RefresMe(context, this, false);
                                 context.SubmitChanges();
                             }
                             else
                             {
                                 //Adresar alebo subor este neboli pridane - obnov nadradeny adresar
-                                children.RefresMe(context, GetWorkingDirectories(), this.mimeTypes, this.settings, this.subtitleExt, false);
+                                children.RefresMe(context, this, false);
                                 context.SubmitChanges();
                             }
                         }
@@ -172,12 +213,35 @@ namespace HomeMediaCenter
                     else
                     {
                         //Ak sa nasla polozka s povodnou cestou - celu cestu ma iba kontajner
-                        item.RefresMe(context, GetWorkingDirectories(), this.mimeTypes, this.settings, this.subtitleExt, false);
+                        item.RefresMe(context, this, false);
                         context.SubmitChanges();
                     }
                 }
             }
-            finally { this.rwLock.ExitWriteLock(); }
+        }
+
+        public BindingListStreamSources GetStreamSources()
+        {
+            SqlCeConnection connection = null;
+            DataContext context = null;
+
+            try
+            {
+                connection = new SqlCeConnection(this.dbConnectionString);
+                context = new DataContext(connection);
+
+                return new BindingListStreamSources(context, this.dbWriteLock);
+            }
+            catch
+            {
+                if (context != null)
+                    context.Dispose();
+
+                if (connection != null)
+                    connection.Dispose();
+
+                return new BindingListStreamSources();
+            }
         }
 
         internal void Start()
@@ -210,87 +274,97 @@ namespace HomeMediaCenter
             }
         }
 
-        internal void SaveSettingsSync(XmlWriter xmlWriter)
+        internal void SaveSettings(XmlWriter xmlWriter)
         {
-            this.rwLock.EnterReadLock();
-            try
-            {
-                xmlWriter.WriteElementString("RealTimeDatabaseRefresh", this.realTimeDatabaseRefresh.ToString());
+            xmlWriter.WriteElementString("RealTimeDatabaseRefresh", this.realTimeDatabaseRefresh.ToString());
+            xmlWriter.WriteElementString("EnableDesktopStreaming", this.enableDesktopStreaming.ToString());
+            xmlWriter.WriteElementString("EnableWebcamStreaming", this.enableWebcamStreaming.ToString());
 
-                xmlWriter.WriteStartElement("Directories");
+            xmlWriter.WriteStartElement("Directories");
+            lock (this.directories)
+            {
                 foreach (string dir in this.directories.Select(a => a.Path))
                     xmlWriter.WriteElementString("string", dir);
-                xmlWriter.WriteEndElement();
-
-                xmlWriter.WriteStartElement("Subtitles");
-                foreach (string ext in this.subtitleExt)
-                    xmlWriter.WriteElementString("string", ext);
-                xmlWriter.WriteEndElement();
-                
-                this.settings.SaveSettings(xmlWriter);
             }
-            finally { this.rwLock.ExitReadLock(); }
+            xmlWriter.WriteEndElement();
+
+            xmlWriter.WriteStartElement("Subtitles");
+            foreach (string ext in this.subtitleExt)
+                xmlWriter.WriteElementString("string", ext);
+            xmlWriter.WriteEndElement();
+
+            this.mimeTypes.SerializeMe(xmlWriter);
+                
+            this.settings.SaveSettings(xmlWriter);
         }
 
-        internal void LoadSync(XmlDocument xmlReader, string databasePath)
+        internal void LoadSettings(XmlDocument xmlReader, string databasePath)
         {
-            this.rwLock.EnterWriteLock();
-            try
+            if (xmlReader != null)
             {
-                if (xmlReader != null)
-                {
-                    XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/RealTimeDatabaseRefresh");
-                    if (node != null)
-                        bool.TryParse(node.InnerText, out this.realTimeDatabaseRefresh);
+                XmlNode node = xmlReader.SelectSingleNode("/HomeMediaCenter/RealTimeDatabaseRefresh");
+                if (node != null)
+                    bool.TryParse(node.InnerText, out this.realTimeDatabaseRefresh);
 
+                node = xmlReader.SelectSingleNode("/HomeMediaCenter/EnableDesktopStreaming");
+                if (node != null)
+                    bool.TryParse(node.InnerText, out this.enableDesktopStreaming);
+
+                node = xmlReader.SelectSingleNode("/HomeMediaCenter/EnableWebcamStreaming");
+                if (node != null)
+                    bool.TryParse(node.InnerText, out this.enableWebcamStreaming);
+
+                lock (this.directories)
+                {
                     foreach (Dir dir in this.directories)
                         dir.Watcher.Dispose();
                     this.directories.Clear();
                     foreach (XmlNode directory in xmlReader.SelectNodes("/HomeMediaCenter/Directories/*"))
-                        AddDirectory(directory.InnerText);
-
-                    this.subtitleExt.Clear();
-                    foreach (XmlNode subtitle in xmlReader.SelectNodes("/HomeMediaCenter/Subtitles/*"))
-                        this.subtitleExt.Add(subtitle.InnerText);
-
-                    this.settings.LoadSettings(xmlReader);
+                        AddDirectoryInt(directory.InnerText);
                 }
 
-                this.dbConnectionString = "Data Source=" + databasePath;
-                if (!File.Exists(databasePath))
+                this.subtitleExt.Clear();
+                foreach (XmlNode subtitle in xmlReader.SelectNodes("/HomeMediaCenter/Subtitles/*"))
+                    this.subtitleExt.Add(subtitle.InnerText);
+
+                this.mimeTypes = HttpMimeDictionary.DeserializeMe(xmlReader);
+
+                this.settings.LoadSettings(xmlReader);
+            }
+
+            this.dbConnectionString = "Data Source=" + databasePath;
+            if (!File.Exists(databasePath))
+            {
+                using (SqlCeEngine engine = new SqlCeEngine(this.dbConnectionString))
                 {
-                    using (SqlCeEngine engine = new SqlCeEngine(this.dbConnectionString))
-                    {
-                        engine.CreateDatabase();
-                    }
-
-                    using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
-                    using (DataContext context = new DataContext(conn))
-                    {
-                        string command = CreateTable(context.Mapping.GetTable(typeof(Item)));
-                        context.ExecuteCommand(command);
-                        context.ExecuteCommand("CREATE INDEX pathidx ON [Items]([Path])");
-
-                        ItemContainerRoot root = new ItemContainerRoot();
-                        context.GetTable<Item>().InsertOnSubmit(root);
-                        context.SubmitChanges();
-
-                        if (root.Id != 0)
-                            throw new MediaCenterException("Root container must have id with value 0");
-                    }
+                    engine.CreateDatabase();
                 }
-                else
+
+                using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+                using (DataContext context = new DataContext(conn))
                 {
-                    using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
-                    using (DataContext context = new DataContext(conn))
-                    {
-                        Item root = context.GetTable<Item>().Single(a => a.GetType() == typeof(ItemContainerRoot));
-                        if (root.Id != 0)
-                            throw new MediaCenterException("Root container must have id with value 0");
-                    }
+                    string command = CreateTable(context.Mapping.GetTable(typeof(Item)));
+                    context.ExecuteCommand(command);
+                    context.ExecuteCommand("CREATE INDEX pathidx ON [Items]([Path])");
+
+                    ItemContainerRoot root = new ItemContainerRoot();
+                    context.GetTable<Item>().InsertOnSubmit(root);
+                    context.SubmitChanges();
+
+                    if (root.Id != 0)
+                        throw new MediaCenterException("Root container must have id with value 0");
                 }
             }
-            finally { this.rwLock.ExitWriteLock(); }
+            else
+            {
+                using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+                using (DataContext context = new DataContext(conn))
+                {
+                    Item root = context.GetTable<Item>().Single(a => a.GetType() == typeof(ItemContainerRoot));
+                    if (root.Id != 0)
+                        throw new MediaCenterException("Root container must have id with value 0");
+                }
+            }
         }
 
         internal bool GetFile(string objectID, out string path, out string mime, out string fileFeature)
@@ -484,7 +558,7 @@ namespace HomeMediaCenter
             return string.Empty;
         }
 
-        private void AddDirectory(string directory)
+        private void AddDirectoryInt(string directory)
         {
             directory = directory.TrimEnd('\\');
 
@@ -514,7 +588,7 @@ namespace HomeMediaCenter
             }
         }
 
-        private void RemoveDirectory(string directory)
+        private void RemoveDirectoryInt(string directory)
         {
             for (int i = 0; i < this.directories.Count; i++)
             {
@@ -537,11 +611,6 @@ namespace HomeMediaCenter
                     catch { }
                 }
             }
-        }
-
-        private IEnumerable<string> GetWorkingDirectories()
-        {
-            return this.directories.Where(a => !a.Skip).Select(a => a.Path);
         }
 
         private void Watcher_Renamed(object sender, RenamedEventArgs e)
@@ -567,6 +636,9 @@ namespace HomeMediaCenter
 
         private void WatcherChanged(string path)
         {
+            if (this.watcherThread == null)
+                return;
+
             lock (this.changedPaths)
             {
                 this.changedPaths.Add(path);
@@ -580,6 +652,7 @@ namespace HomeMediaCenter
             while (true)
             {
                 string path;
+                Exception exc = null;
 
                 lock (this.changedPaths)
                 {
@@ -595,25 +668,25 @@ namespace HomeMediaCenter
 
                 OnAsyncBuildDatabaseStart(null);
 
-                //Niektore subory po udalosti changed este nie su uzavrete - pockat
-                //Pomoha aj znizenie priority vlakna
-                Thread.Sleep(500);
+                if (path == "*")
+                {
+                    //Obnovenie celej databazy
 
-                Exception exc = null;
-                try { BuildDatabaseSync(path); }
-                catch (Exception ex) { exc = ex; }
+                    try { BuildDatabase(); }
+                    catch (Exception ex) { exc = ex; }
+                }
+                else
+                {
+                    //Niektore subory po udalosti changed este nie su uzavrete - pockat
+                    //Pomoha aj znizenie priority vlakna
+                    Thread.Sleep(500);
+
+                    try { BuildDatabaseSync(path); }
+                    catch (Exception ex) { exc = ex; }
+                }
 
                 OnAsyncBuildDatabaseEnd(exc);
             }
-        }
-
-        private void AsyncBuildDatabaseResult(IAsyncResult result)
-        {
-            Exception exc = null;
-            try { this.asyncBuildDatabaseDel.EndInvoke(result); }
-            catch (Exception ex) { exc = ex; }
-
-            OnAsyncBuildDatabaseEnd(exc);
         }
 
         private void OnAsyncBuildDatabaseStart(Exception ex)

@@ -32,20 +32,6 @@ namespace HomeMediaCenter
             set { }
         }
 
-        public override bool Equals(object obj)
-        {
-            if (obj is string)
-                return this.SubtitlesPath == (string)obj;
-            return base.Equals(obj);
-        }
-
-        public override int GetHashCode()
-        {
-            if (this.SubtitlesPath == null)
-                return 0;
-            return this.SubtitlesPath.GetHashCode();
-        }
-
         public override string GetMime()
         {
             return ((ItemContainerVideo)this.Parent).Mime;
@@ -70,12 +56,12 @@ namespace HomeMediaCenter
 
         public override string GetFileFeature(MediaSettings settings)
         {
-            return settings.VideoFileFeature;
+            return settings.Video.FileFeature;
         }
 
         public override string GetEncodeFeature(MediaSettings settings)
         {
-            return settings.VideoEncodeFeature;
+            return settings.Video.EncodeFeature;
         }
 
         public override void RemoveMe(DataContext context)
@@ -90,10 +76,10 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
         {
-            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentId(MediaType.Video));
+            BrowseMetadata(writer, settings, host, idParams, filterSet, this.Parent.GetParentItem(MediaType.Video).Id);
         }
 
-        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, string parentId)
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
             writer.WriteStartElement("item");
 
@@ -111,7 +97,7 @@ namespace HomeMediaCenter
 
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
-                if (settings.VideoNativeFile && this.SubtitlesPath == null && this.Path == null)
+                if (settings.Video.NativeFile && this.SubtitlesPath == null && this.Path == null)
                 {
                     writer.WriteStartElement("res");
 
@@ -135,7 +121,7 @@ namespace HomeMediaCenter
                     writer.WriteEndElement();
                 }
 
-                foreach (EncoderBuilder sett in settings.VideoEncode)
+                foreach (EncoderBuilder sett in settings.Video.Encode)
                 {
                     writer.WriteStartElement("res");
 
@@ -149,7 +135,7 @@ namespace HomeMediaCenter
                     if (sett.Resolution != null && (filterSet == null || filterSet.Contains("res@resolution")))
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
-                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.VideoEncodeFeature));
+                    writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.Video.EncodeFeature));
                     writer.WriteValue(string.Format("{0}/encode/video?id={1}{2}{3}", host, this.Id, sett.GetParamString(), this.Path));
                     writer.WriteEndElement();
                 }

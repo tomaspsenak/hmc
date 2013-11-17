@@ -36,6 +36,7 @@
             this.removeDirButton = new System.Windows.Forms.Button();
             this.webLinkLabel = new System.Windows.Forms.LinkLabel();
             this.directoriesGroup = new System.Windows.Forms.GroupBox();
+            this.streamSourcesButton = new System.Windows.Forms.Button();
             this.buildDatabaseButton = new System.Windows.Forms.Button();
             this.mainTabControl = new System.Windows.Forms.TabControl();
             this.homeTabPage = new System.Windows.Forms.TabPage();
@@ -104,6 +105,8 @@
             this.statusLabel = new System.Windows.Forms.Label();
             this.statusTextLabel = new System.Windows.Forms.Label();
             this.mainNotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this.desktopStreamingCheck = new System.Windows.Forms.CheckBox();
+            this.webcamStreamingCheck = new System.Windows.Forms.CheckBox();
             this.paramControl = new HomeMediaCenterGUI.ParametersControl();
             this.directoriesGroup.SuspendLayout();
             this.mainTabControl.SuspendLayout();
@@ -184,6 +187,7 @@
             this.directoriesGroup.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.directoriesGroup.Controls.Add(this.streamSourcesButton);
             this.directoriesGroup.Controls.Add(this.dirListBox);
             this.directoriesGroup.Controls.Add(this.removeDirButton);
             this.directoriesGroup.Controls.Add(this.addDirButton);
@@ -193,6 +197,17 @@
             this.directoriesGroup.TabIndex = 5;
             this.directoriesGroup.TabStop = false;
             this.directoriesGroup.Text = "Directories";
+            // 
+            // streamSourcesButton
+            // 
+            this.streamSourcesButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.streamSourcesButton.Location = new System.Drawing.Point(10, 330);
+            this.streamSourcesButton.Name = "streamSourcesButton";
+            this.streamSourcesButton.Size = new System.Drawing.Size(75, 23);
+            this.streamSourcesButton.TabIndex = 4;
+            this.streamSourcesButton.Text = "Stream";
+            this.streamSourcesButton.UseVisualStyleBackColor = true;
+            this.streamSourcesButton.Click += new System.EventHandler(this.streamSourcesButton_Click);
             // 
             // buildDatabaseButton
             // 
@@ -356,7 +371,7 @@
             // 
             // tryToForwardPortCheckBox
             // 
-            this.tryToForwardPortCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.tryToForwardPortCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tryToForwardPortCheckBox.Location = new System.Drawing.Point(175, 126);
             this.tryToForwardPortCheckBox.Name = "tryToForwardPortCheckBox";
@@ -369,6 +384,8 @@
             // 
             this.streamGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.streamGroupBox.Controls.Add(this.webcamStreamingCheck);
+            this.streamGroupBox.Controls.Add(this.desktopStreamingCheck);
             this.streamGroupBox.Controls.Add(this.videoStreamParamEditButton);
             this.streamGroupBox.Controls.Add(this.videoStreamParamAddButton);
             this.streamGroupBox.Controls.Add(this.videoStreamParamRemoveButton);
@@ -376,7 +393,7 @@
             this.streamGroupBox.Controls.Add(this.videoStreamParamCombo);
             this.streamGroupBox.Location = new System.Drawing.Point(6, 388);
             this.streamGroupBox.Name = "streamGroupBox";
-            this.streamGroupBox.Size = new System.Drawing.Size(627, 50);
+            this.streamGroupBox.Size = new System.Drawing.Size(627, 95);
             this.streamGroupBox.TabIndex = 30;
             this.streamGroupBox.TabStop = false;
             this.streamGroupBox.Text = "Stream";
@@ -385,7 +402,7 @@
             // 
             this.videoStreamParamEditButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.videoStreamParamEditButton.Image = ((System.Drawing.Image)(resources.GetObject("videoStreamParamEditButton.Image")));
-            this.videoStreamParamEditButton.Location = new System.Drawing.Point(532, 17);
+            this.videoStreamParamEditButton.Location = new System.Drawing.Point(532, 63);
             this.videoStreamParamEditButton.Name = "videoStreamParamEditButton";
             this.videoStreamParamEditButton.Size = new System.Drawing.Size(29, 24);
             this.videoStreamParamEditButton.TabIndex = 29;
@@ -396,7 +413,7 @@
             // 
             this.videoStreamParamAddButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.videoStreamParamAddButton.Image = ((System.Drawing.Image)(resources.GetObject("videoStreamParamAddButton.Image")));
-            this.videoStreamParamAddButton.Location = new System.Drawing.Point(592, 17);
+            this.videoStreamParamAddButton.Location = new System.Drawing.Point(592, 63);
             this.videoStreamParamAddButton.Name = "videoStreamParamAddButton";
             this.videoStreamParamAddButton.Size = new System.Drawing.Size(29, 24);
             this.videoStreamParamAddButton.TabIndex = 28;
@@ -407,7 +424,7 @@
             // 
             this.videoStreamParamRemoveButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.videoStreamParamRemoveButton.Image = ((System.Drawing.Image)(resources.GetObject("videoStreamParamRemoveButton.Image")));
-            this.videoStreamParamRemoveButton.Location = new System.Drawing.Point(562, 17);
+            this.videoStreamParamRemoveButton.Location = new System.Drawing.Point(562, 63);
             this.videoStreamParamRemoveButton.Name = "videoStreamParamRemoveButton";
             this.videoStreamParamRemoveButton.Size = new System.Drawing.Size(29, 24);
             this.videoStreamParamRemoveButton.TabIndex = 27;
@@ -416,7 +433,7 @@
             // 
             // streamParamLabel
             // 
-            this.streamParamLabel.Location = new System.Drawing.Point(6, 22);
+            this.streamParamLabel.Location = new System.Drawing.Point(6, 70);
             this.streamParamLabel.Name = "streamParamLabel";
             this.streamParamLabel.Size = new System.Drawing.Size(160, 13);
             this.streamParamLabel.TabIndex = 24;
@@ -424,18 +441,18 @@
             // 
             // videoStreamParamCombo
             // 
-            this.videoStreamParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoStreamParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoStreamParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.videoStreamParamCombo.FormattingEnabled = true;
-            this.videoStreamParamCombo.Location = new System.Drawing.Point(172, 19);
+            this.videoStreamParamCombo.Location = new System.Drawing.Point(172, 65);
             this.videoStreamParamCombo.Name = "videoStreamParamCombo";
             this.videoStreamParamCombo.Size = new System.Drawing.Size(353, 21);
             this.videoStreamParamCombo.TabIndex = 25;
             // 
             // realTimeDatabaseRefreshCheckBox
             // 
-            this.realTimeDatabaseRefreshCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.realTimeDatabaseRefreshCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.realTimeDatabaseRefreshCheckBox.Location = new System.Drawing.Point(175, 103);
             this.realTimeDatabaseRefreshCheckBox.Name = "realTimeDatabaseRefreshCheckBox";
@@ -446,7 +463,7 @@
             // 
             // minimizeCheckBox
             // 
-            this.minimizeCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.minimizeCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.minimizeCheckBox.Location = new System.Drawing.Point(175, 80);
             this.minimizeCheckBox.Name = "minimizeCheckBox";
@@ -458,7 +475,7 @@
             // 
             // startupCheckBox
             // 
-            this.startupCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.startupCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.startupCheckBox.Location = new System.Drawing.Point(175, 57);
             this.startupCheckBox.Name = "startupCheckBox";
@@ -481,7 +498,7 @@
             // 
             // videoGroupBox
             // 
-            this.videoGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoGroupBox.Controls.Add(this.videoParamEditButton);
             this.videoGroupBox.Controls.Add(this.videoParamAddButton);
@@ -531,7 +548,7 @@
             // 
             // videoNativeCheck
             // 
-            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.videoNativeCheck.Name = "videoNativeCheck";
@@ -542,7 +559,7 @@
             // 
             // videoParamCombo
             // 
-            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.videoParamCombo.FormattingEnabled = true;
@@ -561,7 +578,7 @@
             // 
             // imageGroupBox
             // 
-            this.imageGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.imageGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageGroupBox.Controls.Add(this.imageParamEditButton);
             this.imageGroupBox.Controls.Add(this.imageParamAddButton);
@@ -611,7 +628,7 @@
             // 
             // imageNativeCheck
             // 
-            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.imageNativeCheck.Name = "imageNativeCheck";
@@ -622,7 +639,7 @@
             // 
             // imageParamCombo
             // 
-            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.imageParamCombo.FormattingEnabled = true;
@@ -641,7 +658,7 @@
             // 
             // audioGroupBox
             // 
-            this.audioGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.audioGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioGroupBox.Controls.Add(this.audioParamEditButton);
             this.audioGroupBox.Controls.Add(this.audioParamAddButton);
@@ -691,7 +708,7 @@
             // 
             // audioNativeCheck
             // 
-            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.audioNativeCheck.Name = "audioNativeCheck";
@@ -702,7 +719,7 @@
             // 
             // audioParamCombo
             // 
-            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.audioParamCombo.FormattingEnabled = true;
@@ -721,7 +738,7 @@
             // 
             // portText
             // 
-            this.portText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.portText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.portText.Location = new System.Drawing.Point(175, 31);
             this.portText.Name = "portText";
@@ -738,7 +755,7 @@
             // 
             // friendlyNameText
             // 
-            this.friendlyNameText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.friendlyNameText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.friendlyNameText.Location = new System.Drawing.Point(175, 5);
             this.friendlyNameText.Name = "friendlyNameText";
@@ -835,8 +852,8 @@
             // 
             // logListBox
             // 
-            this.logListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.logListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.logListBox.FormattingEnabled = true;
             this.logListBox.HorizontalScrollbar = true;
@@ -883,7 +900,7 @@
             // 
             // label5
             // 
-            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label5.Location = new System.Drawing.Point(3, 144);
             this.label5.Name = "label5";
@@ -959,6 +976,28 @@
             this.mainNotifyIcon.Text = "Home Media Center";
             this.mainNotifyIcon.Click += new System.EventHandler(this.mainNotifyIcon_Click);
             // 
+            // desktopStreamingCheck
+            // 
+            this.desktopStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.desktopStreamingCheck.Location = new System.Drawing.Point(172, 19);
+            this.desktopStreamingCheck.Name = "desktopStreamingCheck";
+            this.desktopStreamingCheck.Size = new System.Drawing.Size(432, 17);
+            this.desktopStreamingCheck.TabIndex = 30;
+            this.desktopStreamingCheck.Text = "Enable desktop streaming";
+            this.desktopStreamingCheck.UseVisualStyleBackColor = true;
+            // 
+            // webcamStreamingCheck
+            // 
+            this.webcamStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.webcamStreamingCheck.Location = new System.Drawing.Point(172, 42);
+            this.webcamStreamingCheck.Name = "webcamStreamingCheck";
+            this.webcamStreamingCheck.Size = new System.Drawing.Size(432, 17);
+            this.webcamStreamingCheck.TabIndex = 31;
+            this.webcamStreamingCheck.Text = "Enable webcam streaming";
+            this.webcamStreamingCheck.UseVisualStyleBackColor = true;
+            // 
             // paramControl
             // 
             this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -1011,6 +1050,7 @@
 
         private System.Windows.Forms.Button startButton;
         private System.Windows.Forms.ListBox dirListBox;
+        private System.Windows.Forms.Button streamSourcesButton;
         private System.Windows.Forms.Button addDirButton;
         private System.Windows.Forms.Button removeDirButton;
         private System.Windows.Forms.LinkLabel webLinkLabel;
@@ -1084,6 +1124,8 @@
         private System.Windows.Forms.GroupBox streamGroupBox;
         private System.Windows.Forms.Label streamParamLabel;
         private System.Windows.Forms.CheckBox tryToForwardPortCheckBox;
+        private System.Windows.Forms.CheckBox webcamStreamingCheck;
+        private System.Windows.Forms.CheckBox desktopStreamingCheck;
     }
 }
 

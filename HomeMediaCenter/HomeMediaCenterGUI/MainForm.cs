@@ -16,7 +16,6 @@ namespace HomeMediaCenterGUI
 {
     public partial class MainForm : Form
     {
-        private bool mediaCenterStarted;
         private MediaServerDevice mediaCenter = new MediaServerDevice();
         private ToolTip mainToolTip = new ToolTip();
 
@@ -87,6 +86,9 @@ namespace HomeMediaCenterGUI
             this.startupCheckBox.Text = LanguageResource.RunAtStartup;
             this.realTimeDatabaseRefreshCheckBox.Text = LanguageResource.RealTimeDatabaseRefresh;
             this.tryToForwardPortCheckBox.Text = LanguageResource.EnablePortForwarding;
+            this.streamSourcesButton.Text = LanguageResource.Stream;
+            this.desktopStreamingCheck.Text = LanguageResource.EnableDesktopStreaming;
+            this.webcamStreamingCheck.Text = LanguageResource.EnableWebcamStreaming;
             this.mainToolTip.SetToolTip(this.audioParamEditButton, LanguageResource.Edit);
             this.mainToolTip.SetToolTip(this.videoParamEditButton, LanguageResource.Edit);
             this.mainToolTip.SetToolTip(this.imageParamEditButton, LanguageResource.Edit);
@@ -128,7 +130,7 @@ namespace HomeMediaCenterGUI
             try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
             catch { this.startupCheckBox.Checked = false; }
 
-            this.dirListBox.DataSource = this.mediaCenter.ItemManager.GetDirectoriesSync();
+            this.dirListBox.DataSource = this.mediaCenter.ItemManager.GetDirectories();
             this.minimizeCheckBox.Checked = this.mediaCenter.MinimizeToTray;
 
             StartMediaCenterAsync();
@@ -157,8 +159,7 @@ namespace HomeMediaCenterGUI
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                this.dirListBox.DataSource = this.mediaCenter.ItemManager.AddDirectorySync(dialog.SelectedPath);
-                this.mediaCenter.ItemManager.BuildDatabaseAsync();
+                this.dirListBox.DataSource = this.mediaCenter.ItemManager.AddDirectory(dialog.SelectedPath);
             }
         }
 
@@ -168,15 +169,16 @@ namespace HomeMediaCenterGUI
             if (dir == null)
                 MessageBox.Show(this, LanguageResource.SelectDirectory);
 
-            this.dirListBox.DataSource = this.mediaCenter.ItemManager.RemoveDirectorySync(dir);
-            this.mediaCenter.ItemManager.BuildDatabaseAsync();
+            if (MessageBox.Show(this, string.Format(LanguageResource.RemoveFolderQuestion, dir), LanguageResource.Directories, 
+                MessageBoxButtons.YesNo) == DialogResult.Yes)
+                this.dirListBox.DataSource = this.mediaCenter.ItemManager.RemoveDirectory(dir);
         }
 
         private void webLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             try
             {
-                IPAddress address = Dns.GetHostAddresses(Dns.GetHostName()).Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).First();
+                string address = "localhost";
                 System.Diagnostics.Process.Start(string.Format("http://{0}:{1}/web/", address, this.mediaCenter.Server.HttpPort));
             }
             catch { }
@@ -184,7 +186,7 @@ namespace HomeMediaCenterGUI
 
         private void startButton_Click(object sender, EventArgs e)
         {
-            if (this.mediaCenterStarted)
+            if (this.mediaCenter.Started)
                 StopMediaCenterAsync(AfterStopped.Nothing);
             else
                 StartMediaCenterAsync();
@@ -257,7 +259,6 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            this.mediaCenterStarted = true;
             this.startButton.Text = LanguageResource.Stop;
 
             this.mediaCenter.ItemManager.BuildDatabaseAsync();
@@ -287,7 +288,7 @@ namespace HomeMediaCenterGUI
 
             SetButtonEnabled(true);
 
-            if (this.mediaCenterStarted)
+            if (this.mediaCenter.Started)
             {
                 this.statusTextLabel.Text = LanguageResource.Started;
                 this.statusTextLabel.ForeColor = Color.Green;
@@ -320,7 +321,6 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            this.mediaCenterStarted = false;
             this.startButton.Text = LanguageResource.Start;
 
             this.statusTextLabel.Text = LanguageResource.Stopped;
@@ -346,8 +346,6 @@ namespace HomeMediaCenterGUI
         {
             this.startButton.Enabled = enabled;
             this.buildDatabaseButton.Enabled = enabled;
-            this.addDirButton.Enabled = enabled;
-            this.removeDirButton.Enabled = enabled;
             this.friendlyNameText.Enabled = enabled;
             this.portText.Enabled = enabled;
             this.applySettingsButton.Enabled = enabled;
@@ -359,6 +357,7 @@ namespace HomeMediaCenterGUI
             this.minimizeCheckBox.Enabled = enabled;
             this.realTimeDatabaseRefreshCheckBox.Enabled = enabled;
             this.tryToForwardPortCheckBox.Enabled = enabled;
+            this.streamSourcesButton.Enabled = enabled;
         }
 
         private void mainTabControl_Selected(object sender, TabControlEventArgs e)
@@ -367,27 +366,30 @@ namespace HomeMediaCenterGUI
             {
                 this.friendlyNameText.Text = this.mediaCenter.FriendlyName;
                 this.portText.Text = this.mediaCenter.Server.HttpPort.ToString();
-                this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.ItemManager.RealTimeDatabaseRefresh;
                 this.tryToForwardPortCheckBox.Checked = this.mediaCenter.TryToForwardPort;
+
+                this.webcamStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableWebcamStreaming;
+                this.desktopStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableDesktopStreaming;
+                this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.ItemManager.RealTimeDatabaseRefresh;
 
                 MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
 
-                this.audioNativeCheck.Checked = settings.AudioNativeFile;
+                this.audioNativeCheck.Checked = settings.Audio.NativeFile;
                 this.audioParamCombo.Items.Clear();
-                this.audioParamCombo.Items.AddRange(settings.AudioEncode.Select(a => a.GetParamString()).ToArray());
+                this.audioParamCombo.Items.AddRange(settings.Audio.Encode.Select(a => a.GetParamString()).ToArray());
                 this.audioParamCombo.SelectedItem = this.audioParamCombo.Items.Cast<string>().FirstOrDefault();
 
-                this.imageNativeCheck.Checked = settings.ImageNativeFile;
+                this.imageNativeCheck.Checked = settings.Image.NativeFile;
                 this.imageParamCombo.Items.Clear();
-                this.imageParamCombo.Items.AddRange(settings.ImageEncode.Select(a => a.GetParamString()).ToArray());
+                this.imageParamCombo.Items.AddRange(settings.Image.Encode.Select(a => a.GetParamString()).ToArray());
                 this.imageParamCombo.SelectedItem = this.imageParamCombo.Items.Cast<string>().FirstOrDefault();
 
-                this.videoNativeCheck.Checked = settings.VideoNativeFile;
+                this.videoNativeCheck.Checked = settings.Video.NativeFile;
                 this.videoParamCombo.Items.Clear();
-                this.videoParamCombo.Items.AddRange(settings.VideoEncode.Select(a => a.GetParamString()).ToArray());
+                this.videoParamCombo.Items.AddRange(settings.Video.Encode.Select(a => a.GetParamString()).ToArray());
                 this.videoParamCombo.SelectedItem = this.videoParamCombo.Items.Cast<string>().FirstOrDefault();
                 this.videoStreamParamCombo.Items.Clear();
-                this.videoStreamParamCombo.Items.AddRange(settings.StreamEncode.Select(a => a.GetParamString()).ToArray());
+                this.videoStreamParamCombo.Items.AddRange(settings.Stream.Encode.Select(a => a.GetParamString()).ToArray());
                 this.videoStreamParamCombo.SelectedItem = this.videoStreamParamCombo.Items.Cast<string>().FirstOrDefault();
             }
             else if (this.mainTabControl.SelectedTab == this.converterTabPage)
@@ -398,7 +400,7 @@ namespace HomeMediaCenterGUI
 
         private void applySettingsButton_Click(object sender, EventArgs e)
         {
-            if (this.mediaCenterStarted)
+            if (this.mediaCenter.Started)
                 StopMediaCenterAsync(AfterStopped.LoadSettings);
             else
                 ApplySettings();
@@ -408,20 +410,23 @@ namespace HomeMediaCenterGUI
         {
             this.mediaCenter.FriendlyName = this.friendlyNameText.Text;
             this.mediaCenter.Server.HttpPort = int.Parse(this.portText.Text);
-            this.mediaCenter.ItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
             this.mediaCenter.TryToForwardPort = this.tryToForwardPortCheckBox.Checked;
+
+            this.mediaCenter.ItemManager.EnableWebcamStreaming = this.webcamStreamingCheck.Checked;
+            this.mediaCenter.ItemManager.EnableDesktopStreaming = this.desktopStreamingCheck.Checked;
+            this.mediaCenter.ItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
 
             MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
 
-            settings.AudioNativeFile = this.audioNativeCheck.Checked;
-            settings.AudioEncode = this.audioParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
+            settings.Audio.NativeFile = this.audioNativeCheck.Checked;
+            settings.Audio.Encode = this.audioParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
 
-            settings.ImageNativeFile = this.imageNativeCheck.Checked;
-            settings.ImageEncode = this.imageParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
+            settings.Image.NativeFile = this.imageNativeCheck.Checked;
+            settings.Image.Encode = this.imageParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
 
-            settings.VideoNativeFile = this.videoNativeCheck.Checked;
-            settings.VideoEncode = this.videoParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
-            settings.StreamEncode = this.videoStreamParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList();
+            settings.Video.NativeFile = this.videoNativeCheck.Checked;
+            settings.Video.Encode = this.videoParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
+            settings.Stream.Encode = this.videoStreamParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
         }
 
         private void audioParamRemoveButton_Click(object sender, EventArgs e)
@@ -649,6 +654,27 @@ namespace HomeMediaCenterGUI
                 else
                 {
                     rk.DeleteValue(this.regRunName, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void streamSourcesButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (BindingListStreamSources source = this.mediaCenter.ItemManager.GetStreamSources())
+                {
+                    StreamSourcesForm ssf = new StreamSourcesForm(source);
+                    if (ssf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                    {
+                        source.SubmitChanges();
+
+                        this.mediaCenter.ItemManager.BuildDatabaseAsync("Stream");
+                    }
                 }
             }
             catch (Exception ex)
