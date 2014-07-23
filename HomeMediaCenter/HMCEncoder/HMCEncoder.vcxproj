@@ -32,23 +32,27 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -88,18 +92,22 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib;$(SolutionDir)BaseClasses\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProgramDatabaseFile>$(SolutionDir)$(Configuration)\$(TargetName).pdb</ProgramDatabaseFile>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <SupportUnloadOfDelayLoadedDLL>
+      </SupportUnloadOfDelayLoadedDLL>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -108,17 +116,19 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\x64\;$(SolutionDir)BaseClasses\x64\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -129,9 +139,10 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -139,9 +150,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib;$(SolutionDir)BaseClasses\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProgramDatabaseFile>$(SolutionDir)$(Configuration)\$(TargetName).pdb</ProgramDatabaseFile>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -152,9 +164,10 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;HMCENCODER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)BaseClasses;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -162,35 +175,62 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\x64\;$(SolutionDir)BaseClasses\x64\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AsyncInputPin.h" />
-    <ClInclude Include="AudioInputPin.h" />
+    <ClInclude Include="EncoderAsyncInputPin.h" />
+    <ClInclude Include="EncoderAudioInputPin.h" />
     <ClInclude Include="AVEncoder.h" />
+    <ClInclude Include="DesktopSourceAudioPin.h" />
+    <ClInclude Include="DesktopSourceFilter.h" />
+    <ClInclude Include="DesktopSourcePage.h" />
+    <ClInclude Include="DesktopSourceParameters.h" />
+    <ClInclude Include="DesktopSourceVideoPin.h" />
+    <ClInclude Include="EncoderLogPage.h" />
+    <ClInclude Include="FrameRateFilter.h" />
+    <ClInclude Include="FrameRatePage.h" />
+    <ClInclude Include="FrameRateParameters.h" />
+    <ClInclude Include="EncoderPage.h" />
+    <ClInclude Include="FrameWriterFilter.h" />
+    <ClInclude Include="FrameWriterPage.h" />
+    <ClInclude Include="FrameWriterParameters.h" />
     <ClInclude Include="HMCEncoder_h.h" />
-    <ClInclude Include="HMCFilter.h" />
-    <ClInclude Include="HMCParameters.h" />
-    <ClInclude Include="HMCPassThru.h" />
+    <ClInclude Include="EncoderFilter.h" />
+    <ClInclude Include="EncoderParameters.h" />
+    <ClInclude Include="EncoderPassThru.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Stdafx.h" />
-    <ClInclude Include="StreamOutputPin.h" />
-    <ClInclude Include="VideoInputPin.h" />
+    <ClInclude Include="EncoderStreamOutputPin.h" />
+    <ClInclude Include="EncoderVideoInputPin.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AsyncInputPin.cpp" />
-    <ClCompile Include="AudioInputPin.cpp" />
+    <ClCompile Include="EncoderAsyncInputPin.cpp" />
+    <ClCompile Include="EncoderAudioInputPin.cpp" />
     <ClCompile Include="AVEncoder.cpp" />
+    <ClCompile Include="DesktopSourceAudioPin.cpp" />
+    <ClCompile Include="DesktopSourceFilter.cpp" />
+    <ClCompile Include="DesktopSourcePage.cpp" />
+    <ClCompile Include="DesktopSourceParameters.cpp" />
+    <ClCompile Include="DesktopSourceVideoPin.cpp" />
+    <ClCompile Include="EncoderLogPage.cpp" />
+    <ClCompile Include="FrameRateFilter.cpp" />
+    <ClCompile Include="FrameRatePage.cpp" />
+    <ClCompile Include="FrameRateParameters.cpp" />
+    <ClCompile Include="FrameWriterFilter.cpp" />
+    <ClCompile Include="FrameWriterPage.cpp" />
+    <ClCompile Include="FrameWriterParameters.cpp" />
     <ClCompile Include="HMCEncoder.cpp" />
+    <ClCompile Include="EncoderPage.cpp" />
     <ClCompile Include="HMCEncoder_i.c" />
-    <ClCompile Include="HMCFilter.cpp" />
-    <ClCompile Include="HMCParameters.cpp" />
-    <ClCompile Include="HMCPassThru.cpp" />
+    <ClCompile Include="EncoderFilter.cpp" />
+    <ClCompile Include="EncoderParameters.cpp" />
+    <ClCompile Include="EncoderPassThru.cpp" />
     <ClCompile Include="Stdafx.cpp" />
-    <ClCompile Include="StreamOutputPin.cpp" />
-    <ClCompile Include="VideoInputPin.cpp" />
+    <ClCompile Include="EncoderStreamOutputPin.cpp" />
+    <ClCompile Include="EncoderVideoInputPin.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="HMCEncoder.def" />
@@ -204,4 +244,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="HMCEncoder.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>

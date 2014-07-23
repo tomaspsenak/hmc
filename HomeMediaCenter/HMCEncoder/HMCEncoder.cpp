@@ -1,5 +1,13 @@
 #include "StdAfx.h"
-#include "HMCFilter.h"
+#include "EncoderFilter.h"
+#include "EncoderPage.h"
+#include "FrameRateFilter.h"
+#include "FrameRatePage.h"
+#include "DesktopSourceFilter.h"
+#include "DesktopSourcePage.h"
+#include "FrameWriterFilter.h"
+#include "FrameWriterPage.h"
+#include "EncoderLogPage.h"
 
 STDAPI DllRegisterServer()
 {
@@ -9,20 +17,6 @@ STDAPI DllRegisterServer()
 STDAPI DllUnregisterServer()
 {
     return AMovieDllRegisterServer2(FALSE);
-}
-
-STDAPI CreateHMCFilter(void ** ppv)
-{
-	HRESULT hr = S_OK;
-
-	CUnknown * unk = HMCFilter::CreateInstance(NULL, &hr);
-	if (unk == NULL)
-		return E_FAIL;
-
-	unk->NonDelegatingAddRef();
-
-	*ppv = unk;
-	return hr;
 }
 
 extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE, ULONG, LPVOID);
@@ -56,14 +50,54 @@ const AMOVIESETUP_PIN pins[] =
 	{ L"Stream Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 1, &streamTypes[0] }
 };
 
-const AMOVIESETUP_FILTER filter =
+const AMOVIESETUP_FILTER encoderFilter =
 {
-    &CLSID_HMCEncoder, L"HMCFilter", MERIT_DO_NOT_USE, 3, pins
-};                    
+    &CLSID_HMCEncoder, L"HMCEncoderFilter", MERIT_DO_NOT_USE, 3, pins
+};
+
+const AMOVIESETUP_PIN frameRatePins[] =
+{
+    { L"Video Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL },
+	{ L"Video Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL }
+};
+
+const AMOVIESETUP_FILTER frameRateFilter =
+{
+    &CLSID_HMCFrameRate, L"HMCFrameRateFilter", MERIT_DO_NOT_USE, 2, frameRatePins
+};
+
+const AMOVIESETUP_PIN desktopSourcePins[] =
+{
+    { L"Video Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL },
+	{ L"Audio Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL }
+};
+
+const AMOVIESETUP_FILTER desktopSourceFilter =
+{
+    &CLSID_HMCDesktopSource, L"HMCDesktopSourceFilter", MERIT_DO_NOT_USE, 2, desktopSourcePins
+};
+
+const AMOVIESETUP_PIN frameWriterPins[] =
+{
+    { L"Video Input", TRUE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL }
+};
+
+const AMOVIESETUP_FILTER frameWriterFilter =
+{
+    &CLSID_HMCFrameWriter, L"HMCFrameWriterFilter", MERIT_DO_NOT_USE, 1, frameWriterPins
+};
 
 CFactoryTemplate g_Templates[] =
 {
-    { L"HMCFilter", &CLSID_HMCEncoder, HMCFilter::CreateInstance, NULL, &filter }
+    { L"HMCEncoderFilter", &CLSID_HMCEncoder, EncoderFilter::CreateInstance, NULL, &encoderFilter },
+	{ L"HMCEncoderFilterPage", &CLSID_HMCEncoderPage, EncoderPage::CreateInstance },
+	{ L"HMCEncoderFilterLogPage", &CLSID_HMCEncoderLogPage, EncoderLogPage::CreateInstance },
+	{ L"HMCFrameRateFilter", &CLSID_HMCFrameRate, FrameRateFilter::CreateInstance, NULL, &frameRateFilter },
+	{ L"HMCFrameRateFilterPage", &CLSID_HMCFrameRatePage, FrameRatePage::CreateInstance },
+	{ L"HMCDesktopSourceFilter", &CLSID_HMCDesktopSource, DesktopSourceFilter::CreateInstance, NULL, &desktopSourceFilter },
+	{ L"HMCDesktopSourceFilterPage", &CLSID_HMCDesktopSourcePage, DesktopSourcePage::CreateInstance },
+	{ L"HMCFrameWriterFilter", &CLSID_HMCFrameWriter, FrameWriterFilter::CreateInstance, NULL, &frameWriterFilter },
+	{ L"HMCFrameWriterFilterPage", &CLSID_HMCFrameWriterPage, FrameWriterPage::CreateInstance }
 };
 
 int g_cTemplates = sizeof(g_Templates) / sizeof(g_Templates[0]);

@@ -6,7 +6,7 @@
 #define FF_COMPLIANCE_EXPERIMENTAL	-2
 
 AVEncoder::AVEncoder(void) : m_formatContext(NULL), m_audioStream(NULL), m_videoStream(NULL), m_audioResample(NULL), m_audioInChannels(0),
-	m_audioInSampleRate(0), m_audioInBuf(NULL), m_audioFIFO(NULL), m_audioFrame(NULL), m_pictureFormat(PIX_FMT_UYVY422), 
+	m_audioInSampleRate(0), m_audioInBuf(NULL), m_audioFIFO(NULL), m_audioFrame(NULL), m_pictureFormat(AV_PIX_FMT_UYVY422), 
 	m_pictureContext(NULL), m_pictureInFrame(NULL), m_pictureOutFrame(NULL), m_isStopped(FALSE)
 {
 	av_register_all();
@@ -17,7 +17,10 @@ AVEncoder::~AVEncoder(void)
 	FreeContext();
 }
 
-HRESULT AVEncoder::Start(StreamOutputPin * streamPin, HMCParameters * params, AM_MEDIA_TYPE * audioMT, AM_MEDIA_TYPE * videoMT)
+HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, AM_MEDIA_TYPE * videoMT,  int buffer_size, void * opaque,
+	int (* read_packet)(void * opaque, uint8_t * buf, int buf_size),
+	int (* write_packet)(void * opaque, uint8_t * buf, int buf_size),
+	int64_t (* seek)(void * opaque, int64_t offset, int whence))
 {
 	//Lock musi byt v nasledujucom poradi aby nevznikol deadlock (audio / video lock nasledne ziada main lock)
 	CAutoLock cAutoLock1(&this->m_audioLock);
@@ -61,14 +64,14 @@ HRESULT AVEncoder::Start(StreamOutputPin * streamPin, HMCParameters * params, AM
 		}
 	}
 
-	unsigned char * buffer = (unsigned char *)av_malloc(HMCFilter::OutBufferSize);
+	unsigned char * buffer = (unsigned char *)av_malloc(buffer_size);
 	if (!buffer)
 	{
 		CHECK_HR(hr = E_OUTOFMEMORY);
 	}
 
-	this->m_formatContext->pb = avio_alloc_context(buffer, HMCFilter::OutBufferSize, 1, streamPin, 
-		StreamOutputPin::ReadPackets, StreamOutputPin::WritePackets, params->m_streamable ? NULL : StreamOutputPin::Seek);
+	this->m_formatContext->pb = avio_alloc_context(buffer, buffer_size, 1, opaque, 
+		read_packet, write_packet, params->m_streamable ? NULL : seek);
 	if (!this->m_formatContext->pb)
 	{
 		CHECK_HR(hr = E_FAIL);
@@ -178,7 +181,7 @@ HRESULT AVEncoder::Stop(BOOL isEOS)
 	return S_OK;
 }
 
-AVStream * AVEncoder::AddAudio(HMCParameters * params, AM_MEDIA_TYPE * audioMT)
+AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT)
 {
     AVCodecContext * c;
 	AVCodec * codec;
@@ -225,7 +228,7 @@ AVStream * AVEncoder::AddAudio(HMCParameters * params, AM_MEDIA_TYPE * audioMT)
         return NULL;
 
 	this->m_audioFIFO = av_audio_fifo_alloc(c->sample_fmt, c->channels, c->frame_size);
-	this->m_audioFrame = avcodec_alloc_frame();
+	this->m_audioFrame = av_frame_alloc();
 
 	if (av_samples_alloc_array_and_samples(&this->m_audioInBuf, NULL, c->channels, c->frame_size, c->sample_fmt, 0) < 0 ||
 		!this->m_audioFIFO || !this->m_audioFrame)
@@ -264,7 +267,7 @@ AVStream * AVEncoder::AddAudio(HMCParameters * params, AM_MEDIA_TYPE * audioMT)
     return st;
 }
 
-AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
+AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * videoMT)
 {
 	AVCodecContext * c;
 	AVCodec * codec;
@@ -274,13 +277,13 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 	REFERENCE_TIME timePerFrame;
 
 	if (videoMT->subtype == MEDIASUBTYPE_UYVY)
-		this->m_pictureFormat = PIX_FMT_UYVY422;
+		this->m_pictureFormat = AV_PIX_FMT_UYVY422;
 	else if (videoMT->subtype == MEDIASUBTYPE_YUY2)
-		this->m_pictureFormat = PIX_FMT_YUYV422;
+		this->m_pictureFormat = AV_PIX_FMT_YUYV422;
 	else if (videoMT->subtype == MEDIASUBTYPE_RGB24)
-		this->m_pictureFormat = PIX_FMT_BGR24;
+		this->m_pictureFormat = AV_PIX_FMT_BGR24;
 	else if (videoMT->subtype == MEDIASUBTYPE_YV12)
-		this->m_pictureFormat = PIX_FMT_YUV420P;
+		this->m_pictureFormat = AV_PIX_FMT_YUV420P;
 	else
 		return NULL;
 
@@ -312,7 +315,17 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
     c = st->codec;
 	c->codec_id = this->m_formatContext->oformat->video_codec;
     c->codec_type = AVMEDIA_TYPE_VIDEO;
-	c->pix_fmt = PIX_FMT_YUV420P;
+
+	//Vyberie format zhodujuci sa s m_pictureFormat alebo prvy v pix_fmts
+	c->pix_fmt = codec->pix_fmts[0];
+	for (int i = 0; codec->pix_fmts[i] != PIX_FMT_NONE; i++)
+	{
+		if (codec->pix_fmts[i] == this->m_pictureFormat)
+		{
+			c->pix_fmt = this->m_pictureFormat;
+			break;
+		}
+	}
 
 	c->sample_aspect_ratio.den = 1;
 	c->sample_aspect_ratio.num = 1;
@@ -322,8 +335,8 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 	c->time_base.den =  frameRate.num;
 	c->time_base.num =  frameRate.den;
 
-	c->width = inputFormat->biWidth;
-	c->height = inputFormat->biHeight;
+	c->width = (params->m_width < 1) ? inputFormat->biWidth : params->m_width;
+	c->height = (params->m_height < 1) ? inputFormat->biHeight : params->m_height;
 
 	c->bit_rate = params->m_videoBitrate;
 	if (params->m_videoMode == BitrateMode_VBR)
@@ -340,14 +353,11 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 		{
 			c->rc_buffer_size = params->m_videoBufferSize;
 			c->rc_max_rate = c->rc_min_rate = params->m_videoBitrate;
-		}
-		else
-		{
-			c->rc_max_rate = c->rc_buffer_size = params->m_videoBitrate * 2;
+			c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3 / 4;
 		}
 	}
 
-	c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3 / 4; 
+	//c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3 / 4; 
 
 	if (params->m_videoInterlaced)
 	{
@@ -361,6 +371,8 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 			//Nedodrzat standard
 			c->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
 		}
+
+		c->thread_count = min(av_cpu_count(), 8);
 	}
 
 	c->gop_size = params->m_videoGopSize;
@@ -384,13 +396,14 @@ AVStream * AVEncoder::AddVideo(HMCParameters * params, AM_MEDIA_TYPE * videoMT)
 	}
 	this->m_pictureOutFrame->quality = c->global_quality;
 
-	if (this->m_pictureFormat != PIX_FMT_YUV420P || c->width != inputFormat->biWidth || c->height != inputFormat->biHeight)
+	if (this->m_pictureFormat != AV_PIX_FMT_YUV420P || c->width != inputFormat->biWidth || c->height != inputFormat->biHeight)
 	{
 		//Ak vstupny format sa nezhoduje s vystupnym - je potrebna konverzia cez sws
+		//V EncodeVideo m_pictureFormat moze byt NULL iba v pripade AV_PIX_FMT_YUV420P
 
 		this->m_pictureInFrame = CreateFrame(this->m_pictureFormat, inputFormat->biWidth, inputFormat->biHeight);
-		this->m_pictureContext = sws_getContext(inputFormat->biWidth, inputFormat->biHeight, this->m_pictureFormat, inputFormat->biWidth, 
-			inputFormat->biHeight, c->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+		this->m_pictureContext = sws_getContext(inputFormat->biWidth, inputFormat->biHeight, this->m_pictureFormat, c->width, 
+			c->height, c->pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 		if (!this->m_pictureInFrame || !this->m_pictureContext)
 		{
 			avcodec_close(st->codec);
@@ -448,8 +461,7 @@ HRESULT AVEncoder::FreeContext(void)
 
 	if (this->m_audioFrame)
 	{
-		av_free(this->m_audioFrame);
-		this->m_audioFrame = NULL;
+		av_frame_free(&this->m_audioFrame);
 	}
 	
 	if (this->m_audioResample)
@@ -461,15 +473,13 @@ HRESULT AVEncoder::FreeContext(void)
 	if (this->m_pictureInFrame)
 	{
 		av_free(this->m_pictureInFrame->data[0]);
-		av_free(this->m_pictureInFrame);
-		this->m_pictureInFrame = NULL;
+		av_frame_free(&this->m_pictureInFrame);
 	}
 
 	if (this->m_pictureOutFrame)
 	{
 		av_free(this->m_pictureOutFrame->data[0]);
-		av_free(this->m_pictureOutFrame);
-		this->m_pictureOutFrame = NULL;
+		av_frame_free(&this->m_pictureOutFrame);
 	}
 
 	if (this->m_pictureContext)
@@ -481,13 +491,13 @@ HRESULT AVEncoder::FreeContext(void)
 	return S_OK;
 }
 
-AVFrame * AVEncoder::CreateFrame(PixelFormat pix_fmt, int width, int height)
+AVFrame * AVEncoder::CreateFrame(AVPixelFormat pix_fmt, int width, int height)
 {
 	AVFrame * frame;
     uint8_t * buffer;
     size_t size;
     
-    frame = avcodec_alloc_frame();
+    frame = av_frame_alloc();
     if (!frame)
         return NULL;
 
@@ -495,12 +505,13 @@ AVFrame * AVEncoder::CreateFrame(PixelFormat pix_fmt, int width, int height)
     buffer = (uint8_t *)av_malloc(size);
     if (!buffer)
 	{
-        av_free(frame);
+        av_frame_free(&frame);
         return NULL;
     }
 
 	frame->width = width;
 	frame->height = height;
+	frame->format = pix_fmt;
     avpicture_fill((AVPicture *)frame, buffer, pix_fmt, width, height);
 
     return frame;
@@ -624,7 +635,7 @@ HRESULT AVEncoder::EncodeAudio(BYTE * buffer, long length)
 	{
 		//Uprava audia - ak nesedi pocet kanalov, samplerate alebo vystupny format
 		uint8_t ** output = NULL;
-		int outSamples = av_rescale_rnd(swr_get_delay(this->m_audioResample, this->m_audioInSampleRate) + inSamples, 
+		int outSamples = (int)av_rescale_rnd(swr_get_delay(this->m_audioResample, this->m_audioInSampleRate) + inSamples, 
 			c->sample_rate, this->m_audioInSampleRate, AV_ROUND_UP);
 
 		if (av_samples_alloc_array_and_samples(&output, NULL, c->channels, outSamples, c->sample_fmt, 0) < 0)
@@ -717,7 +728,7 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 
 	switch (this->m_pictureFormat)
 	{
-		case PIX_FMT_BGR24: //MEDIASUBTYPE_RGB24
+		case AV_PIX_FMT_BGR24: //MEDIASUBTYPE_RGB24
 		{
 			//RGB obraz z DirectShow je prevrateny - preloz riadky
 
@@ -734,8 +745,8 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 
 			break;
 		}
-		case PIX_FMT_YUYV422: //MEDIASUBTYPE_YUY2
-		case PIX_FMT_UYVY422: //MEDIASUBTYPE_UYVY
+		case AV_PIX_FMT_YUYV422: //MEDIASUBTYPE_YUY2
+		case AV_PIX_FMT_UYVY422: //MEDIASUBTYPE_UYVY
 		{
 			uint8_t * tmpData = this->m_pictureInFrame->data[0];
 			this->m_pictureInFrame->data[0] = buffer;
@@ -747,12 +758,12 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 
 			break;
 		}
-		case PIX_FMT_YUV420P: //MEDIASUBTYPE_YV12
+		case AV_PIX_FMT_YUV420P: //MEDIASUBTYPE_YV12
 		{
 			//Ak nie je potrebne menit format alebo velkost cez sws_scale, zapise sa rovno do vystupneho frame-u 
 			AVFrame * frame = (this->m_pictureContext) ? this->m_pictureInFrame : this->m_pictureOutFrame;
 
-			//Preloz planes z directshow do AVFrame (PIX_FMT_YUV420P ma 3 planes)
+			//Preloz planes z directshow do AVFrame (AV_PIX_FMT_YUV420P ma 3 planes)
 			memcpy(frame->data[0], buffer, frame->width * frame->height);
 			memcpy(frame->data[2], buffer + (frame->width * frame->height), (frame->width * frame->height) >> 2);
 			memcpy(frame->data[1], buffer + (frame->width * frame->height) + ((frame->width * frame->height) >> 2), 
@@ -760,8 +771,8 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 
 			if (this->m_pictureContext)
 			{
-				sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, c->height, 
-					this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
+				sws_scale(this->m_pictureContext, this->m_pictureInFrame->data, this->m_pictureInFrame->linesize, 0, 
+					this->m_pictureInFrame->height, this->m_pictureOutFrame->data, this->m_pictureOutFrame->linesize);
 			}
 
 			break;
