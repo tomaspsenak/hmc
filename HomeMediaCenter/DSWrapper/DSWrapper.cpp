@@ -41,6 +41,11 @@ namespace DSWrapper
 
 	void DSEncoder::SetInput(System::String ^ filePath, System::Boolean reqSeeking)
 	{
+		SetInput(filePath, reqSeeking, nullptr);
+	}
+
+	void DSEncoder::SetInput(System::String ^ filePath, System::Boolean reqSeeking, System::Collections::Generic::IEnumerable<System::Guid>^ preferedDemultiplexor)
+	{
 		HRESULT hr = S_OK;
 
 		System::Uri^ uri = nullptr;
@@ -75,24 +80,22 @@ namespace DSWrapper
 			CHECK_HR(hr = demuxFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
 			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
 		}
-		else if (uri->IsFile)
+		else if (extension == "iso" || !uri->IsFile)
+		{
+			//Zdroj je ISO subor alebo URL adresa
+			pin_ptr<const wchar_t> pFilePath = uri->IsFile ? PtrToStringChars(uri->LocalPath) : PtrToStringChars(uri->AbsoluteUri);
+
+			CHECK_HR(hr = CoCreateInstance(CLSID_LAVSource, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&demuxFilter));
+			CHECK_HR(hr = demuxFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
+			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
+		}
+		else
 		{
 			//Zdroj je suborovy system
 			pin_ptr<const wchar_t> pFilePath = PtrToStringChars(uri->LocalPath);
 
 			CHECK_HR(hr = CoCreateInstance(CLSID_AsyncReader, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&sourceFilter));
 			CHECK_HR(hr = sourceFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
-			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
-		}
-		else
-		{
-			//Zdroj je URL adresa
-			pin_ptr<const wchar_t> pFilePath = PtrToStringChars(uri->AbsoluteUri);
-
-			//CHECK_HR(hr = CoCreateInstance(CLSID_URLReader, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&sourceFilter));
-			//CHECK_HR(hr = sourceFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
-			CHECK_HR(hr = CoCreateInstance(CLSID_LAVSource, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&demuxFilter));
-			CHECK_HR(hr = demuxFilter->QueryInterface(IID_IFileSourceFilter, (void **)&fileSource));
 			CHECK_HR(hr = fileSource->Load(pFilePath, NULL));
 		}
 
@@ -112,12 +115,12 @@ namespace DSWrapper
 				//Najprv sa pokusi najst demultiplexor s podporou seekovania
 				if (reqSeeking)
 				{
-					if (FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, TRUE) != S_OK)
-						CHECK_HR(hr = FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, FALSE));
+					if (FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, TRUE, preferedDemultiplexor) != S_OK)
+						CHECK_HR(hr = FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, FALSE, preferedDemultiplexor));
 				}
 				else
 				{
-					CHECK_HR(hr = FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, FALSE));
+					CHECK_HR(hr = FindDemultiplexor(&demuxFilter, graphBuilder, outputPin, FALSE, preferedDemultiplexor));
 				}
 
 				sourcePins = GetPinsInfo(demuxFilter, PINDIR_OUTPUT);
@@ -220,6 +223,16 @@ namespace DSWrapper
 			throw gcnew DSException(L"Unable to initialize input", hr);
 	}
 
+	void DSEncoder::SetOutput(ContainerType ^ containerType)
+	{
+		SetOutput(nullptr, containerType, 0, 0);
+	}
+
+	void DSEncoder::SetOutput(ContainerType ^ containerType, System::Int64 startTime, System::Int64 endTime)
+	{
+		SetOutput(nullptr, containerType, startTime, endTime);
+	}
+
 	void DSEncoder::SetOutput(System::IO::Stream ^ outputStream, ContainerType ^ containerType)
 	{
 		SetOutput(outputStream, containerType, 0, 0);
@@ -232,8 +245,9 @@ namespace DSWrapper
 		if (startTime < 0 || endTime < 0 || (endTime != 0 && startTime > endTime))
 			CHECK_HR(hr = E_INVALIDARG);
 
-		this->m_startTime = startTime;
-		this->m_endTime = endTime;
+		//Vstupm su milisekundy
+		this->m_startTime = startTime * 10000;
+		this->m_endTime = endTime * 10000;
 
 		this->m_outputStream = outputStream;
 
@@ -247,7 +261,16 @@ namespace DSWrapper
 
 	void DSEncoder::StartEncode(void)
 	{
+		StartEncode(0);
+	}
+
+	void DSEncoder::StartEncode(DWORD msTimeout)
+	{
 		HRESULT hr = S_OK;
+
+		//Obmedzenie maximalneho casu enkodovania - ak je msTimeout nenulove
+		DWORD encStartTick = GetTickCount();
+		DWORD getEventTimeout = (msTimeout) ? min(msTimeout, 1000) : 1000;
 
 		IMediaControl * mediaControl = NULL;
 		IMediaEvent * mediaEvent = NULL;
@@ -261,14 +284,13 @@ namespace DSWrapper
 		IPin * subtitlePin = NULL;
 		IPin * writerPin = NULL;
 
-		CHECK_HR(hr = (this->m_outputStream == nullptr) ? E_FAIL : S_OK);
 		CHECK_HR(hr = (this->m_containerType == nullptr) ? E_FAIL : S_OK);
 		CHECK_HR(hr = (this->m_graphBuilder == NULL) ? E_FAIL : S_OK);
 		CHECK_HR(hr = (this->m_demuxFilter == NULL) ? E_FAIL : S_OK);
 
 		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaControl, (void **)&mediaControl));
 		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaEvent, (void **)&mediaEvent));
-		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));
+		CHECK_HR(hr = this->m_graphBuilder->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking));		
 		
 		//Vycisti graf a zisti audio a video pin podla nastavenia a demultiplexora
 		CHECK_HR(hr = ClearGraphFrom(this->m_graphBuilder, this->m_demuxFilter));
@@ -320,7 +342,7 @@ namespace DSWrapper
 		this->m_continueEncode = TRUE;
 		while (this->m_continueEncode)
 		{
-			if (mediaEvent->GetEvent(&evCode, &param1, &param2, 1000) == S_OK)
+			if (mediaEvent->GetEvent(&evCode, &param1, &param2, getEventTimeout) == S_OK)
 			{
 				switch(evCode) 
 				{ 
@@ -336,9 +358,20 @@ namespace DSWrapper
 				}
 				CHECK_HR(hr = mediaEvent->FreeEventParams(evCode, param1, param2));
 			}
+			else
+			{
+				//GetEvent vracia E_ABORT - vyprsal timeout
+			}
+
+			if (msTimeout && (GetTickCount() - encStartTick) >= msTimeout)
+			{
+				//Ak je msTimeout nastaveny a vyprsal cas na ukoncenie operacie
+				hr = RPC_E_TIMEOUT;
+				goto done;
+			}
 
 			//Kontrola, ci stream nie je uz zatvoreny
-			if (!this->m_outputStream->CanWrite)
+			if (this->m_outputStream != nullptr && !this->m_outputStream->CanWrite)
 			{
 				hr = E_FAIL;
 				goto done;
@@ -374,6 +407,8 @@ namespace DSWrapper
 		{
 			if (hr == VFW_E_CANNOT_CONNECT)
 				throw gcnew DSException(L"No combination of intermediate filters could be found to make the connection", hr);
+			if (hr == RPC_E_TIMEOUT)
+				throw gcnew DSException(L"This operation returned because the time-out period expired", hr);
 			throw gcnew DSException(L"Unable to recode entire input", hr);
 		}
 	}
@@ -509,14 +544,13 @@ namespace DSWrapper
 		return hr;
 	}
 
-	HRESULT DSEncoder::FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking)
+	HRESULT DSEncoder::FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking,
+		System::Collections::Generic::IEnumerable<System::Guid>^ preferedDemultiplexor)
 	{
 		CheckPointer(outputPin, E_POINTER);
 		HRESULT hr = S_OK;
 
-		IMediaSeeking * mediaSeeking = NULL;
 		IBaseFilter * demuxFilter = NULL;
-		IPin * inputPin = NULL;
 
 		IFilterMapper2 * filterMapper = NULL;
 		IEnumMoniker * enumMoniker = NULL;
@@ -527,46 +561,49 @@ namespace DSWrapper
 		GUID arrayInTypes[20 * 2]; //velkost musi byt arrayLength * 2
 		arrayLength = GetTypesArray(outputPin, arrayInTypes, arrayLength);
 
-		CHECK_HR(hr = CoCreateInstance(CLSID_FilterMapper2, NULL, CLSCTX_INPROC, IID_IFilterMapper2, (void **)&filterMapper));
-		//nezvysovat merit - problem s LAV filtrom
-		CHECK_HR(hr = filterMapper->EnumMatchingFilters(&enumMoniker, 0, TRUE, MERIT_DO_NOT_USE, TRUE, arrayLength, arrayInTypes, 
-			NULL, NULL, FALSE, TRUE, 0, NULL, NULL, NULL));
-		
-		//Najdenie vhodneho demultiplexora
-		while (enumMoniker->Next(1, &moniker, NULL) == S_OK)
+		if (preferedDemultiplexor != nullptr)
 		{
-			if (moniker->BindToStorage(0, 0, IID_IPropertyBag, (void **)&propBag) >= 0)
+			//Ako prve sa pokusi pripojit preferovane demultiplexori
+			for each (System::Guid guid in preferedDemultiplexor)
 			{
-				if (moniker->BindToObject(NULL, NULL, IID_IBaseFilter, (void**)&demuxFilter) == S_OK)
+				array<System::Byte>^ guidData = guid.ToByteArray();
+				pin_ptr<System::Byte> data = &(guidData[0]);
+				IID iid = *((IID *)data);
+
+				if (CoCreateInstance(iid, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&demuxFilter) == S_OK)
 				{
-					if (graphBuilder->AddFilter(demuxFilter, NULL) >= 0)
-					{
-						inputPin = GetFirstPin(demuxFilter, PINDIR_INPUT);
+					if (ConnectDemultiplexor(demuxFilter, graphBuilder, outputPin, reqSeeking) == S_OK)
+						break;
 
-						if (graphBuilder->ConnectDirect(outputPin, inputPin, NULL) >= 0)
-						{
-							if (reqSeeking)
-							{
-								if (demuxFilter->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking) >= 0)
-								{
-									SAFE_RELEASE(mediaSeeking);
-									break;
-								}
-							}
-							else
-							{
-								break;
-							}
-						}
-
-						SAFE_RELEASE(inputPin);
-						CHECK_HR(hr = graphBuilder->RemoveFilter(demuxFilter));
-					}
 					SAFE_RELEASE(demuxFilter);
 				}
-				SAFE_RELEASE(propBag);
 			}
-			SAFE_RELEASE(moniker);
+		}
+
+		if (demuxFilter == NULL)
+		{
+			//Preferovany demultiplexor sa nepodarilo pouzit
+			CHECK_HR(hr = CoCreateInstance(CLSID_FilterMapper2, NULL, CLSCTX_INPROC, IID_IFilterMapper2, (void **)&filterMapper));
+			//nezvysovat merit - problem s LAV filtrom
+			CHECK_HR(hr = filterMapper->EnumMatchingFilters(&enumMoniker, 0, TRUE, MERIT_DO_NOT_USE, TRUE, arrayLength, arrayInTypes, 
+				NULL, NULL, FALSE, TRUE, 0, NULL, NULL, NULL));
+		
+			//Najdenie vhodneho demultiplexora
+			while (enumMoniker->Next(1, &moniker, NULL) == S_OK)
+			{
+				if (moniker->BindToStorage(0, 0, IID_IPropertyBag, (void **)&propBag) >= 0)
+				{
+					if (moniker->BindToObject(NULL, NULL, IID_IBaseFilter, (void**)&demuxFilter) == S_OK)
+					{
+						if (ConnectDemultiplexor(demuxFilter, graphBuilder, outputPin, reqSeeking) == S_OK)
+							break;
+
+						SAFE_RELEASE(demuxFilter);
+					}
+					SAFE_RELEASE(propBag);
+				}
+				SAFE_RELEASE(moniker);
+			}
 		}
 
 		if (demuxFilter != NULL)
@@ -587,8 +624,44 @@ namespace DSWrapper
 		SAFE_RELEASE(propBag);
 		SAFE_RELEASE(moniker);
 
-		SAFE_RELEASE(mediaSeeking);
 		SAFE_RELEASE(demuxFilter);
+
+		return hr;
+	}
+
+	HRESULT DSEncoder::ConnectDemultiplexor(IBaseFilter * demuxFilter, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking)
+	{
+		HRESULT hr = E_FAIL;
+		IPin * inputPin = NULL;
+		IMediaSeeking * mediaSeeking = NULL;
+
+		if (graphBuilder->AddFilter(demuxFilter, NULL) >= 0)
+		{
+			inputPin = GetFirstPin(demuxFilter, PINDIR_INPUT);
+
+			if (graphBuilder->ConnectDirect(outputPin, inputPin, NULL) >= 0)
+			{
+				if (reqSeeking)
+				{
+					if (demuxFilter->QueryInterface(IID_IMediaSeeking, (void **)&mediaSeeking) >= 0)
+					{
+						hr = S_OK;
+						goto done;
+					}
+				}
+				else
+				{
+					hr = S_OK;
+					goto done;
+				}
+			}
+
+			graphBuilder->RemoveFilter(demuxFilter);
+		}
+
+	done:
+
+		SAFE_RELEASE(mediaSeeking);
 		SAFE_RELEASE(inputPin);
 
 		return hr;
@@ -862,7 +935,7 @@ namespace DSWrapper
 
 	HRESULT DSEncoder::ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter)
 	{
-		return ClearGraphFrom(filterGraph, fromFilter, FALSE);
+		return ClearGraphFrom(filterGraph, fromFilter, TRUE);
 	}
 
 	HRESULT DSEncoder::ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter, BOOL removeFilter)
@@ -897,8 +970,6 @@ namespace DSWrapper
 						SAFE_RELEASE(info.pFilter);
 					}
 
-					retPin->Disconnect();
-
 					SAFE_RELEASE(connPin);
 				}
 			}
@@ -912,6 +983,33 @@ namespace DSWrapper
 		SAFE_RELEASE(retPin);
 		SAFE_RELEASE(connPin);
 		
+		return hr;
+	}
+
+	HRESULT DSEncoder::SaveGraphFile(IGraphBuilder * graph, WCHAR * wszPath)
+	{
+		const WCHAR wszStreamName[] = L"ActiveMovieGraph";
+		IPersistStream * pPersist = NULL;
+		IStorage * pStorage = NULL;
+		IStream * pStream = NULL;
+		HRESULT hr;
+    
+		CHECK_HR(hr = StgCreateDocfile(wszPath, STGM_CREATE | STGM_TRANSACTED | STGM_READWRITE | STGM_SHARE_EXCLUSIVE, 0, &pStorage));
+
+		CHECK_HR(hr = pStorage->CreateStream(wszStreamName, STGM_WRITE | STGM_CREATE | STGM_SHARE_EXCLUSIVE, 0, 0, &pStream));
+
+		CHECK_HR(hr = graph->QueryInterface(IID_IPersistStream, (void**)&pPersist));
+
+		CHECK_HR(hr = pPersist->Save(pStream, TRUE));
+		
+		CHECK_HR(hr = pStorage->Commit(STGC_DEFAULT));
+
+	done:
+
+		SAFE_RELEASE(pPersist);
+		SAFE_RELEASE(pStorage);
+		SAFE_RELEASE(pStream);
+
 		return hr;
 	}
 }

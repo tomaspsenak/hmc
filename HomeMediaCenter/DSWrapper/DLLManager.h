@@ -50,6 +50,11 @@ struct DLLManager
 					return CreateObjectFromPath(this->m_vorbisencoder, clsid, ppUnk);
 				}
 
+				static DLLManager & GetManager(void)
+				{
+					return manager;
+				}
+
 	private:	HRESULT CreateObjectFromPath(HMODULE module, REFCLSID clsid, IUnknown ** ppUnk)
 				{
 					FN_DLLGETCLASSOBJECT fn = (FN_DLLGETCLASSOBJECT)GetProcAddress(module, "DllGetClassObject");
@@ -76,6 +81,8 @@ struct DLLManager
 				HMODULE m_vp8encoder;
 				HMODULE m_vorbisencoder;
 				HMODULE m_hmcencoder;
+
+				static DLLManager manager;
 };
 
 #endif //DLLMANAGER_DSWRAPPER_INCLUDED

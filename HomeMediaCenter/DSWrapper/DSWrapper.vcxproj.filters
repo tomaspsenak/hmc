@@ -42,18 +42,6 @@
     <ClInclude Include="ProgressChangeEventArgs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DesktopSourceFilter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DibHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DesktopSourcePin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DesktopSourceAudioPin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WMSinkWriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -61,9 +49,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DSBufferedStream.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FramerateFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DSPlayer.h">
@@ -76,9 +61,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SinkSourceFilter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DesktopSilenceGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Extern\vp8encoderidl.h">
@@ -128,15 +110,6 @@
     <ClCompile Include="ContainerType.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DesktopSourceFilter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DibHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DesktopSourceAudioPin.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="WMSinkWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -144,9 +117,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DSBufferedStream.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FramerateFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DSPlayer.cpp">
@@ -161,12 +131,6 @@
     <ClCompile Include="SinkSourceFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DesktopSilenceGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DesktopSourcePin.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MediaFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -174,6 +138,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PreFilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DLLManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -14,10 +14,11 @@ namespace DSWrapper
 	public ref class MediaFile
 	{
 		private:	MediaFile(void);
+					static HRESULT GetValue(IO::FileInfo ^ file, OLECHAR * propName, VARIANT * vValue);
 					static String ^ GetValue(IO::FileInfo ^ file, Int32 iValue, String ^ defaultValue);
 					static void PrintKeys(IO::FileInfo ^ file, Int32 maxKeys);
 
-		public:		static HRESULT GetVideoInfo(IO::FileInfo ^ file, 
+		public:		static HRESULT GetVideoInfo(IO::FileInfo ^ file, String ^ thumbnailPath,
 						[Runtime::InteropServices::Out] TimeSpan% duration,
 						[Runtime::InteropServices::Out] String ^% resolution,
 						[Runtime::InteropServices::Out] Int32% audioStreamsCount,
@@ -29,6 +30,7 @@ namespace DSWrapper
 					static String ^ GetAudioArtist(IO::FileInfo ^ file);
 					static String ^ GetAudioGenre(IO::FileInfo ^ file);
 					static String ^ GetAudioAlbum(IO::FileInfo ^ file);
+					static Boolean GetAudioThumbnail(IO::FileInfo ^ file, String ^ thumbnailPath);
 					
 	};
 }

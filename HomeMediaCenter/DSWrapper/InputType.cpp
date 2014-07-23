@@ -2,7 +2,7 @@
 #include "DSWrapper.h"
 #include "InputType.h"
 #include "DSException.h"
-#include "DesktopSourceFilter.h"
+#include "DLLManager.h"
 
 namespace DSWrapper 
 {
@@ -23,18 +23,15 @@ namespace DSWrapper
 	HRESULT DesktopInput::GetInputFilter(IBaseFilter ** inputFilter)
 	{
 		HRESULT hr = S_OK;
+		IUnknown * unk = NULL;
 		IBaseFilter * filter = NULL;
+		IHMCDesktopSource * params = NULL;
 
-		filter = new DesktopSourceFilter(NULL, &hr, this->m_fps);
-		if (filter == NULL)
-		{
-			CHECK_HR(hr = E_OUTOFMEMORY);
-		}
-		else
-		{
-			filter->AddRef();
-		}
-		CHECK_HR(hr);
+		CHECK_HR(hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCDesktopSource, &unk));
+		CHECK_HR(hr = unk->QueryInterface(IID_IBaseFilter, (void **)&filter));
+		CHECK_HR(hr = filter->QueryInterface(IID_IHMCDesktopSource, (void **)&params));
+
+		CHECK_HR(hr = params->SetFrameRate(this->m_fps));
 
 		*inputFilter = filter;
 		filter = NULL;
@@ -42,6 +39,8 @@ namespace DSWrapper
 	done:
 
 		SAFE_RELEASE(filter);
+		SAFE_RELEASE(unk);
+		SAFE_RELEASE(params);
 
 		return hr;
 	}
