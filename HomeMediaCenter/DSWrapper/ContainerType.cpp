@@ -14,7 +14,6 @@
 #include "WMSinkWriter.h"
 #include "DSException.h"
 #include "DSBufferedStream.h"
-#include "FramerateFilter.h"
 #include <InitGuid.h>
 #include "DLLManager.h"
 #include "WMPreFilter.h"
@@ -27,8 +26,6 @@ DEFINE_GUID(CLSID_VorbisEncodeFilter, 0x5C94FE86, 0xB93B, 0x467F, 0xBF, 0xC3, 0x
 DEFINE_GUID(CLSID_IVorbisEncodeSettings, 0xA4C6A887, 0x7BD3, 0x4B33, 0x9A, 0x57, 0xA3, 0xEB, 0x10, 0x92, 0x4D, 0x3A);  
 DEFINE_GUID(CLSID_WebmOut, 0xED3110EB, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
 DEFINE_GUID(CLSID_FFDSHOWRaw, 0x0B390488, 0xD80F, 0x4A68, 0x84, 0x08, 0x48, 0xDC, 0x19, 0x9F, 0x0E, 0x97);
-
-static DLLManager g_dllmanager;
 
 namespace DSWrapper 
 {
@@ -153,17 +150,17 @@ namespace DSWrapper
 	System::Boolean ContainerType::IsWEBMInstalled(void)
 	{
 		IUnknown * filter = NULL;
-		HRESULT hr = g_dllmanager.CreateWebmmux(CLSID_WebmMux, &filter);
+		HRESULT hr = DLLManager::GetManager().CreateWebmmux(CLSID_WebmMux, &filter);
 		SAFE_RELEASE(filter);
 		if (hr != S_OK)
 			return false;
 
-		hr = g_dllmanager.CreateVP8Encoder(CLSID_WebmVideo, &filter);
+		hr = DLLManager::GetManager().CreateVP8Encoder(CLSID_WebmVideo, &filter);
 		SAFE_RELEASE(filter);
 		if (hr != S_OK)
 			return false;
 
-		hr = g_dllmanager.CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &filter);
+		hr = DLLManager::GetManager().CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &filter);
 		SAFE_RELEASE(filter);
 		return hr == S_OK;
 	}
@@ -189,7 +186,7 @@ namespace DSWrapper
 	System::Boolean ContainerType::IsHMCInstalled(void)
 	{
 		IUnknown * filter = NULL;
-		HRESULT hr = g_dllmanager.CreateHMCEncoder(CLSID_HMCEncoder, &filter);
+		HRESULT hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCEncoder, &filter);
 		SAFE_RELEASE(filter);
 
 		return hr == S_OK;
@@ -200,135 +197,149 @@ namespace DSWrapper
 		HRESULT hr = S_OK;
 
 		IPin * tempPin = NULL;
+		IUnknown * framerateUnk = NULL;
 		IBaseFilter * ffVideoDecoder = NULL;
 		IBaseFilter * framerateFilter = NULL;
 		IffdshowBaseW * ffVideoConfig = NULL;
+		IHMCFrameRate * framerateParams = NULL;
+		IHMCDesktopSource * desktopSourceParams = NULL;
 
-		if ((this->m_intSubtitles || this->m_width > 0 || this->m_height > 0) && (*pVideoPin) != NULL)
+		if ((*pVideoPin) != NULL)
 		{
-			//CLSID_FFDSHOW nepodporuje typy ako RGB32,.. - vtedy treba pouzit CLSID_FFDSHOWRaw
-			CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOW, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
-			CHECK_SUCCEED(hr = graphBuilder->AddFilter(ffVideoDecoder, NULL));
-
-			if (this->m_intSubtitles)
+			if ((*pVideoPin)->QueryInterface(IID_IHMCDesktopSource, (void **)&desktopSourceParams) == S_OK)
 			{
-				//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
-				#ifdef _M_X64
-					Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64\\default", "isSubtitles", 1);
-				#else
-					Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow\\default", "isSubtitles", 1);
-				#endif
+				if (this->m_width > 0)
+					CHECK_HR(hr = desktopSourceParams->SetWidth(this->m_width));
+
+				if (this->m_height > 0)
+					CHECK_HR(hr = desktopSourceParams->SetHeight(this->m_height));
+
+				CHECK_HR(hr = desktopSourceParams->SetAspectRatio(this->m_keepAspectRatio));
 			}
-
-			tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
-			if(graphBuilder->ConnectDirect(*pVideoPin, tempPin, NULL) >= 0)
+			else if (this->m_intSubtitles || this->m_width > 0 || this->m_height > 0)
 			{
-				//pouzity bude CLSID_FFDSHOW
-				SAFE_RELEASE(tempPin);
-			}
-			else
-			{
-				//pouzity bude CLSID_FFDSHOWRaw
-				CHECK_HR(hr = graphBuilder->RemoveFilter(ffVideoDecoder));
-				SAFE_RELEASE(ffVideoDecoder);
-				SAFE_RELEASE(tempPin);
-
-				CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOWRaw, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+				//CLSID_FFDSHOW nepodporuje typy ako RGB32,.. - vtedy treba pouzit CLSID_FFDSHOWRaw
+				CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOW, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
 				CHECK_SUCCEED(hr = graphBuilder->AddFilter(ffVideoDecoder, NULL));
 
 				if (this->m_intSubtitles)
 				{
 					//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
 					#ifdef _M_X64
-						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw\\default", "isSubtitles", 1);
+						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64\\default", "isSubtitles", 1);
 					#else
-						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "isSubtitles", 1);
+						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow\\default", "isSubtitles", 1);
 					#endif
 				}
 
 				tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
-				CHECK_SUCCEED(hr = graphBuilder->Connect(*pVideoPin, tempPin));
-				SAFE_RELEASE(tempPin);
-			}
-			
-			CHECK_HR(hr = ffVideoDecoder->QueryInterface(IID_IffdshowBaseW, (void **)&ffVideoConfig));
-
-			if ((*pSubtitlePin) != NULL)
-			{
-				//Napojenie pinu s titulkami ak je aktivovany v demultiplexore
-				tempPin = DSEncoder::GetPin(ffVideoDecoder, PINDIR_INPUT, 1);
-				CHECK_SUCCEED(hr = graphBuilder->Connect(*pSubtitlePin, tempPin));
-				SAFE_RELEASE(tempPin);
-			}
-
-			//Nezobrazuj tray ikonu
-			CHECK_HR(hr = ffVideoConfig->putParam(IDFF_trayIcon, 0));
-
-			if (this->m_intSubtitles)
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isSubtitles, 1));
-				if (this->m_intSubtitlesPath == nullptr)
+				if(graphBuilder->ConnectDirect(*pVideoPin, tempPin, NULL) >= 0)
 				{
-					//Filter automaticky zisti subor s titulkami
-					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_subAutoFlnm, 1));
+					//pouzity bude CLSID_FFDSHOW
+					SAFE_RELEASE(tempPin);
 				}
 				else
 				{
-					//Zada sa subor s titulkami
-					pin_ptr<const wchar_t> pFilePath = PtrToStringChars(this->m_intSubtitlesPath);
-					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_subAutoFlnm, 0));
-					CHECK_HR(hr = ffVideoConfig->putParamStr(821, pFilePath));
+					//pouzity bude CLSID_FFDSHOWRaw
+					CHECK_HR(hr = graphBuilder->RemoveFilter(ffVideoDecoder));
+					SAFE_RELEASE(ffVideoDecoder);
+					SAFE_RELEASE(tempPin);
+
+					CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOWRaw, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+					CHECK_SUCCEED(hr = graphBuilder->AddFilter(ffVideoDecoder, NULL));
+
+					if (this->m_intSubtitles)
+					{
+						//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
+						#ifdef _M_X64
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw\\default", "isSubtitles", 1);
+						#else
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "isSubtitles", 1);
+						#endif
+					}
+
+					tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
+					CHECK_SUCCEED(hr = graphBuilder->Connect(*pVideoPin, tempPin));
+					SAFE_RELEASE(tempPin);
 				}
-			}
-			else
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isSubtitles, 0));
-			}
+			
+				CHECK_HR(hr = ffVideoDecoder->QueryInterface(IID_IffdshowBaseW, (void **)&ffVideoConfig));
 
-			if (this->m_keepAspectRatio)
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeAspect, 1));
-			}
-			else
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeAspect, 0));
-			}
+				if ((*pSubtitlePin) != NULL)
+				{
+					//Napojenie pinu s titulkami ak je aktivovany v demultiplexore
+					tempPin = DSEncoder::GetPin(ffVideoDecoder, PINDIR_INPUT, 1);
+					CHECK_SUCCEED(hr = graphBuilder->Connect(*pSubtitlePin, tempPin));
+					SAFE_RELEASE(tempPin);
+				}
 
-			if (this->m_width > 0 && this->m_height > 0)
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 1));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIsDy0, 0));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeMode, 0));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIf, 0));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDx, this->m_width));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDy, this->m_height));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDy_real, this->m_height));
-			}
-			else if (this->m_width > 0)
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 1));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIsDy0, 1));
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDx, this->m_width));
-			}
-			else
-			{
-				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 0));
-			}
+				//Nezobrazuj tray ikonu
+				CHECK_HR(hr = ffVideoConfig->putParam(IDFF_trayIcon, 0));
 
-			SAFE_RELEASE(*pVideoPin);
-			*pVideoPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_OUTPUT);
+				if (this->m_intSubtitles)
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isSubtitles, 1));
+					if (this->m_intSubtitlesPath == nullptr)
+					{
+						//Filter automaticky zisti subor s titulkami
+						CHECK_HR(hr = ffVideoConfig->putParam(IDFF_subAutoFlnm, 1));
+					}
+					else
+					{
+						//Zada sa subor s titulkami
+						pin_ptr<const wchar_t> pFilePath = PtrToStringChars(this->m_intSubtitlesPath);
+						CHECK_HR(hr = ffVideoConfig->putParam(IDFF_subAutoFlnm, 0));
+						CHECK_HR(hr = ffVideoConfig->putParamStr(821, pFilePath));
+					}
+				}
+				else
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isSubtitles, 0));
+				}
+
+				if (this->m_keepAspectRatio)
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeAspect, 1));
+				}
+				else
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeAspect, 0));
+				}
+
+				if (this->m_width > 0 && this->m_height > 0)
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 1));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIsDy0, 0));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeMode, 0));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIf, 0));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDx, this->m_width));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDy, this->m_height));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDy_real, this->m_height));
+				}
+				else if (this->m_width > 0)
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 1));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeIsDy0, 1));
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_resizeDx, this->m_width));
+				}
+				else
+				{
+					CHECK_HR(hr = ffVideoConfig->putParam(IDFF_isResize, 0));
+				}
+
+				SAFE_RELEASE(*pVideoPin);
+				*pVideoPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_OUTPUT);
+			}
 		}
 
 		if (this->m_fps > 0 && (*pVideoPin) != NULL)
 		{
 			//Nastavenie snimkov za sekundu ak je hodnota vacsia ako 0, inak povodna hodnota
-			framerateFilter = new FramerateFilter(NULL, &hr, this->m_fps);
+			CHECK_HR(hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCFrameRate, &framerateUnk));
+			CHECK_HR(hr = framerateUnk->QueryInterface(IID_IBaseFilter, (void **)&framerateFilter));
+			CHECK_HR(hr = framerateUnk->QueryInterface(IID_IHMCFrameRate, (void **)&framerateParams));
 
-			if (framerateFilter == NULL)
-				hr = E_OUTOFMEMORY;
-			else
-				framerateFilter->AddRef();
-			CHECK_HR(hr);
+			CHECK_HR(hr = framerateParams->SetFrameRate(this->m_fps));
 
 			CHECK_SUCCEED(hr = graphBuilder->AddFilter(framerateFilter, NULL));
 
@@ -343,9 +354,12 @@ namespace DSWrapper
 	done:
 
 		SAFE_RELEASE(tempPin);
+		SAFE_RELEASE(framerateUnk);
 		SAFE_RELEASE(ffVideoDecoder);
 		SAFE_RELEASE(framerateFilter);
 		SAFE_RELEASE(ffVideoConfig);
+		SAFE_RELEASE(framerateParams);
+		SAFE_RELEASE(desktopSourceParams);
 
 		return hr;
 	}
@@ -353,6 +367,9 @@ namespace DSWrapper
 	HRESULT ContainerType::GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter)
 	{
 		HRESULT hr = S_OK;
+
+		if (outputStream == nullptr)
+			return E_FAIL;
 
 		FileWriterFilter * writer = NULL;
 
@@ -528,15 +545,15 @@ namespace DSWrapper
 		//Najprv nastavit piny az potom pridat enkoder do grafu (piny sa pokusaju na vsetky filtre v grafe)
 		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
 
-		CHECK_HR(hr = g_dllmanager.CreateWebmmux(CLSID_WebmMux, &unknown));
+		CHECK_HR(hr = DLLManager::GetManager().CreateWebmmux(CLSID_WebmMux, &unknown));
 		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmMuxFilter));
 		SAFE_RELEASE(unknown);
 
-		CHECK_HR(hr = g_dllmanager.CreateVP8Encoder(CLSID_WebmVideo, &unknown));
+		CHECK_HR(hr = DLLManager::GetManager().CreateVP8Encoder(CLSID_WebmVideo, &unknown));
 		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmVideoFilter));
 		SAFE_RELEASE(unknown);
 
-		CHECK_HR(hr = g_dllmanager.CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &unknown));
+		CHECK_HR(hr = DLLManager::GetManager().CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &unknown));
 		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmAudioFilter));
 		SAFE_RELEASE(unknown);
 
@@ -892,6 +909,9 @@ namespace DSWrapper
 		IWMWriterAdvanced2 * advWriter = NULL;
 		TCHAR tempPath[MAX_PATH];
 
+		if (outputStream == nullptr)
+			return E_FAIL;
+
 		CHECK_HR(hr = CoCreateInstance(CLSID_WMAsfWriter, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&writer));
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(writer, NULL));
 
@@ -951,7 +971,7 @@ namespace DSWrapper
 		//Najprv nastavit piny az potom pridat enkoder do grafu (piny sa pokusaju na vsetky filtre v grafe)
 		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
 
-		CHECK_HR(hr = g_dllmanager.CreateHMCEncoder(CLSID_HMCEncoder, &unknown));
+		CHECK_HR(hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCEncoder, &unknown));
 		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&muxFilter));
 		CHECK_SUCCEED(hr = graphBuilder->AddFilter(muxFilter, NULL));
 
@@ -1021,6 +1041,59 @@ namespace DSWrapper
 		SAFE_RELEASE(audioPin);
 		SAFE_RELEASE(subtitlePin);
 		
+		return hr;
+	}
+
+	HRESULT ContainerJPEG::GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter)
+	{
+		HRESULT hr = S_OK;
+
+		IUnknown * unknown = NULL;
+		IBaseFilter * writer = NULL;
+		IHMCFrameWriter * writerProp = NULL;
+		IFileSinkFilter * writerSink = NULL;
+
+		if (this->m_imgPath == nullptr)
+			return E_FAIL;
+		pin_ptr<const wchar_t> pImgPath = PtrToStringChars(this->m_imgPath);
+
+		CHECK_HR(hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCFrameWriter, &unknown));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&writer));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IHMCFrameWriter, (void**)&writerProp));
+		CHECK_HR(hr = unknown->QueryInterface(IID_IFileSinkFilter, (void **)&writerSink));
+		CHECK_SUCCEED(hr = graphBuilder->AddFilter(writer, NULL));
+		
+		CHECK_HR(hr = writerSink->SetFileName(pImgPath, NULL));
+
+		CHECK_HR(hr = writerProp->SetFormat(ImageFormat_JPEG));
+		CHECK_HR(hr = writerProp->SetWidth(this->m_width));
+		CHECK_HR(hr = writerProp->SetHeight(this->m_height));
+		CHECK_HR(hr = writerProp->SetBitrate(this->m_vidBitrate));
+
+		*writerFilter = writer;
+		writer = NULL;
+
+	done: 
+
+		SAFE_RELEASE(writerSink);
+		SAFE_RELEASE(writerProp);
+		SAFE_RELEASE(writer);
+		SAFE_RELEASE(unknown);
+
+		return hr;
+	}
+
+	HRESULT ContainerJPEG::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+		IPin * writerPin, IMediaSeeking ** mediaSeekingMux)
+	{
+		HRESULT hr = S_OK;
+
+		if (videoPin != NULL)
+		{
+			CHECK_SUCCEED(hr = graphBuilder->Connect(videoPin, writerPin));
+		}
+
+	done:
 		return hr;
 	}
 }

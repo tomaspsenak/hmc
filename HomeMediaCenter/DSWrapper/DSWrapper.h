@@ -21,13 +21,22 @@ namespace DSWrapper
 
 					void SetInput(System::String ^ filePath, System::Boolean reqSeeking);
 
+					void SetInput(System::String ^ filePath, System::Boolean reqSeeking, 
+						System::Collections::Generic::IEnumerable<System::Guid>^ preferedDemultiplexor);
+
 					void SetInput(InputType ^ inputType);
+
+					void SetOutput(ContainerType ^ containerType);
+
+					void SetOutput(ContainerType ^ containerType, System::Int64 startTime, System::Int64 endTime);
 
 					void SetOutput(System::IO::Stream ^ outputStream, ContainerType ^ containerType);
 
 					void SetOutput(System::IO::Stream ^ outputStream, ContainerType ^ containerType, System::Int64 startTime, System::Int64 endTime);
 
 					void StartEncode(void);
+
+					void StartEncode(DWORD msTimeout);
 
 					void StopEncode(void);
 
@@ -50,9 +59,12 @@ namespace DSWrapper
 					static DWORD GetTypesArray(IPin * pin, GUID * typesArray, DWORD maxLength);
 					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter);
 					static HRESULT ClearGraphFrom(IFilterGraph * filterGraph, IBaseFilter * fromFilter, BOOL removeFilter);
+					static HRESULT SaveGraphFile(IGraphBuilder * graph, WCHAR * wszPath);
 
 		private:	void OnProgressChange(ProgressChangeEventArgs ^ arg);
-					HRESULT FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking);
+					static HRESULT FindDemultiplexor(IBaseFilter ** demultiplexor, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking,
+						System::Collections::Generic::IEnumerable<System::Guid>^ preferedDemultiplexor);
+					static HRESULT ConnectDemultiplexor(IBaseFilter * demuxFilter, IGraphBuilder * graphBuilder, IPin * outputPin, BOOL reqSeeking);
 					HRESULT GetSourcePins(IPin ** videoPin, IPin ** audioPin, IPin ** subtitlePin);
 
 					System::Collections::Generic::List<PinInfoItem^>^ m_sourcePins;

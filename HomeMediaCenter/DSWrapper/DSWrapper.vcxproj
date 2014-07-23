@@ -108,14 +108,15 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <SubSystem>Windows</SubSystem>
       <FixedBaseAddress>false</FixedBaseAddress>
       <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -141,14 +142,15 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbasd.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RegisterOutput>false</RegisterOutput>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <SubSystem>Windows</SubSystem>
       <FixedBaseAddress>false</FixedBaseAddress>
       <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\x64\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -172,7 +174,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
@@ -180,7 +182,8 @@
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -202,7 +205,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Wmvcore.lib;strmiids.lib;strmbase.lib;winmm.lib;comctl32.lib;gdiplus.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AssemblyDebug>
@@ -210,7 +213,8 @@
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(SolutionDir)BaseClasses\x64\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -223,11 +227,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ContainerType.h" />
-    <ClInclude Include="DesktopSilenceGenerator.h" />
-    <ClInclude Include="DesktopSourceAudioPin.h" />
-    <ClInclude Include="DesktopSourceFilter.h" />
-    <ClInclude Include="DesktopSourcePin.h" />
-    <ClInclude Include="DibHelper.h" />
     <ClInclude Include="DLLManager.h" />
     <ClInclude Include="DSBufferedStream.h" />
     <ClInclude Include="DSException.h" />
@@ -237,7 +236,6 @@
     <ClInclude Include="Extern\vp8encoderidl.h" />
     <ClInclude Include="Extern\webmmuxidl.h" />
     <ClInclude Include="FileWriterFilter.h" />
-    <ClInclude Include="FramerateFilter.h" />
     <ClInclude Include="Extern\IffDecoder.h" />
     <ClInclude Include="Extern\IffdshowBase.h" />
     <ClInclude Include="InputType.h" />
@@ -257,16 +255,11 @@
   <ItemGroup>
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="ContainerType.cpp" />
-    <ClCompile Include="DesktopSilenceGenerator.cpp" />
-    <ClCompile Include="DesktopSourceAudioPin.cpp" />
-    <ClCompile Include="DesktopSourceFilter.cpp" />
-    <ClCompile Include="DesktopSourcePin.cpp" />
-    <ClCompile Include="DibHelper.cpp" />
+    <ClCompile Include="DLLManager.cpp" />
     <ClCompile Include="DSBufferedStream.cpp" />
     <ClCompile Include="DSPlayer.cpp" />
     <ClCompile Include="DSWrapper.cpp" />
     <ClCompile Include="FileWriterFilter.cpp" />
-    <ClCompile Include="FramerateFilter.cpp" />
     <ClCompile Include="InputType.cpp" />
     <ClCompile Include="MediaFile.cpp" />
     <ClCompile Include="PreFilter.cpp" />

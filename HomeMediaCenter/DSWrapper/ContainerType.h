@@ -154,6 +154,21 @@ namespace DSWrapper
 					ScanType m_scanType;
 					enum Container m_container;
 	};
+
+	private ref class ContainerJPEG : ContainerType
+	{
+		internal:	ContainerJPEG(UINT32 width, UINT32 height, UINT32 imgBitrate, System::String ^ imgPath) : ContainerType(width, height, BitrateMode::CBR, imgBitrate, 
+						0, 0, false, nullptr, FALSE), m_imgPath(imgPath) { }
+
+					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
+						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
+
+					virtual HRESULT GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter) override;
+
+					virtual GUID GetSubtype() override { return GUID_NULL; }
+
+		protected:	System::String ^ m_imgPath;
+	};
 }
 
 #endif //CONTAINERTYPE_DSWRAPPER_INCLUDED
