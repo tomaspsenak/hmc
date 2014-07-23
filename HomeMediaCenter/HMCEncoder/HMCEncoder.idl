@@ -2,7 +2,7 @@ import "oaidl.idl";
 import "ocidl.idl";
 
 [
-    uuid(7D308C03-FB74-49ed-9C3B-AA4B7814C4B5),
+    uuid(7D308C03-FB74-49ED-9C3B-AA4B7814C4B5),
     helpstring("Home Media Center Filter Library"),
     version(1.0)
 ]
@@ -26,10 +26,17 @@ library HMCEncoderLib
 		BitrateMode_VBR
 	};
 
+	enum ImageFormat
+	{
+		ImageFormat_BMP,
+		ImageFormat_JPEG,
+		ImageFormat_PNG
+	};
+
 	[
 	   object,
-	   uuid(2FDD6C62-CA3B-4d2a-A93C-107EA551F42D),
-	   helpstring("Home Media Center Filter Interface")
+	   uuid(2FDD6C62-CA3B-4D2A-A92C-107EA551F42D),
+	   helpstring("Home Media Center Encoder Interface")
 	]
 	interface IHMCEncoder : IUnknown
 	{
@@ -41,20 +48,157 @@ library HMCEncoderLib
 
 		HRESULT SetAudioCBR([in] int audioBitrate);
 		HRESULT SetAudioVBR([in] int audioBitrate, [in] int audioBitrateMax, [in] int audioBitrateMin, [in] int audioQuality);
+		HRESULT GetAudioBitrate([out] BOOL * pIsConstant, [out] int * pAudioBitrate, [out] int * pAudioBitrateMax, [out] int * pAudioBitrateMin, [out] int * pAudioQuality);
 
 		HRESULT SetVideoCBR([in] int videoBitrate);
 		HRESULT SetVideoVBR([in] int videoBitrate, [in] int videoBitrateMax, [in] int videoBitrateMin, [in] int videoQuality);
+		HRESULT GetVideoBitrate([out] BOOL * pIsConstant, [out] int * pVideoBitrate, [out] int * pVideoBitrateMax, [out] int * pVideoBitrateMin, [out] int * pVideoQuality);
 
 		HRESULT SetVideoInterlace([in] BOOL interlaced);
 		HRESULT GetVideoInterlace([out] BOOL * interlaced);
+
+		HRESULT SetWidth([in] UINT32 width);
+		HRESULT GetWidth([out] UINT32 * pWidth);
+
+		HRESULT SetHeight([in] UINT32 height);
+		HRESULT GetHeight([out] UINT32 * pHeight);
 	}
 
 	[
-	   uuid(3A45D055-A75B-4f46-8676-B8EB32883699),
-	   helpstring("Home Media Center Filter Class")
+	   uuid(2FDD6C62-CA3B-4D2A-A91C-107EA551F42D),
+	   helpstring("Home Media Center Encoder Class")
 	]
 	coclass HMCEncoder
 	{
 	   [default] interface IHMCEncoder;
+	}
+
+	[
+	   uuid(2FDD6C62-CA3B-4D2A-A93C-107EA551F42D),
+	   helpstring("Home Media Center Encoder Page Class")
+	]
+	coclass HMCEncoderPage
+	{
+	   [default] interface ISpecifyPropertyPages;
+	}
+
+	[
+	   uuid(2FDD6C62-CA3B-4D2A-A94C-107EA551F42D),
+	   helpstring("Home Media Center Encoder Log Page Class")
+	]
+	coclass HMCEncoderLogPage
+	{
+	   [default] interface ISpecifyPropertyPages;
+	}
+
+	[
+	   object,
+	   uuid(89F5B7A4-F4DE-48A6-BB2C-D8AD772D177B),
+	   helpstring("Home Media Center Frame Rate Interface")
+	]
+	interface IHMCFrameRate : IUnknown
+	{
+		HRESULT SetFrameRate([in] UINT32 fps);
+		HRESULT GetFrameRate([out] UINT32 * pFps);
+	}
+
+	[
+	   uuid(89F5B7A4-F4DE-48A6-BB1C-D8AD772D177B),
+	   helpstring("Home Media Center Frame Rate Class")
+	]
+	coclass HMCFrameRate
+	{
+	   [default] interface IHMCFrameRate;
+	}
+
+	[
+	   uuid(89F5B7A4-F4DE-48A6-BB3C-D8AD772D177B),
+	   helpstring("Home Media Center Frame Rate Page Class")
+	]
+	coclass HMCFrameRatePage
+	{
+	   [default] interface ISpecifyPropertyPages;
+	}
+
+	[
+	   object,
+	   uuid(3D7090C2-B04C-42F2-9324-3E7EE2BEEFE7),
+	   helpstring("Home Media Center Desktop Source Interface")
+	]
+	interface IHMCDesktopSource : IUnknown
+	{
+		HRESULT SetFrameRate([in] UINT32 fps);
+		HRESULT GetFrameRate([out] UINT32 * pFps);
+
+		HRESULT SetWidth([in] UINT32 width);
+		HRESULT GetWidth([out] UINT32 * pWidth);
+
+		HRESULT SetHeight([in] UINT32 height);
+		HRESULT GetHeight([out] UINT32 * pHeight);
+
+		HRESULT SetVideoQuality([in] BYTE quality);
+		HRESULT GetVideoQuality([out] BYTE * pQuality);
+
+		HRESULT SetCaptureCursor([in] BOOL captureCursor);
+		HRESULT GetCaptureCursor([out] BOOL * pCaptureCursor);
+
+		HRESULT SetAspectRatio([in] BOOL keepAspectRatio);
+		HRESULT GetAspectRatio([out] BOOL * pKeepAspectRatio);
+	}
+
+	[
+	   uuid(3D7090C2-B04C-42F2-9314-3E7EE2BEEFE7),
+	   helpstring("Home Media Center Desktop Source Class")
+	]
+	coclass HMCDesktopSource
+	{
+	   [default] interface IHMCDesktopSource;
+	}
+
+	[
+	   uuid(3D7090C2-B04C-42F2-9334-3E7EE2BEEFE7),
+	   helpstring("Home Media Center Desktop Source Page Class")
+	]
+	coclass HMCDesktopSourcePage
+	{
+	   [default] interface ISpecifyPropertyPages;
+	}
+
+	[
+	   object,
+	   uuid(E6E91083-47A0-41CE-A721-611A62111F6A),
+	   helpstring("Home Media Center Frame Writer Interface")
+	]
+	interface IHMCFrameWriter : IUnknown
+	{
+		HRESULT SetFormat([in] enum ImageFormat format);
+		HRESULT GetFormat([out] enum ImageFormat * pFormat);
+
+		HRESULT SetWidth([in] UINT32 width);
+		HRESULT GetWidth([out] UINT32 * pWidth);
+
+		HRESULT SetHeight([in] UINT32 height);
+		HRESULT GetHeight([out] UINT32 * pHeight);
+
+		HRESULT SetBitrate([in] int imageBitrate);
+		HRESULT GetBitrate([out] int * pImageBitrate);
+	}
+
+	[
+	   uuid(E6E91083-47A0-41CE-A711-611A62111F6A),
+	   helpstring("Home Media Center Frame Writer Class")
+	]
+	coclass HMCFrameWriter
+	{
+	   [default] interface IHMCFrameWriter;
+	}
+
+	[
+	   uuid(E6E91083-47A0-41CE-A731-611A62111F6A),
+	   helpstring("Home Media Center Frame Writer Page Class")
+	]
+	coclass HMCFrameWriterPage
+	{
+	   [default] interface ISpecifyPropertyPages;
 	}
 }

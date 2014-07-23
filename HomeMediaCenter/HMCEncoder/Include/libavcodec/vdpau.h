@@ -52,18 +52,36 @@
 #include <vdpau/vdpau.h>
 #include <vdpau/vdpau_x11.h>
 #include "libavutil/avconfig.h"
+#include "libavutil/attributes.h"
 
+#ifndef FF_API_CAP_VDPAU
+#define FF_API_CAP_VDPAU 1
+#endif
+#ifndef FF_API_BUFS_VDPAU
+#define FF_API_BUFS_VDPAU 1
+#endif
+
+#if FF_API_BUFS_VDPAU
 union AVVDPAUPictureInfo {
     VdpPictureInfoH264        h264;
     VdpPictureInfoMPEG1Or2    mpeg;
     VdpPictureInfoVC1          vc1;
     VdpPictureInfoMPEG4Part2 mpeg4;
 };
+#endif
+
+struct AVCodecContext;
+struct AVFrame;
+
+typedef int (*AVVDPAU_Render2)(struct AVCodecContext *, struct AVFrame *,
+                               const VdpPictureInfo *, uint32_t,
+                               const VdpBitstreamBuffer *);
 
 /**
  * This structure is used to share data between the libavcodec library and
  * the client video application.
- * The user shall zero-allocate the structure and make it available as
+ * The user shall allocate the structure via the av_alloc_vdpau_hwaccel
+ * function and make it available as
  * AVCodecContext.hwaccel_context. Members can be set by the user once
  * during initialization or through each AVCodecContext.get_buffer()
  * function call. In any case, they must be valid prior to calling
@@ -84,11 +102,13 @@ typedef struct AVVDPAUContext {
      */
     VdpDecoderRender *render;
 
+#if FF_API_BUFS_VDPAU
     /**
      * VDPAU picture information
      *
      * Set by libavcodec.
      */
+    attribute_deprecated
     union AVVDPAUPictureInfo info;
 
     /**
@@ -96,6 +116,7 @@ typedef struct AVVDPAUContext {
      *
      * Set by libavcodec.
      */
+    attribute_deprecated
     int bitstream_buffers_allocated;
 
     /**
@@ -103,6 +124,7 @@ typedef struct AVVDPAUContext {
      *
      * Set by libavcodec.
      */
+    attribute_deprecated
     int bitstream_buffers_used;
 
    /**
@@ -111,10 +133,23 @@ typedef struct AVVDPAUContext {
      *
      * Set by libavcodec.
      */
+    attribute_deprecated
     VdpBitstreamBuffer *bitstream_buffers;
+#endif
+    AVVDPAU_Render2 render2;
 } AVVDPAUContext;
 
+/**
+ * @brief allocation function for AVVDPAUContext
+ *
+ * Allows extending the struct without breaking API/ABI
+ */
+AVVDPAUContext *av_alloc_vdpaucontext(void);
 
+AVVDPAU_Render2 av_vdpau_hwaccel_get_render2(const AVVDPAUContext *);
+void av_vdpau_hwaccel_set_render2(AVVDPAUContext *, AVVDPAU_Render2);
+
+#if FF_API_CAP_VDPAU
 /** @brief The videoSurface is used for rendering. */
 #define FF_VDPAU_STATE_USED_FOR_RENDER 1
 
@@ -153,6 +188,7 @@ struct vdpau_render_state {
     union AVVDPAUPictureInfo info;
 #endif
 };
+#endif
 
 /* @}*/
 
