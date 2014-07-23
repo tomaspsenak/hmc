@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
+using System.Net.NetworkInformation;
 
 namespace HomeMediaCenter
 {
@@ -21,6 +22,8 @@ namespace HomeMediaCenter
         public SsdpServer(UpnpServer upnpServer)
         {
             this.upnpServer = upnpServer;
+
+            NetworkChange.NetworkAddressChanged += new NetworkAddressChangedEventHandler(NetworkChange_NetworkAddressChanged);
         }
 
         private class MySocket
@@ -32,42 +35,73 @@ namespace HomeMediaCenter
 
         public void Start()
         {
-            if (this.listenerThreads == null)
+            lock (this)
             {
-                this.sockets = GetSockets().ToArray();
-
-                this.listenerThreads = new Thread[this.sockets.Length];
-                this.notifyTimers = new Timer[this.sockets.Length];
-
-                for (int i = 0; i < this.sockets.Length; i++)
+                if (this.listenerThreads == null)
                 {
-                    this.listenerThreads[i] = new Thread(new ParameterizedThreadStart(ListenNotify));
-                    this.listenerThreads[i].Start(this.sockets[i]);
+                    this.sockets = GetSockets().ToArray();
 
-                    //Oznamuje v pravidelnych intervaloch pritomnost, zaciatok je oneskoreny o sekundu
-                    //Sprava sa posiela o nieco skor ako maxAge, preto nie je * 1000
-                    this.notifyTimers[i] = new Timer(new TimerCallback(OnNotifyTimeout), this.sockets[i], 1000, this.maxAge * 900);
+                    this.listenerThreads = new Thread[this.sockets.Length];
+                    this.notifyTimers = new Timer[this.sockets.Length];
+
+                    for (int i = 0; i < this.sockets.Length; i++)
+                    {
+                        this.listenerThreads[i] = new Thread(new ParameterizedThreadStart(ListenNotify));
+                        if (this.upnpServer.RootDevice.CultureInfo != null)
+                            this.listenerThreads[i].CurrentCulture = this.listenerThreads[i].CurrentUICulture = this.upnpServer.RootDevice.CultureInfo;
+
+                        this.listenerThreads[i].Start(this.sockets[i]);
+
+                        //Oznamuje v pravidelnych intervaloch pritomnost, zaciatok je oneskoreny o sekundu
+                        //Sprava sa posiela o nieco skor ako maxAge, preto nie je * 1000
+                        this.notifyTimers[i] = new Timer(new TimerCallback(OnNotifyTimeout), this.sockets[i], 1000, this.maxAge * 900);
+                    }
                 }
             }
         }
 
         public void Stop()
         {
-            if (this.listenerThreads != null)
+            lock (this)
             {
-                foreach (Timer timer in this.notifyTimers)
-                    timer.Dispose();
+                if (this.listenerThreads != null)
+                {
+                    foreach (Timer timer in this.notifyTimers)
+                        timer.Dispose();
 
-                //Uzavre ListenerSocket a tym aj funkcia ListenNotify odosle spravu "byebye" a uzavre NotifySocket
-                foreach (MySocket socket in this.sockets)
-                    socket.ListenerSocket.Close();
+                    //Uzavre ListenerSocket a tym aj funkcia ListenNotify odosle spravu "byebye" a uzavre NotifySocket
+                    foreach (MySocket socket in this.sockets)
+                        socket.ListenerSocket.Close();
 
-                foreach (Thread thread in this.listenerThreads)
-                    thread.Join();
+                    foreach (Thread thread in this.listenerThreads)
+                        thread.Join();
 
-                this.sockets = null;
-                this.listenerThreads = null;
-                this.notifyTimers = null;
+                    this.sockets = null;
+                    this.listenerThreads = null;
+                    this.notifyTimers = null;
+                }
+            }
+        }
+
+        private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
+        {
+            //Udalost sa spusta na inom vlakne
+            lock (this)
+            {
+                if (this.listenerThreads == null)
+                    return;
+
+                this.upnpServer.RootDevice.OnLogEvent("SSDP server will be restarted due to change of IP address");
+
+                try
+                {
+                    Stop();
+                    Start();
+                }
+                catch (Exception ex)
+                {
+                    this.upnpServer.RootDevice.OnLogEvent("SSDP server could not be restarted: " + ex.Message);
+                }
             }
         }
 

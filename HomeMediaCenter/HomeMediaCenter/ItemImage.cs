@@ -56,6 +56,11 @@ namespace HomeMediaCenter
             return System.IO.Path.Combine(this.Parent.Path, this.Path);
         }
 
+        public override string GetThumbnailPath(ItemManager manager)
+        {
+            return GetPath();
+        }
+
         public override string GetFileFeature(MediaSettings settings)
         {
             return (this.Mime == "image/jpeg" ? "DLNA.ORG_PN=JPEG_MED;" : string.Empty) + settings.Image.FileFeature;
@@ -66,7 +71,7 @@ namespace HomeMediaCenter
             return settings.Image.EncodeFeature;
         }
 
-        public override void RemoveMe(DataContext context)
+        public override void RemoveMe(DataContext context, ItemManager manager)
         {
             this.Parent.CheckMediaType(MediaType.Image);
         }
@@ -76,8 +81,11 @@ namespace HomeMediaCenter
             return type == MediaType.Image;
         }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMetadata(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
             if (this.Resolution == null)
                 AssignValues(new FileInfo(GetPath()));
@@ -105,13 +113,13 @@ namespace HomeMediaCenter
                 writer.WriteElementString("dc", "date", null, this.Date.ToString("yyyy-MM-dd"));
 
             if (filterSet == null || filterSet.Contains("upnp:icon"))
-                writer.WriteElementString("upnp", "icon", null, host + "/encode/image?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteElementString("upnp", "icon", null, host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
 
             if (filterSet == null || filterSet.Contains("upnp:albumArtURI"))
             {
                 writer.WriteStartElement("upnp", "albumArtURI", null);
                 writer.WriteAttributeString("dlna", "profileID", "urn:schemas-dlna-org:metadata-1-0/", "JPEG_TN");
-                writer.WriteValue(host + "/encode/image?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteValue(host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
                 writer.WriteEndElement();
             }
 
@@ -128,7 +136,7 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("resolution", this.Resolution);
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", this.Mime, GetFileFeature(settings)));
-                    writer.WriteValue(host + "/files/image?id=" + this.Id);
+                    writer.WriteValue(string.Format("{0}/files/image{1}?id={2}", host, System.IO.Path.GetExtension(this.Path), this.Id));
                     writer.WriteEndElement();
                 }
 
@@ -150,12 +158,35 @@ namespace HomeMediaCenter
 
         public override void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams)
         {
-            xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/files/image?id=" + this.Id);
-            xmlWriter.WriteStartElement("img");
-            xmlWriter.WriteAttributeString("src", "/encode/image?id=" + this.Id + "&codec=jpeg&width=80&height=80&quality=10");
-            xmlWriter.WriteAttributeString("alt", Title);
+            xmlWriter.WriteStartElement("tr");
+
+            xmlWriter.WriteStartElement("td");
+            xmlWriter.WriteStartElement("div");
+            xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteRaw(string.Format(@"<a href=""/files/image?id={0}"" target=""_blank"">{1}</a>", this.Id, LanguageResource.Play));
+            xmlWriter.WriteStartElement("ul");
+            xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/image{0}?id={1}"" target=""_blank"">{2}</a></li>", 
+                System.IO.Path.GetExtension(this.Path), this.Id, LanguageResource.Download));
+            xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/control.html?id={0}"" target=""_blank"">{1}</a></li>", this.Id, LanguageResource.PlayTo));
             xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndElement();
+
+            xmlWriter.WriteStartElement("td");
+            xmlWriter.WriteStartElement("img");
+            xmlWriter.WriteAttributeString("src", string.Format("/thumbnail/image.jpg?id={0}&codec=jpeg&width=50&height=50&quality=30", this.Id));
+            xmlWriter.WriteAttributeString("alt", this.Title);
+            xmlWriter.WriteAttributeString("title", this.Title);
+            xmlWriter.WriteAttributeString("border", "0");
+            xmlWriter.WriteAttributeString("width", "50");
+            xmlWriter.WriteAttributeString("height", "50");
+            xmlWriter.WriteAttributeString("align", "right");
+            xmlWriter.WriteFullEndElement();
+            xmlWriter.WriteFullEndElement();
+
+            xmlWriter.WriteElementString("td", this.Title);
+            xmlWriter.WriteElementString("td", this.Resolution == null ? string.Empty : this.Resolution);
+
             xmlWriter.WriteEndElement();
         }
 

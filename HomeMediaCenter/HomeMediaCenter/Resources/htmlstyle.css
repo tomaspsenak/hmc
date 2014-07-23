@@ -135,35 +135,6 @@ img.box_img{
 	background:url(/web/images/htmlgreenbox.gif) no-repeat left #50a842;
 	background-position:50px 0px;
 }
-/*--------------------------gallery------------------------*/
-.gallery a, .galleryFolders a{
-    border-style: solid;
-    border-width: 1px;
-    border-color: white;
-    display: inline-block;
-    width: 90px;
-    height: 80px;
-    overflow: hidden;
-    padding: 5px 0 5px 0;
-    margin: 0px;
-    font-size: 13px;
-    color: #f7951e;
-    text-decoration: none;
-    text-align: center;
-}
-.gallery a:hover, .galleryFolders a:hover{
-    border-color: #f7951e;
-    text-decoration:underline;
-}
-.gallery a img, .galleryFolders img{
-    margin-left: auto;
-    margin-right: auto;
-    display: block;
-    border: 0px;
-}
-.galleryFolders img{
-	width: 30px;
-}
 /*--------------------------main_content-------------------*/
 #main_content{
 	width:auto;
@@ -187,8 +158,8 @@ img.box_img{
 	padding:10px;
 }
 #main_content table a{
-	padding:5px 0 5px 0;
-	margin:0px;
+	padding:0px;
+	margin:5px;
 	font-size:13px;
 	color:#f7951e;
 	text-decoration:none;
@@ -202,6 +173,14 @@ img.box_img{
 }
 #main_content table a:hover{
     text-decoration:underline;
+}
+#main_content table .libPlayButton ul {
+    position:absolute;
+    z-index:80;
+}
+#main_content table .libPlayButton ul a {
+    margin:0px;
+    padding:2px 10px 2px 10px;
 }
 #main_content table tr{
     border-top-style: solid;
@@ -229,19 +208,38 @@ img.box_img{
     width:550px;
     display:inline-block;
 }
+#main_content #right_content #seekSlider{
+    width:320px;
+}
+#main_content #right_content p{
+    margin:0px 0px 0px 15px;
+}
+#main_content #right_content input{
+    margin:10px 0px 0px 15px;
+    width:100px;
+}
+#main_content #right_content .error{
+    margin:10px 0px 0px 15px;
+    font-size:medium;
+    color:#f7951e;
+    display:inline-block;
+}
+#main_content #right_content .ui-icon{
+    display:inline-block;
+}
 #main_content #volumeSlider{
     width:100px;
     display:inline-block;
 }
 #main_content #streamPos, #streamLength, #volumeVal{
-    margin:10px 15px 10px 15px;
+    margin:10px 15px 0px 15px;
     display:inline-block;
 }
 #main_content #streamToolbar{
-	padding:8px 0 0 10px;
+    margin:10px 0px 0px 0px;
+	padding:4px 4px 4px 4px;
 }
 #main_content #playButton, #pauseButton, #submitButton{
-    top:-9px;
     margin-right:10px;
     width:80px;
 }

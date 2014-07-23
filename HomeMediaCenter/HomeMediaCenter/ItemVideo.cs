@@ -48,6 +48,13 @@ namespace HomeMediaCenter
             return this.SubtitlesPath == null ? null : System.IO.Path.Combine(this.Parent.Parent.Path, this.SubtitlesPath);
         }
 
+        public override string GetThumbnailPath(ItemManager manager)
+        {
+            if (this.Parent.HasThumbnail.HasValue && this.Parent.HasThumbnail.Value)
+                return System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Parent.Id + ".jpg");
+            return null;
+        }
+
         public override TimeSpan? GetDuration()
         {
             long? durationTicks = ((ItemContainerVideo)this.Parent).DurationTicks;
@@ -64,7 +71,7 @@ namespace HomeMediaCenter
             return settings.Video.EncodeFeature;
         }
 
-        public override void RemoveMe(DataContext context)
+        public override void RemoveMe(DataContext context, ItemManager manager)
         {
             this.Parent.CheckMediaType(MediaType.Video);
         }
@@ -81,6 +88,11 @@ namespace HomeMediaCenter
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
         {
+            BrowseMetadata(writer, settings, host, idParams, filterSet, parentId, null);
+        }
+
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId, TimeSpan? startTime)
+        {
             writer.WriteStartElement("item");
 
             writer.WriteAttributeString("id", this.Id.ToString());
@@ -95,16 +107,31 @@ namespace HomeMediaCenter
             if (filterSet == null || filterSet.Contains("dc:date"))
                 writer.WriteElementString("dc", "date", null, this.Date.ToString("yyyy-MM-dd"));
 
+            if ((filterSet == null || filterSet.Contains("upnp:icon")) && (this.Parent.HasThumbnail.HasValue && this.Parent.HasThumbnail.Value))
+                writer.WriteElementString("upnp", "icon", null, host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+
+            if ((filterSet == null || filterSet.Contains("upnp:albumArtURI")) && (this.Parent.HasThumbnail.HasValue && this.Parent.HasThumbnail.Value))
+            {
+                writer.WriteStartElement("upnp", "albumArtURI", null);
+                writer.WriteAttributeString("dlna", "profileID", "urn:schemas-dlna-org:metadata-1-0/", "JPEG_TN");
+                writer.WriteValue(host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteEndElement();
+            }
+
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
-                if (settings.Video.NativeFile && this.SubtitlesPath == null && this.Path == null)
+                TimeSpan? duration = this.GetDuration();
+                if (duration.HasValue && startTime.HasValue)
+                    duration -= startTime;
+
+                if (settings.Video.NativeFile && this.SubtitlesPath == null && this.Path == null && !startTime.HasValue)
                 {
+                    //Povoli sa povodne video ak sa nevkladaju titulky, nemeni sa zvukova stopa alebo zaciatok videa
                     writer.WriteStartElement("res");
 
                     if (filterSet == null || filterSet.Contains("res@size"))
                         writer.WriteAttributeString("size", ((ItemContainerVideo)this.Parent).Length.ToString());
 
-                    TimeSpan? duration = this.GetDuration();
                     if (duration.HasValue && (filterSet == null || filterSet.Contains("res@duration")))
                         writer.WriteAttributeString("duration", duration.Value.ToString("h':'mm':'ss'.'fff"));
 
@@ -117,7 +144,7 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("resolution", resolution);
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", GetMime(), GetFileFeature(settings)));
-                    writer.WriteValue(host + "/files/video?id=" + this.Id);
+                    writer.WriteValue(string.Format("{0}/files/video{1}?id={2}", host, System.IO.Path.GetExtension(this.Parent.Path), this.Id));
                     writer.WriteEndElement();
                 }
 
@@ -125,7 +152,6 @@ namespace HomeMediaCenter
                 {
                     writer.WriteStartElement("res");
 
-                    TimeSpan? duration = this.GetDuration();
                     if (duration.HasValue && (filterSet == null || filterSet.Contains("res@duration")))
                         writer.WriteAttributeString("duration", duration.Value.ToString("h':'mm':'ss'.'fff"));
 
@@ -136,7 +162,8 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("resolution", sett.Resolution);
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.Video.EncodeFeature));
-                    writer.WriteValue(string.Format("{0}/encode/video?id={1}{2}{3}", host, this.Id, sett.GetParamString(), this.Path));
+                    writer.WriteValue(string.Format("{0}/encode/video?id={1}{2}{3}{4}", host, this.Id, sett.GetParamString(), this.Path, 
+                        startTime.HasValue ? "&starttime=" + startTime.Value.TotalSeconds : string.Empty));
                     writer.WriteEndElement();
                 }
             }
@@ -147,8 +174,9 @@ namespace HomeMediaCenter
         public override void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams)
         {
             TimeSpan? duration = this.GetDuration();
-            WriteHTML(xmlWriter, this.Id.ToString(), this.Title, duration.HasValue ? duration.Value.ToString("h':'mm':'ss") : null, 
-                ((ItemContainerVideo)this.Parent).Resolution);
+            WriteHTML(xmlWriter, this.Id.ToString(), this.Title, duration.HasValue ? duration.Value.ToString("h':'mm':'ss") : null,
+                ((ItemContainerVideo)this.Parent).Resolution, this.Parent.HasThumbnail.HasValue && this.Parent.HasThumbnail.Value,
+                System.IO.Path.GetExtension(this.Parent.Path));
         }
 
         public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)
@@ -156,37 +184,36 @@ namespace HomeMediaCenter
             WriteHTMLPlayer(xmlWriter, this.Id.ToString(), this.GetDuration(), urlParams, this.Path);
         }
 
-        public static void WriteHTML(XmlWriter xmlWriter, string id, string title, string duration, string resolution)
+        public static void WriteHTML(XmlWriter xmlWriter, string id, string title, string duration, string resolution, bool hasThumbanil, string noStreamExtension)
         {
             xmlWriter.WriteStartElement("tr");
 
             xmlWriter.WriteStartElement("td");
-
-            xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/web/player.html?id=" + id);
-            xmlWriter.WriteAttributeString("target", "_blank");
-
-            xmlWriter.WriteStartElement("img");
-            xmlWriter.WriteAttributeString("src", "/web/images/htmlorangearrow.gif");
-            xmlWriter.WriteAttributeString("alt", string.Empty);
+            xmlWriter.WriteStartElement("div");
+            xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteRaw(string.Format(@"<a href=""/web/player.html?id={0}"" target=""_blank"">{1}</a>", id, LanguageResource.Play));
+            xmlWriter.WriteStartElement("ul");
+            if (noStreamExtension != null)
+                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/video{0}?id={1}"" target=""_blank"">{2}</a></li>", noStreamExtension, id, LanguageResource.Download));
+            xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/control.html?id={0}"" target=""_blank"">{1}</a></li>", id, LanguageResource.PlayTo));
+            xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndElement();
             xmlWriter.WriteEndElement();
 
-            xmlWriter.WriteStartElement("span");
-            xmlWriter.WriteValue(LanguageResource.Play);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteStartElement("span");
-            xmlWriter.WriteValue("|");
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/web/control.html?id=" + id);
-            xmlWriter.WriteValue(LanguageResource.PlayTo);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
+            xmlWriter.WriteStartElement("td");
+            if (hasThumbanil)
+            {
+                xmlWriter.WriteStartElement("img");
+                xmlWriter.WriteAttributeString("src", string.Format("/thumbnail/image.jpg?id={0}&codec=jpeg&width=50&height=50&quality=30", id));
+                xmlWriter.WriteAttributeString("alt", title);
+                xmlWriter.WriteAttributeString("title", title);
+                xmlWriter.WriteAttributeString("border", "0");
+                xmlWriter.WriteAttributeString("width", "50");
+                xmlWriter.WriteAttributeString("height", "50");
+                xmlWriter.WriteAttributeString("align", "right");
+                xmlWriter.WriteFullEndElement();
+            }
+            xmlWriter.WriteFullEndElement();
 
             xmlWriter.WriteElementString("td", title);
             xmlWriter.WriteElementString("td", duration == null ? string.Empty : duration);

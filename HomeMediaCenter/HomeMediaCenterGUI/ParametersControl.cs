@@ -21,9 +21,6 @@ namespace HomeMediaCenterGUI
         public ParametersControl()
         {
             InitializeComponent();
-
-            InitLanguage();
-            LoadInfoBox();
         }
 
         public string ParamString
@@ -171,8 +168,41 @@ namespace HomeMediaCenterGUI
             this.fpsComboBox.SelectedIndex = 5;
         }
 
-        private void LoadInfoBox()
+        private void ParametersControl_Load(object sender, EventArgs e)
         {
+            InitLanguage();
+        }
+
+        private void InitLanguage()
+        {
+            this.paramGroupBox.Text = LanguageResource.Parameters;
+            this.containerGroupBox.Text = LanguageResource.ContainerCodec;
+            this.editCheckBox.Text = LanguageResource.Edit;
+            this.audioCheckBox.Text = LanguageResource.Audio;
+            this.audioGroupBox.Text = LanguageResource.Audio;
+            this.videoCheckBox.Text = LanguageResource.Video;
+            this.videoGroupBox.Text = LanguageResource.Video;
+            this.inputGroupBox.Text = LanguageResource.Input;
+            this.outputGroupBox.Text = LanguageResource.Output;
+            this.browseInputButton.Text = LanguageResource.Browse;
+            this.browseOutputButton.Text = LanguageResource.Browse;
+            this.othersGroupBox.Text = LanguageResource.Others;
+            this.startEndTimeLabel.Text = LanguageResource.StartEndTime + ":";
+            this.subtitlesIntCheckBox.Text = LanguageResource.IntegrateSubtitles;
+            this.bitrateVideoLabel.Text = LanguageResource.BitRate + ":";
+            this.bitrateAudioLabel.Text = LanguageResource.BitRate + ":";
+            this.resolutionLabel.Text = LanguageResource.Resolution + ":";
+            this.keepAspectCheckBox.Text = LanguageResource.KeepAspectRatio;
+            this.fpsLabel.Text = LanguageResource.FPS + ":";
+            this.resolutionComboBox.Items[0] = LanguageResource.SameAsSource;
+            this.fpsComboBox.Items[0] = LanguageResource.SameAsSource;
+            this.scanLabel.Text = LanguageResource.ScanType + ":";
+            this.scanComboBox.Items[0] = LanguageResource.Interlaced;
+            this.scanComboBox.Items[1] = LanguageResource.Progressive;
+
+            //Nastavenie infoTextBox - najprv zmazat
+            this.infoTextBox.Clear();
+
             this.infoTextBox.AppendText(LanguageResource.Parameters + "\r\n");
             this.infoTextBox.AppendText("&codec= \r\n");
             this.infoTextBox.AppendText("\tmpeg2_ps\t(MPEG2 Program stream, audio layer 2)\r\n");
@@ -228,34 +258,6 @@ namespace HomeMediaCenterGUI
             this.infoTextBox.AppendText("&codec=wmv2&width=800&height=480&vidbitrate=400&audbitrate=40&quality=10&fps=30\r\n");
             this.infoTextBox.AppendText("&codec=mpeg2_ps&audbitrate=128&video=0\r\n");
             this.infoTextBox.AppendText("&codec=jpeg&width=1280&height=720&keepaspect\r\n");
-        }
-
-        private void InitLanguage()
-        {
-            this.paramGroupBox.Text = LanguageResource.Parameters;
-            this.containerGroupBox.Text = LanguageResource.ContainerCodec;
-            this.editCheckBox.Text = LanguageResource.Edit;
-            this.audioCheckBox.Text = LanguageResource.Audio;
-            this.audioGroupBox.Text = LanguageResource.Audio;
-            this.videoCheckBox.Text = LanguageResource.Video;
-            this.videoGroupBox.Text = LanguageResource.Video;
-            this.inputGroupBox.Text = LanguageResource.Input;
-            this.outputGroupBox.Text = LanguageResource.Output;
-            this.browseInputButton.Text = LanguageResource.Browse;
-            this.browseOutputButton.Text = LanguageResource.Browse;
-            this.othersGroupBox.Text = LanguageResource.Others;
-            this.startEndTimeLabel.Text = LanguageResource.StartEndTime + ":";
-            this.subtitlesIntCheckBox.Text = LanguageResource.IntegrateSubtitles;
-            this.bitrateVideoLabel.Text = LanguageResource.BitRate + ":";
-            this.bitrateAudioLabel.Text = LanguageResource.BitRate + ":";
-            this.resolutionLabel.Text = LanguageResource.Resolution + ":";
-            this.keepAspectCheckBox.Text = LanguageResource.KeepAspectRatio;
-            this.fpsLabel.Text = LanguageResource.FPS + ":";
-            this.resolutionComboBox.Items[0] = LanguageResource.SameAsSource;
-            this.fpsComboBox.Items[0] = LanguageResource.SameAsSource;
-            this.scanLabel.Text = LanguageResource.ScanType + ":";
-            this.scanComboBox.Items[0] = LanguageResource.Interlaced;
-            this.scanComboBox.Items[1] = LanguageResource.Progressive;
         }
 
         private void editCheckBox_CheckedChanged(object sender, EventArgs e)

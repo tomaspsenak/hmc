@@ -88,6 +88,7 @@ namespace HomeMediaCenter
             set.Add(new HttpMime(".mpg", "mpeg", MediaType.Video));
             set.Add(new HttpMime(".webm", "webm", MediaType.Video));
             set.Add(new HttpMime(".wmv", "x-ms-wmv", MediaType.Video));
+            set.Add(new HttpMime(".iso", "iso", MediaType.Video));
 
             set.Add(new HttpMime(".flac", "flac", MediaType.Audio));
             set.Add(new HttpMime(".m2a", "mpeg", MediaType.Audio));

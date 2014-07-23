@@ -851,6 +851,47 @@ CBaseFilter::ReconnectPin(
     }
 }
 
+//Synchronous reconnect
+HRESULT
+CBaseFilter::ReconnectPinSync(
+    IPin *pPin,
+    __in_opt AM_MEDIA_TYPE const *pmt
+)
+{
+    PIN_DIRECTION pinDir;
+	IPin * connPin;
+	HRESULT hr;
+
+    if (this->m_pGraph != NULL)
+	{
+		hr = pPin->QueryDirection(&pinDir);
+        if (SUCCEEDED(hr))
+		{
+			hr = pPin->ConnectedTo(&connPin);
+            if(SUCCEEDED(hr))
+			{
+				hr = this->m_pGraph->Disconnect(pPin);
+				if (hr == S_OK)
+				{
+					hr = this->m_pGraph->Disconnect(connPin);
+					if (hr == S_OK)
+					{
+						if (pinDir == PINDIR_INPUT)
+							hr =  this->m_pGraph->ConnectDirect(connPin, pPin, pmt);
+						else
+							hr = this->m_pGraph->ConnectDirect(pPin, connPin, pmt);
+					}
+				}
+
+				connPin->Release();
+			}
+        }   
+    }
+	else
+        return E_NOINTERFACE;
+
+	return hr;
+}
 
 
 /* This is the same idea as the media type version does for type enumeration

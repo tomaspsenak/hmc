@@ -12,11 +12,27 @@ namespace HomeMediaCenter
     {
         private bool minimizeToTray;
         private bool tryToForwardPort;
+        private bool generateThumbnails;
+        private List<Guid> prefDsDemux;
         private ItemManager itemManager;
         private UpnpControlPoint controlPoint;
 
-        public MediaServerDevice()
+        private readonly string dataDirectory;
+        private readonly string settingsPath;
+        private readonly string databasePath;
+        private readonly string thumbnailsPath;
+
+        public MediaServerDevice(string dataDirectory)
         {
+            this.dataDirectory = dataDirectory;
+            this.settingsPath = Path.Combine(dataDirectory, "settings.xml");
+            this.databasePath = Path.Combine(dataDirectory, "database.db");
+            this.thumbnailsPath = Path.Combine(dataDirectory, "thumbnails");
+
+            this.prefDsDemux = new List<Guid>() { 
+                new Guid(0x171252A0, 0x8820, 0x4AFE, 0x9D, 0xF8, 0x5C, 0x92, 0xB2, 0xD6, 0x6B, 0x04) //LAV Splitter
+            };
+
             this.itemManager = new ItemManager(this);
             this.controlPoint = new UpnpControlPoint(this);
             Version ver = Assembly.GetExecutingAssembly().GetName().Version;
@@ -34,26 +50,30 @@ namespace HomeMediaCenter
             this.services.Add(new ContentDirectoryService(this, this.server));
             this.services.Add(new MediaReceiverRegistrarService(this, this.server));
 
-            this.server.HttpServer.AddRoute("HEAD", "/Files/", new HttpRouteDelegate(GetFile));
-            this.server.HttpServer.AddRoute("GET", "/Files/", new HttpRouteDelegate(GetFile));
-            this.server.HttpServer.AddRoute("HEAD", "/Encode/", new HttpRouteDelegate(GetEncode));
-            this.server.HttpServer.AddRoute("GET", "/Encode/", new HttpRouteDelegate(GetEncode));
+            this.server.HttpServer.AddRoute("HEAD", "/Files/*", new HttpRouteDelegate(GetLibraryFile));
+            this.server.HttpServer.AddRoute("GET", "/Files/*", new HttpRouteDelegate(GetLibraryFile));
+            this.server.HttpServer.AddRoute("HEAD", "/Encode/*", new HttpRouteDelegate(GetLibraryEncode));
+            this.server.HttpServer.AddRoute("GET", "/Encode/*", new HttpRouteDelegate(GetLibraryEncode));
+            this.server.HttpServer.AddRoute("HEAD", "/Thumbnail/*", new HttpRouteDelegate(GetThumbnailFile));
+            this.server.HttpServer.AddRoute("GET", "/Thumbnail/*", new HttpRouteDelegate(GetThumbnailFile));
 
-            this.server.HttpServer.AddRoute("GET", "/Web/", new HttpRouteDelegate(GetWeb));
+            this.server.HttpServer.AddRoute("GET", "/", new HttpRouteDelegate(GetWeb));
+            this.server.HttpServer.AddRoute("GET", "/Web/*", new HttpRouteDelegate(GetWeb));
             this.server.HttpServer.AddRoute("GET", "/Web/player.html", new HttpRouteDelegate(GetWebPlayer));
             this.server.HttpServer.AddRoute("HEAD", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/htmlstyle.css", new HttpRouteDelegate(GetWebStyle));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.css", new HttpRouteDelegate(GetWebStyle));
-            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.8.18.custom.css", new HttpRouteDelegate(GetWebStyle));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.10.4.custom.min.css", new HttpRouteDelegate(GetWebStyle));
             this.server.HttpServer.AddRoute("GET", "/Web/control.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/player.js", new HttpRouteDelegate(GetWebJavascript));
-            this.server.HttpServer.AddRoute("GET", "/Web/jquery-1.7.1.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery-1.11.1.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.min.js", new HttpRouteDelegate(GetWebJavascript));
-            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.8.18.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.10.4.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/folder.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/folderback.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmllogo.png", new HttpRouteDelegate(GetWebPng));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/ui-icons_222222_256x240.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlarrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlorangearrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlleftcontent.gif", new HttpRouteDelegate(GetWebGif));
@@ -72,7 +92,16 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("HEAD", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("POST", "/Web/devices.xml", new HttpRouteDelegate(GetWebDevices));
-            this.server.HttpServer.AddRoute("POST", "/Web/control", new HttpRouteDelegate(PostWebControl));
+        }
+
+        public string DataDirectory
+        {
+            get { return this.dataDirectory; }
+        }
+
+        public string ThumbnailsPath
+        {
+            get { return this.thumbnailsPath; }
         }
 
         public ItemManager ItemManager
@@ -102,21 +131,33 @@ namespace HomeMediaCenter
             }
         }
 
-        public void LoadSettings(string settingsPath, string databasePath)
+        public bool GenerateThumbnails
+        {
+            get { return this.generateThumbnails; }
+            set
+            {
+                CheckStopped();
+
+                this.generateThumbnails = value;
+                SettingsChanged();
+            }
+        }
+
+        public void LoadSettings()
         {
             CheckStopped();
 
             bool reThrow = true;
             try
             {
-                if (!File.Exists(settingsPath))
+                if (!File.Exists(this.settingsPath))
                 {
                     //Subor neexistuje - napr. po instalacii - nevyhadzovat chybu
                     reThrow = false;
                     throw new MediaCenterException("Settings file not found");
                 }
 
-                using (FileStream file = new FileStream(settingsPath, FileMode.Open, FileAccess.Read))
+                using (FileStream file = new FileStream(this.settingsPath, FileMode.Open, FileAccess.Read))
                 {
                     XmlDocument xmlReader = new XmlDocument();
                     xmlReader.Load(file);
@@ -154,32 +195,53 @@ namespace HomeMediaCenter
                         bool.TryParse(node.InnerText, out this.tryToForwardPort);
                     }
 
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/GenerateThumbnails");
+                    if (node != null)
+                    {
+                        bool.TryParse(node.InnerText, out this.generateThumbnails);
+                    }
+
+                    node = xmlReader.SelectSingleNode("/HomeMediaCenter/CultureName");
+                    if (node != null && node.InnerText != string.Empty)
+                    {
+                        //Empty string je InvariantCulture - musi byt null
+                        try { this.cultureInfo = new System.Globalization.CultureInfo(node.InnerText); }
+                        catch { }
+                    }
+
+                    this.prefDsDemux.Clear();
+                    foreach (XmlNode demuxGuid in xmlReader.SelectNodes("/HomeMediaCenter/PreferredDsDemux/*"))
+                    {
+                        try { this.prefDsDemux.Add(Guid.Parse(demuxGuid.InnerText)); }
+                        catch { }
+                    }
+
                     this.server.LoadSettings(xmlReader);
 
-                    this.itemManager.LoadSettings(xmlReader, databasePath);
+                    this.itemManager.LoadSettings(xmlReader, this.databasePath);
                 }
             }
             catch
             {
-                try { File.Delete(databasePath); }
+                try { File.Delete(this.databasePath); }
                 catch { }
 
                 //treba nanovo zapisat settings kedze sa ho nepodarilo precitat
                 this.settingsChanged = true;
 
-                this.itemManager.LoadSettings(null, databasePath);
+                this.itemManager.LoadSettings(null, this.databasePath);
 
                 if (reThrow)
                     throw;
             }
         }
 
-        public void SaveSettings(string settingsPath, string databasePath)
+        public void SaveSettings()
         {
             if (!this.settingsChanged)
                 return;
 
-            using (FileStream file = new FileStream(settingsPath, FileMode.Create, FileAccess.Write))
+            using (FileStream file = new FileStream(this.settingsPath, FileMode.Create, FileAccess.Write))
             using (XmlWriter xmlWriter = XmlWriter.Create(file, new XmlWriterSettings() { Indent = true }))
             {
                 xmlWriter.WriteStartDocument();
@@ -192,6 +254,13 @@ namespace HomeMediaCenter
                 xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
                 xmlWriter.WriteElementString("MinimizeToTray", this.minimizeToTray.ToString());
                 xmlWriter.WriteElementString("TryToForwardPort", this.tryToForwardPort.ToString());
+                xmlWriter.WriteElementString("GenerateThumbnails", this.generateThumbnails.ToString());
+                xmlWriter.WriteElementString("CultureName", this.cultureInfo == null ? null : this.cultureInfo.Name);
+
+                xmlWriter.WriteStartElement("PreferredDsDemux");
+                foreach (Guid guid in this.prefDsDemux)
+                    xmlWriter.WriteElementString("guid", guid.ToString());
+                xmlWriter.WriteEndElement();
 
                 this.server.SaveSettings(xmlWriter);
 
@@ -204,16 +273,22 @@ namespace HomeMediaCenter
             this.settingsChanged = false;
         }
 
-        public override void Start()
+        protected override void OnStart()
         {
             this.controlPoint.PortForwardingAsync(this.tryToForwardPort, this.server.HttpPort);
+
+            if (this.generateThumbnails && !Directory.Exists(this.thumbnailsPath))
+                Directory.CreateDirectory(this.thumbnailsPath);
+
             this.itemManager.Start();
-            base.Start();
+
+            base.OnStart();
         }
 
-        public override void Stop()
+        protected override void OnStop()
         {
-            base.Stop();
+            base.OnStop();
+
             this.itemManager.Stop();
         }
 
@@ -238,16 +313,36 @@ namespace HomeMediaCenter
             descWriter.WriteEndElement();
         }
 
-        private void GetFile(HttpRequest request)
+        private void GetLibraryFile(HttpRequest request)
         {
-            HttpResponse response = request.GetResponse();
-
             if (!request.UrlParams.ContainsKey("id"))
                 throw new HttpException(404, "Unknown source");
 
             string path, mime, fileFeature;
             if (!this.itemManager.GetFile(request.UrlParams["id"], out path, out mime, out fileFeature))
                 throw new HttpException(404, "Bad parameter");
+
+            GetFile(request, path, mime, fileFeature);
+        }
+
+        private void GetThumbnailFile(HttpRequest request)
+        {
+            if (!request.UrlParams.ContainsKey("id"))
+                throw new HttpException(404, "Unknown source");
+
+            string path, mime;
+            if (!this.itemManager.GetThumbnailFile(request.UrlParams["id"], out path, out mime))
+                throw new HttpException(404, "Bad parameter");
+
+            if (request.UrlParams.ContainsKey("codec"))
+                GetEncode(request, path, null, null, null);
+            else
+                GetFile(request, path, mime, null);
+        }
+
+        private void GetFile(HttpRequest request, string path, string mime, string fileFeature)
+        {
+            HttpResponse response = request.GetResponse();
 
             if (!File.Exists(path))
                 throw new HttpException(404, "File not found");
@@ -280,8 +375,11 @@ namespace HomeMediaCenter
                 response.AddHreader(HttpHeader.AcceptRanges, "bytes");
 
                 //Nastavenie DLNA hlaviciek - nastavenie feature aby bolo mozne seekovanie pomocu content-range
-                response.AddHreader("TransferMode.DLNA.ORG", "Streaming");
-                response.AddHreader("ContentFeatures.DLNA.ORG", fileFeature);
+                if (fileFeature != null)
+                {
+                    response.AddHreader("TransferMode.dlna.org", "Streaming");
+                    response.AddHreader("ContentFeatures.dlna.org", fileFeature);
+                }
                 response.SendHeaders();
 
                 if (request.Method == "GET")
@@ -305,73 +403,94 @@ namespace HomeMediaCenter
             }
         }
 
-        private void GetEncode(HttpRequest request)
+        private void GetLibraryEncode(HttpRequest request)
+        {
+            if (!request.UrlParams.ContainsKey("id"))
+                throw new HttpException(404, "Unknown source");
+
+            TimeSpan? duration;
+            string path, subtitlesPath, encodeFeature;
+            if (!this.itemManager.GetEncode(request.UrlParams["id"], out path, out subtitlesPath, out encodeFeature, out duration))
+                throw new HttpException(404, "Bad parameter");
+
+            GetEncode(request, path, subtitlesPath, encodeFeature, duration);
+        }
+
+        private void GetEncode(HttpRequest request, string path, string subtitlesPath, string encodeFeature, TimeSpan? duration)
         {
             HttpResponse response = request.GetResponse();
 
-            if (request.UrlParams.ContainsKey("id"))
+            request.UrlParams["source"] = path;
+            if (subtitlesPath != null)
+                request.UrlParams["subtitles"] = subtitlesPath;
+            if (encodeFeature != null)
+                response.AddHreader("ContentFeatures.dlna.org", encodeFeature);
+
+            if (duration.HasValue)
             {
-                //Zisti zdroj podla id
-                TimeSpan? duration;
-                string path, subtitlesPath, encodeFeature;
+                //Je mozne seekovanie pomocou casu
 
-                if (!this.itemManager.GetEncode(request.UrlParams["id"], out path, out subtitlesPath, out encodeFeature, out duration))
-                    throw new HttpException(404, "Bad parameter");
-
-                request.UrlParams["source"] = path;
-                if (subtitlesPath != null)
-                    request.UrlParams["subtitles"] = subtitlesPath;
-                response.AddHreader("ContentFeatures.DLNA.ORG", encodeFeature);
-
-                if (duration.HasValue)
+                double startTimeParam = 0;
+                if (request.UrlParams.ContainsKey("starttime") && double.TryParse(request.UrlParams["starttime"], 
+                    System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands, 
+                    System.Globalization.CultureInfo.InvariantCulture, out startTimeParam))
                 {
-                    //Je mozne seekovanie pomocou casu
-                    response.AddHreader("X-AvailableSeekRange", string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                        "1 npt=0-{0:0.000}", duration.Value.TotalSeconds));
+                    //Ak je nastaveny url parameter pozicie - treba upravit dlzku
+                    duration -= TimeSpan.FromSeconds(startTimeParam);
+                }
 
-                    if (request.Headers.ContainsKey("TimeSeekRange.DLNA.ORG"))
+                response.AddHreader("X-AvailableSeekRange", string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "1 npt=0.0-{0:0.000}", duration.Value.TotalSeconds));
+
+                if (request.Headers.ContainsKey("TimeSeekRange.dlna.org"))
+                {
+                    //Zistenie a nastavenie pozicie
+                    string[] range = request.Headers["TimeSeekRange.dlna.org"].Split('=').Last().Split('-').Select(a => a.Trim()).ToArray();
+                    double end, start;
+
+                    //Cas moze byt vo formate 0.000 sekundy alebo 0:00:00.0
+                    if (!double.TryParse(range[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out start))
+                        start = TimeSpan.Parse(range[0]).TotalSeconds;
+                    if (start < 0)
+                        start += duration.Value.TotalSeconds;
+
+                    if (range.Length < 2)
                     {
-                        //Zistenie a nastavenie pozicie
-                        string[] range = request.Headers["TimeSeekRange.DLNA.ORG"].Split('=').Last().Split('-').Select(a => a.Trim()).ToArray();
-                        double end, start;
-
-                        //Cas moze byt vo formate 0.000 sekundy alebo 0:00:00.0
-                        if (!double.TryParse(range[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out start))
-                            start = TimeSpan.Parse(range[0]).TotalSeconds;
-                        if (start < 0)
-                            start += duration.Value.TotalSeconds;
-
-                        if (range.Length < 2)
-                        {
-                            end = duration.Value.TotalSeconds;
-                        }
-                        else
-                        {
-                            TimeSpan endSpan;
-                            if (double.TryParse(range[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out end))
-                                request.UrlParams["endtime"] = end.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                            else if (TimeSpan.TryParse(range[1], out endSpan))
-                                request.UrlParams["endtime"] = endSpan.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                            else
-                                end = duration.Value.TotalSeconds;
-                        }
-
-                        request.UrlParams["starttime"] = start.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-                        response.AddHreader("Vary", "TimeSeekRange.DLNA.ORG");
-                        response.AddHreader("TimeSeekRange.DLNA.ORG", string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                            "npt={0:0.000}-{1:0.000}/{2:0.000}", start, end, duration.Value.TotalSeconds));
+                        end = duration.Value.TotalSeconds;
                     }
+                    else
+                    {
+                        TimeSpan endSpan;
+                        if (double.TryParse(range[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out end))
+                            request.UrlParams["endtime"] = end.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        else if (TimeSpan.TryParse(range[1], out endSpan))
+                            request.UrlParams["endtime"] = endSpan.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        else
+                            end = duration.Value.TotalSeconds;
+                    }
+
+                    request.UrlParams["starttime"] = (start + startTimeParam).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                    response.AddHreader("Vary", "TimeSeekRange.dlna.org");
+                    response.AddHreader("TimeSeekRange.dlna.org", string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                        "npt={0:0.000}-{1:0.000}/{2:0.000}", start, end, duration.Value.TotalSeconds));
                 }
             }
-            else
-                throw new HttpException(404, "Unknown source");
+
+            if (this.prefDsDemux.Count > 0)
+            {
+                //Zapisu sa hodnoty guid preferovaneho demultiplexora pre DirectShow oddelene znakom |
+                string prefDsDemuxStr = string.Empty;
+                foreach (Guid guid in this.prefDsDemux)
+                    prefDsDemuxStr += guid + "|";
+                request.UrlParams["prefDsDemux"] = prefDsDemuxStr;
+            }
             
             EncoderBuilder builder = EncoderBuilder.GetEncoder(request.UrlParams);
 
             response.AddHreader(HttpHeader.ContentType, builder.GetMime());
             response.AddHreader(HttpHeader.AcceptRanges, "none");
-            response.AddHreader("TransferMode.DLNA.ORG", "Streaming");
+            response.AddHreader("TransferMode.dlna.org", "Streaming");
             response.SendHeaders();
 
             if (request.Method == "GET")
@@ -400,8 +519,10 @@ namespace HomeMediaCenter
                 xmlWriter.WriteElementString("title", "Home Media Center");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/htmlstyle.css"" />");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery.lightbox-0.5.css"" />");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.7.1.min.js""></script>");
+                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.10.4.custom.min.css"" />");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.11.1.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.lightbox-0.5.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.10.4.custom.min.js""></script>");
                 xmlWriter.WriteEndElement();
 
                 xmlWriter.WriteStartElement("body");
@@ -430,8 +551,18 @@ namespace HomeMediaCenter
 
                 if (request.Url.Contains("control.html"))
                 {
+                    string device = request.UrlParams.ContainsKey("devices") ? request.UrlParams["devices"] : null;
+
+                    TimeSpan startTime;
+                    if (!request.UrlParams.ContainsKey("starttime") || !TimeSpan.TryParse(request.UrlParams["starttime"], out startTime))
+                        startTime = TimeSpan.Zero;
+
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("id", "main_content");
+
+                    xmlWriter.WriteStartElement("form");
+                    xmlWriter.WriteAttributeString("action", "/web/control.html");
+                    xmlWriter.WriteAttributeString("method", "get");
 
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("id", "left_content");
@@ -450,7 +581,7 @@ namespace HomeMediaCenter
                     xmlWriter.WriteValue(LanguageResource.SelectDevice);
                     xmlWriter.WriteEndElement();
 
-                    this.controlPoint.WriteXml(xmlWriter);
+                    this.controlPoint.WriteXml(xmlWriter, device);
 
                     xmlWriter.WriteEndElement();
 
@@ -463,22 +594,65 @@ namespace HomeMediaCenter
                     xmlWriter.WriteStartElement("div");
                     xmlWriter.WriteAttributeString("id", "right_content");
 
-                    if (id == "0")
+                    Item item = this.itemManager.GetItemWithParent(id);
+                    if (id == "0" || item == null)
                     {
                         xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, LanguageResource.NotSelected));
                     }
                     else
                     {
-                        xmlWriter.WriteRaw(string.Format(@"<input id=""idInput"" type=""hidden"" value=""{0}""></input>", id));
-                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, this.itemManager.GetTitle(id)));
+                        xmlWriter.WriteRaw(string.Format(@"<input id=""idInput"" type=""hidden"" name=""id"" value=""{0}""></input>", id));
+                        xmlWriter.WriteRaw(string.Format(@"<p>{0}: {1}</p>", LanguageResource.Item, item.Title));
+
+                        TimeSpan? duration = item.GetDuration();
+                        if (duration.HasValue)
+                        {
+                            xmlWriter.WriteRaw(string.Format(@"<input id=""posInput"" type=""hidden"" name=""starttime"" value=""{0}""></input>", startTime.ToString("h':'mm':'ss")));
+
+                            xmlWriter.WriteRaw(string.Format(@"<span id=""streamPos"">{0}</span>", startTime.ToString("h':'mm':'ss")));
+                            xmlWriter.WriteRaw(@"<div id=""seekSlider""></div>");
+                            xmlWriter.WriteRaw(string.Format(@"<span id=""streamLength"">{0}</span>", duration.Value.ToString("h':'mm':'ss")));
+                            xmlWriter.WriteStartElement("br");
+                            xmlWriter.WriteEndElement();
+                        }
                     }
 
-                    xmlWriter.WriteRaw(string.Format(@"<button id=""volPBtn"" type=""button"">{0} +</button>", LanguageResource.Volume));
-                    xmlWriter.WriteRaw(string.Format(@"<button id=""volMBtn"" type=""button"">{0} -</button>", LanguageResource.Volume));
-                    xmlWriter.WriteRaw(string.Format(@"<button id=""playBtn"" type=""button"">{0}</button>", LanguageResource.Play));
-                    xmlWriter.WriteRaw(string.Format(@"<button id=""stopBtn"" type=""button"">{0}</button>", LanguageResource.Stop));
+                    xmlWriter.WriteRaw(string.Format(@"<input id=""volPBtn"" type=""submit"" name=""volP"" value=""{0} +"">", LanguageResource.Volume));
+                    xmlWriter.WriteRaw(string.Format(@"<input id=""volMBtn"" type=""submit"" name=""volM"" value=""{0} -"">", LanguageResource.Volume));
+                    xmlWriter.WriteRaw(string.Format(@"<input id=""playBtn"" type=""submit"" name=""play"" value=""{0}"">", LanguageResource.Play));
+                    xmlWriter.WriteRaw(string.Format(@"<input id=""stopBtn"" type=""submit"" name=""stop"" value=""{0}"">", LanguageResource.Stop));
+
+                    try
+                    {
+                        if (request.UrlParams.ContainsKey("volP"))
+                            this.controlPoint.VolumePlus(device);
+                        else if (request.UrlParams.ContainsKey("volM"))
+                            this.controlPoint.VolumeMinus(device);
+                        else if (request.UrlParams.ContainsKey("play"))
+                            this.controlPoint.Play(device, this.server.HttpPort, id, this.itemManager, startTime);
+                        else if (request.UrlParams.ContainsKey("stop"))
+                            this.controlPoint.Stop(device);
+                    }
+                    catch (Exception ex)
+                    {
+                        xmlWriter.WriteStartElement("br");
+                        xmlWriter.WriteEndElement();
+
+                        xmlWriter.WriteStartElement("span");
+                        xmlWriter.WriteAttributeString("class", "error");
+                        xmlWriter.WriteValue(LanguageResource.OperationFailed);
+                        xmlWriter.WriteEndElement();
+
+                        xmlWriter.WriteStartElement("span");
+                        xmlWriter.WriteAttributeString("class", "ui-icon ui-icon-info");
+                        xmlWriter.WriteAttributeString("title", ex.Message);
+                        xmlWriter.WriteFullEndElement();
+                    }
 
                     //Koniec right_content
+                    xmlWriter.WriteEndElement();
+
+                    //Koniec form
                     xmlWriter.WriteEndElement();
 
                     //Koniec main_content
@@ -503,6 +677,7 @@ namespace HomeMediaCenter
 
                 response.AddHreader(HttpHeader.ContentLength, stream.Length.ToString());
                 response.AddHreader(HttpHeader.ContentType, "text/html; charset=utf-8");
+                response.AddHreader(HttpHeader.CacheControl, "no-cache, no-store, must-revalidate"); //nocache hlavne pre odosielanie formulara
                 response.SendHeaders();
 
                 stream.CopyTo(response.GetStream());
@@ -527,11 +702,9 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartElement("head");
                 xmlWriter.WriteElementString("title", "Home Media Center - Player");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/htmlstyle.css"" />");
-                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery.lightbox-0.5.css"" />");
-                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.8.18.custom.css"" />");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.7.1.min.js""></script>");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.lightbox-0.5.min.js""></script>");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.8.18.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.10.4.custom.min.css"" />");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.11.1.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.10.4.custom.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/flowplayer.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/player.js""></script>");
                 xmlWriter.WriteEndElement();
@@ -672,7 +845,7 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartDocument();
 
                 xmlWriter.WriteStartElement("devices");
-                this.controlPoint.WriteXml(xmlWriter, type);
+                this.controlPoint.WriteXml(xmlWriter, null, type);
                 xmlWriter.WriteEndElement();
 
                 xmlWriter.Flush();
@@ -684,27 +857,6 @@ namespace HomeMediaCenter
 
                 stream.CopyTo(response.GetStream());
             }
-        }
-
-        private void PostWebControl(HttpRequest request)
-        {
-            string action = request.UrlParams["action"].ToLower();
-            string device = request.UrlParams["device"];
-
-            switch (action)
-            {
-                case "volp": this.controlPoint.VolumePlus(device);
-                    break;
-                case "volm": this.controlPoint.VolumeMinus(device);
-                    break;
-                case "play": this.controlPoint.Play(device, this.server.HttpPort, request.UrlParams["id"], this.itemManager);
-                    break;
-                case "stop": this.controlPoint.Stop(device);
-                    break;
-            }
-
-            HttpResponse response = request.GetResponse();
-            response.SendHeaders();
         }
     }
 }

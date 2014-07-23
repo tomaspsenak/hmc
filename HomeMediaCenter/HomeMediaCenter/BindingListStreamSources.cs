@@ -12,15 +12,15 @@ namespace HomeMediaCenter
     public class BindingListStreamSources : BindingList<ItemContainerStreamCustom>, IDisposable
     {
         private DataContext context;
-        private readonly object dbWriteLock;
+        private readonly ItemManager manager;
 
-        public BindingListStreamSources() : base() { } 
+        public BindingListStreamSources() : base() { }
 
-        public BindingListStreamSources(DataContext context, object dbWriteLock) 
+        public BindingListStreamSources(DataContext context, ItemManager manager) 
             : base(context.GetTable<Item>().OfType<ItemContainerStreamCustom>().ToList())
         {
             this.context = context;
-            this.dbWriteLock = dbWriteLock;
+            this.manager = manager;
         }
 
         public void Dispose()
@@ -48,11 +48,11 @@ namespace HomeMediaCenter
                 a => string.IsNullOrWhiteSpace(a.Title) || string.IsNullOrWhiteSpace(a.Path));
             this.context.GetTable<Item>().DeleteAllOnSubmit(toDelete);
 
-            lock (this.dbWriteLock)
+            lock (this.manager.DbWriteLock)
             {
                 //Pre aktualizaciu nazvu je potrebne potomkov odstranit - pri refresh sa pridaju so spravnym nazvom
                 foreach (ItemContainerStreamCustom toUpdate in changeSet.Updates.OfType<ItemContainerStreamCustom>())
-                    toUpdate.RemoveMe(this.context);
+                    toUpdate.RemoveMe(this.context, this.manager);
 
                 this.context.SubmitChanges();
             }
@@ -79,7 +79,7 @@ namespace HomeMediaCenter
 
             ItemContainerStreamCustom item = this.Items[index];
             this.context.GetTable<Item>().DeleteOnSubmit(item);
-            item.RemoveMe(this.context);
+            item.RemoveMe(this.context, this.manager);
 
             base.RemoveItem(index);
         }

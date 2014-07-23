@@ -17,5 +17,27 @@ namespace HomeMediaCenter
 
             return value.Substring(0, maxLength - 3) + "...";
         }
+
+        public static bool IsFileLocked(FileInfo fileInfo)
+        {
+            FileStream fs = null;
+            try
+            {
+                fs = fileInfo.Open(FileMode.Open);
+            }
+            catch (IOException e)
+            {
+                uint hr = (uint)System.Runtime.InteropServices.Marshal.GetHRForException(e);
+
+                return hr == 0x80070020 || hr == 0x80070021; //FileLocked || PortionOfFileLocked
+            }
+            finally
+            {
+                if (fs != null)
+                    fs.Dispose();
+            }
+
+            return false;
+        }
     }
 }

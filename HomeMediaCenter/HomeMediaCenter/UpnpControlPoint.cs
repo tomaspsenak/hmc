@@ -117,7 +117,7 @@ namespace HomeMediaCenter
             }
         }
 
-        public void WriteXml(XmlWriter xmlWriter, string type = "urn:schemas-upnp-org:device:MediaRenderer:1")
+        public void WriteXml(XmlWriter xmlWriter, string selectedUDN, string type = "urn:schemas-upnp-org:device:MediaRenderer:1")
         {
             lock (this)
             {
@@ -125,6 +125,8 @@ namespace HomeMediaCenter
                 {
                     xmlWriter.WriteStartElement("option");
                     xmlWriter.WriteAttributeString("value", device.UniqueDeviceName);
+                    if (string.Compare(device.UniqueDeviceName, selectedUDN, true) == 0)
+                        xmlWriter.WriteAttributeString("selected", "selected");
                     xmlWriter.WriteValue(device.FriendlyName);
                     xmlWriter.WriteEndElement();
                 }
@@ -165,7 +167,7 @@ namespace HomeMediaCenter
             service.InvokeAction("SetVolume", inArgs, ref outArgs);
         }
 
-        public void Play(string deviceId, int httpPort, string objectID, ItemManager manager)
+        public void Play(string deviceId, int httpPort, string objectID, ItemManager manager, TimeSpan startTime)
         {
             IUPnPDeviceDocumentAccess deviceAccess;
             UPnPService service = GetServiceSync(deviceId, "urn:schemas-upnp-org:service:AVTransport:1", out deviceAccess);
@@ -183,19 +185,10 @@ namespace HomeMediaCenter
             if (addresses.Length == 1)
                 deviceIP = addresses[0];
 
-            string result;
-            Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            headers.Add("host", deviceIP + ":" + httpPort);
+            string result, firstResource;
+            manager.BrowseMetadata("http://" + deviceIP + ":" + httpPort, objectID, startTime, out result, out firstResource);
 
-            manager.Browse(headers, objectID, BrowseFlag.BrowseMetadata, out result);
-
-            XmlDocument xmlReader = new XmlDocument();
-            xmlReader.LoadXml(result);
-            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(xmlReader.NameTable);
-            namespaceManager.AddNamespace("didlNam", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/");
-            XmlNode res = xmlReader.SelectSingleNode("/didlNam:DIDL-Lite/didlNam:item/didlNam:res[1]", namespaceManager);
-
-            object[] inArgs = new object[] { 0, res.InnerText, result };
+            object[] inArgs = new object[] { 0, firstResource, result };
             object outArgs = null;
             service.InvokeAction("SetAVTransportURI", inArgs, ref outArgs);
 

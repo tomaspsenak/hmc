@@ -1,5 +1,13 @@
+function TimeToValue(str) {
+    var splitArray = str.split(":");
+    return (new Number(splitArray[0]) * 3600) + (new Number(splitArray[1]) * 60) + new Number(splitArray[2]);
+}
+
 $(function () {
-    $("#refreshBtn").click(function () {
+
+    $(document).tooltip();
+
+    $("#refreshBtn").button().click(function () {
 
         $(this).hide();
         $("#loadingImg").show();
@@ -26,19 +34,27 @@ $(function () {
         });
     });
 
-    $("#volPBtn").click(function () {
-        $.post("/web/control?action=volp&device=" + $("#devices").val());
-    });
+    $("#volPBtn").button();
+    $("#volMBtn").button();
+    $("#playBtn").button();
+    $("#stopBtn").button();
 
-    $("#volMBtn").click(function () {
-        $.post("/web/control?action=volm&device=" + $("#devices").val());
-    });
+    var streamLength = TimeToValue($("#streamLength").text());
 
-    $("#playBtn").click(function () {
-        $.post("/web/control?action=play&device=" + $("#devices").val() + "&id=" + $("#idInput").val());
-    });
+    var streamValue = TimeToValue($("#posInput").val());
 
-    $("#stopBtn").click(function () {
-        $.post("/web/control?action=stop&device=" + $("#devices").val());
+    $("#seekSlider").slider({
+        min: 0,
+        max: streamLength,
+        value: streamValue,
+        slide: function (event, ui) {
+            var newPos = new Date(0, 0, 0, 0, 0, ui.value);
+            var newPosStr = newPos.getHours() + ":" +
+                (newPos.getMinutes() < 10 ? "0" + newPos.getMinutes() : newPos.getMinutes()) + ":" +
+                (newPos.getSeconds() < 10 ? "0" + newPos.getSeconds() : newPos.getSeconds());
+
+            $("#streamPos").html(newPosStr);
+            $("#posInput").val(newPosStr);
+        }
     });
 });

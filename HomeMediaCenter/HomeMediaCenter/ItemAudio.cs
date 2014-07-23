@@ -80,6 +80,13 @@ namespace HomeMediaCenter
             return System.IO.Path.Combine(this.Parent.Path, this.Path);
         }
 
+        public override string GetThumbnailPath(ItemManager manager)
+        {
+            if (this.HasThumbnail.HasValue && this.HasThumbnail.Value)
+                return System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+            return null;
+        }
+
         public override TimeSpan? GetDuration()
         {
             return this.DurationTicks.HasValue ? TimeSpan.FromTicks(this.DurationTicks.Value) : default(TimeSpan?);
@@ -95,9 +102,17 @@ namespace HomeMediaCenter
             return settings.Audio.EncodeFeature;
         }
 
-        public override void RemoveMe(DataContext context)
+        public override void RemoveMe(DataContext context, ItemManager manager)
         {
             this.Parent.CheckMediaType(MediaType.Audio);
+
+            if (this.HasThumbnail.HasValue && this.HasThumbnail.Value)
+            {
+                string thumbnailPath = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+
+                try { System.IO.File.Delete(thumbnailPath); }
+                catch { }
+            }
         }
 
         public override bool IsType(MediaType type)
@@ -105,11 +120,31 @@ namespace HomeMediaCenter
             return type == MediaType.Audio;
         }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMetadata(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
+            string thumbnailPath = null;
+            if (manager.UpnpDevice.GenerateThumbnails && !this.HasThumbnail.HasValue)
+            {
+                //Ak sa ma generovat thumbnail a HasThumbnail je null - generuj
+                thumbnailPath = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+            }
+            else if (!manager.UpnpDevice.GenerateThumbnails && this.HasThumbnail == true)
+            {
+                //Ak sa nema generovat thumbnail a HasThumbnail je true - vymaz thumbnail
+                string thumbnailPath2 = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+
+                try { System.IO.File.Delete(thumbnailPath2); }
+                catch { }
+
+                this.HasThumbnail = null;
+            }
+
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
-            if (!this.DurationTicks.HasValue)
-                AssignValues(new FileInfo(GetPath()));
+            if (!this.DurationTicks.HasValue || thumbnailPath != null)
+                AssignValues(new FileInfo(GetPath()), thumbnailPath);
         }
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet)
@@ -118,6 +153,11 @@ namespace HomeMediaCenter
         }
 
         public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
+        {
+            BrowseMetadata(writer, settings, host, idParams, filterSet, parentId, null);
+        }
+
+        public override void BrowseMetadata(XmlWriter writer, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId, TimeSpan? startTime)
         {
             writer.WriteStartElement("item");
 
@@ -147,16 +187,31 @@ namespace HomeMediaCenter
             if (this.Album != null && this.Album != string.Empty && (filterSet == null || filterSet.Contains("upnp:album")))
                 writer.WriteElementString("upnp", "album", null, this.Album);
 
+            if ((filterSet == null || filterSet.Contains("upnp:icon")) && (this.HasThumbnail.HasValue && this.HasThumbnail.Value))
+                writer.WriteElementString("upnp", "icon", null, host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+
+            if ((filterSet == null || filterSet.Contains("upnp:albumArtURI")) && (this.HasThumbnail.HasValue && this.HasThumbnail.Value))
+            {
+                writer.WriteStartElement("upnp", "albumArtURI", null);
+                writer.WriteAttributeString("dlna", "profileID", "urn:schemas-dlna-org:metadata-1-0/", "JPEG_TN");
+                writer.WriteValue(host + "/thumbnail/image.jpg?id=" + this.Id + "&codec=jpeg&width=160&height=160&keepaspect");
+                writer.WriteEndElement();
+            }
+
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
-                if (settings.Audio.NativeFile)
+                TimeSpan? duration = this.GetDuration();
+                if (duration.HasValue && startTime.HasValue)
+                    duration -= startTime;
+
+                if (settings.Audio.NativeFile && !startTime.HasValue)
                 {
+                    //Povoli sa povodne audio ak sa nemeni zaciatok audia
                     writer.WriteStartElement("res");
 
                     if (filterSet == null || filterSet.Contains("res@size"))
                         writer.WriteAttributeString("size", this.Length.ToString());
 
-                    TimeSpan? duration = this.GetDuration();
                     if (duration.HasValue && (filterSet == null || filterSet.Contains("res@duration")))
                         writer.WriteAttributeString("duration", duration.Value.ToString("h':'mm':'ss'.'fff"));
 
@@ -164,7 +219,7 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("bitrate", this.Bitrate.Value.ToString());
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}", this.Mime, GetFileFeature(settings)));
-                    writer.WriteValue(host + "/files/audio?id=" + this.Id);
+                    writer.WriteValue(string.Format("{0}/files/audio{1}?id={2}",host, System.IO.Path.GetExtension(this.Path), this.Id));
                     writer.WriteEndElement();
                 }
 
@@ -172,7 +227,6 @@ namespace HomeMediaCenter
                 {
                     writer.WriteStartElement("res");
 
-                    TimeSpan? duration = this.GetDuration();
                     if (duration.HasValue && (filterSet == null || filterSet.Contains("res@duration")))
                         writer.WriteAttributeString("duration", duration.Value.ToString("h':'mm':'ss'.'fff"));
 
@@ -180,7 +234,8 @@ namespace HomeMediaCenter
                         writer.WriteAttributeString("bitrate", sett.AudBitrate);
 
                     writer.WriteAttributeString("protocolInfo", string.Format("http-get:*:{0}:{1}{2}", sett.GetMime(), sett.GetDlnaType(), settings.Audio.EncodeFeature));
-                    writer.WriteValue(host + "/encode/audio?id=" + this.Id + sett.GetParamString());
+                    writer.WriteValue(string.Format("{0}/encode/audio?id={1}{2}{3}", host, this.Id, sett.GetParamString(),
+                        startTime.HasValue ? "&starttime=" + startTime.Value.TotalSeconds : string.Empty));
                     writer.WriteEndElement();
                 }
             }
@@ -191,8 +246,8 @@ namespace HomeMediaCenter
         public override void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams)
         {
             TimeSpan? duration = this.GetDuration();
-            WriteHTML(xmlWriter, this.Id.ToString(), this.Title, duration.HasValue ? duration.Value.ToString("h':'mm':'ss") : null, 
-                this.Artist, this.Album, this.Genre);
+            WriteHTML(xmlWriter, this.Id.ToString(), this.Title, duration.HasValue ? duration.Value.ToString("h':'mm':'ss") : null, this.Artist, 
+                this.Album, this.Genre, this.HasThumbnail.HasValue && this.HasThumbnail.Value, System.IO.Path.GetExtension(this.Path));
         }
 
         public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)
@@ -200,37 +255,36 @@ namespace HomeMediaCenter
             WriteHTMLPlayer(xmlWriter, this.Id.ToString(), this.GetDuration(), urlParams);
         }
 
-        public static void WriteHTML(XmlWriter xmlWriter, string id, string title, string duration, string artist, string album, string genre)
+        public static void WriteHTML(XmlWriter xmlWriter, string id, string title, string duration, string artist, string album, string genre, bool hasThumbanil, string noStreamExtension)
         {
             xmlWriter.WriteStartElement("tr");
 
             xmlWriter.WriteStartElement("td");
-
-            xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/web/player.html?id=" + id);
-            xmlWriter.WriteAttributeString("target", "_blank");
-
-            xmlWriter.WriteStartElement("img");
-            xmlWriter.WriteAttributeString("src", "/web/images/htmlorangearrow.gif");
-            xmlWriter.WriteAttributeString("alt", string.Empty);
+            xmlWriter.WriteStartElement("div");
+            xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteRaw(string.Format(@"<a href=""/web/player.html?id={0}"" target=""_blank"">{1}</a>", id, LanguageResource.Play));
+            xmlWriter.WriteStartElement("ul");
+            if (noStreamExtension != null)
+                xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/audio{0}?id={1}"" target=""_blank"">{2}</a></li>", noStreamExtension, id, LanguageResource.Download));
+            xmlWriter.WriteRaw(string.Format(@"<li><a href=""/web/control.html?id={0}"" target=""_blank"">{1}</a></li>", id, LanguageResource.PlayTo));
+            xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndElement();
             xmlWriter.WriteEndElement();
 
-            xmlWriter.WriteStartElement("span");
-            xmlWriter.WriteValue(LanguageResource.Play);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteStartElement("span");
-            xmlWriter.WriteValue("|");
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteStartElement("a");
-            xmlWriter.WriteAttributeString("href", "/web/control.html?id=" + id);
-            xmlWriter.WriteValue(LanguageResource.PlayTo);
-            xmlWriter.WriteEndElement();
-
-            xmlWriter.WriteEndElement();
+            xmlWriter.WriteStartElement("td");
+            if (hasThumbanil)
+            {
+                xmlWriter.WriteStartElement("img");
+                xmlWriter.WriteAttributeString("src", string.Format("/thumbnail/image.jpg?id={0}&codec=jpeg&width=50&height=50&quality=30", id));
+                xmlWriter.WriteAttributeString("alt", title);
+                xmlWriter.WriteAttributeString("title", title);
+                xmlWriter.WriteAttributeString("border", "0");
+                xmlWriter.WriteAttributeString("width", "50");
+                xmlWriter.WriteAttributeString("height", "50");
+                xmlWriter.WriteAttributeString("align", "right");
+                xmlWriter.WriteFullEndElement();
+            }
+            xmlWriter.WriteFullEndElement();
 
             xmlWriter.WriteElementString("td", title);
             xmlWriter.WriteElementString("td", duration == null ? string.Empty : duration);
@@ -407,7 +461,7 @@ namespace HomeMediaCenter
             xmlWriter.WriteEndElement();
         }
 
-        private void AssignValues(FileInfo file)
+        private void AssignValues(FileInfo file, string thumbnailPath)
         {
             TimeSpan duration;
             int audioStreamsCount;
@@ -423,11 +477,15 @@ namespace HomeMediaCenter
                 this.Genre = DSWrapper.MediaFile.GetAudioGenre(file).Truncate(60);
                 this.Artist = DSWrapper.MediaFile.GetAudioArtist(file).Truncate(60);
                 this.Album = DSWrapper.MediaFile.GetAudioAlbum(file).Truncate(60);
+                if (thumbnailPath != null)
+                    this.HasThumbnail = DSWrapper.MediaFile.GetAudioThumbnail(file, thumbnailPath);
             }
-            else if (hr != -2147024864)
+            else if (hr != -2147024864 && !HelperClass.IsFileLocked(file))
             {
                 //Chyba -2147024864 znamena ze subor nie je dostupny - napr. pouziva ho iny proces, nie je kompletne skopirovany,...
-                //V pripade inej chyby uz sa nepokusaj zistit metadata
+                //V pripade inej chyby este overi ci naozaj subor nepouziva iny proces
+
+                //Inak sa uz nepokusaj zistit metadata
                 this.DurationTicks = 0;
             }
         }

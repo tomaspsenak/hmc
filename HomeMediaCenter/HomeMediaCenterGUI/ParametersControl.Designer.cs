@@ -80,7 +80,7 @@
             this.othersGroupBox.Location = new System.Drawing.Point(2, 249);
             this.othersGroupBox.Name = "othersGroupBox";
             this.othersGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.othersGroupBox.TabIndex = 2147483647;
+            this.othersGroupBox.TabIndex = 50;
             this.othersGroupBox.TabStop = false;
             this.othersGroupBox.Text = "Others";
             // 
@@ -91,7 +91,7 @@
             this.subtitlesIntCheckBox.Location = new System.Drawing.Point(490, 20);
             this.subtitlesIntCheckBox.Name = "subtitlesIntCheckBox";
             this.subtitlesIntCheckBox.Size = new System.Drawing.Size(109, 17);
-            this.subtitlesIntCheckBox.TabIndex = 14;
+            this.subtitlesIntCheckBox.TabIndex = 53;
             this.subtitlesIntCheckBox.Text = "Integrate subtitles";
             this.subtitlesIntCheckBox.UseVisualStyleBackColor = true;
             this.subtitlesIntCheckBox.CheckedChanged += new System.EventHandler(this.subtitlesIntCheckBox_CheckedChanged);
@@ -101,7 +101,7 @@
             this.endTimeTextBox.Location = new System.Drawing.Point(285, 18);
             this.endTimeTextBox.Name = "endTimeTextBox";
             this.endTimeTextBox.Size = new System.Drawing.Size(90, 20);
-            this.endTimeTextBox.TabIndex = 13;
+            this.endTimeTextBox.TabIndex = 52;
             this.endTimeTextBox.Text = "00:00:00";
             this.endTimeTextBox.TextChanged += new System.EventHandler(this.endTimeTextBox_TextChanged);
             // 
@@ -110,7 +110,7 @@
             this.startTimeTextBox.Location = new System.Drawing.Point(189, 18);
             this.startTimeTextBox.Name = "startTimeTextBox";
             this.startTimeTextBox.Size = new System.Drawing.Size(90, 20);
-            this.startTimeTextBox.TabIndex = 12;
+            this.startTimeTextBox.TabIndex = 51;
             this.startTimeTextBox.Text = "00:00:00";
             this.startTimeTextBox.TextChanged += new System.EventHandler(this.startTimeTextBox_TextChanged);
             // 
@@ -140,7 +140,7 @@
             this.fpsComboBox.Location = new System.Drawing.Point(340, 42);
             this.fpsComboBox.Name = "fpsComboBox";
             this.fpsComboBox.Size = new System.Drawing.Size(120, 21);
-            this.fpsComboBox.TabIndex = 10;
+            this.fpsComboBox.TabIndex = 35;
             this.fpsComboBox.SelectedIndexChanged += new System.EventHandler(this.fpsComboBox_Changed);
             this.fpsComboBox.EnabledChanged += new System.EventHandler(this.fpsComboBox_Changed);
             // 
@@ -161,7 +161,7 @@
             this.audioGroupBox.Location = new System.Drawing.Point(2, 193);
             this.audioGroupBox.Name = "audioGroupBox";
             this.audioGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.audioGroupBox.TabIndex = 2147483647;
+            this.audioGroupBox.TabIndex = 40;
             this.audioGroupBox.TabStop = false;
             this.audioGroupBox.Text = "Audio";
             // 
@@ -178,7 +178,7 @@
             this.bitrateAudioComboBox.Location = new System.Drawing.Point(108, 17);
             this.bitrateAudioComboBox.Name = "bitrateAudioComboBox";
             this.bitrateAudioComboBox.Size = new System.Drawing.Size(80, 21);
-            this.bitrateAudioComboBox.TabIndex = 11;
+            this.bitrateAudioComboBox.TabIndex = 41;
             this.bitrateAudioComboBox.SelectedIndexChanged += new System.EventHandler(this.bitrateAudioComboBox_Changed);
             this.bitrateAudioComboBox.EnabledChanged += new System.EventHandler(this.bitrateAudioComboBox_Changed);
             // 
@@ -214,7 +214,7 @@
             this.bitrateVideoComboBox.Location = new System.Drawing.Point(108, 17);
             this.bitrateVideoComboBox.Name = "bitrateVideoComboBox";
             this.bitrateVideoComboBox.Size = new System.Drawing.Size(80, 21);
-            this.bitrateVideoComboBox.TabIndex = 6;
+            this.bitrateVideoComboBox.TabIndex = 31;
             this.bitrateVideoComboBox.SelectedIndexChanged += new System.EventHandler(this.bitrateVideoComboBox_Changed);
             this.bitrateVideoComboBox.EnabledChanged += new System.EventHandler(this.bitrateVideoComboBox_Changed);
             // 
@@ -234,7 +234,7 @@
             this.videoGroupBox.Location = new System.Drawing.Point(2, 115);
             this.videoGroupBox.Name = "videoGroupBox";
             this.videoGroupBox.Size = new System.Drawing.Size(605, 72);
-            this.videoGroupBox.TabIndex = 2147483647;
+            this.videoGroupBox.TabIndex = 30;
             this.videoGroupBox.TabStop = false;
             this.videoGroupBox.Text = "Video";
             // 
@@ -256,7 +256,7 @@
             this.scanComboBox.Location = new System.Drawing.Point(108, 42);
             this.scanComboBox.Name = "scanComboBox";
             this.scanComboBox.Size = new System.Drawing.Size(80, 21);
-            this.scanComboBox.TabIndex = 9;
+            this.scanComboBox.TabIndex = 34;
             this.scanComboBox.SelectedIndexChanged += new System.EventHandler(this.scanComboBox_Changed);
             this.scanComboBox.EnabledChanged += new System.EventHandler(this.scanComboBox_Changed);
             // 
@@ -283,7 +283,7 @@
             this.resolutionComboBox.Location = new System.Drawing.Point(340, 17);
             this.resolutionComboBox.Name = "resolutionComboBox";
             this.resolutionComboBox.Size = new System.Drawing.Size(120, 21);
-            this.resolutionComboBox.TabIndex = 7;
+            this.resolutionComboBox.TabIndex = 32;
             this.resolutionComboBox.SelectedIndexChanged += new System.EventHandler(this.resolutionComboBox_Changed);
             this.resolutionComboBox.EnabledChanged += new System.EventHandler(this.resolutionComboBox_Changed);
             // 
@@ -292,7 +292,7 @@
             this.keepAspectCheckBox.Location = new System.Drawing.Point(476, 21);
             this.keepAspectCheckBox.Name = "keepAspectCheckBox";
             this.keepAspectCheckBox.Size = new System.Drawing.Size(120, 17);
-            this.keepAspectCheckBox.TabIndex = 8;
+            this.keepAspectCheckBox.TabIndex = 33;
             this.keepAspectCheckBox.Text = "Keep aspect ratio";
             this.keepAspectCheckBox.UseVisualStyleBackColor = true;
             this.keepAspectCheckBox.CheckedChanged += new System.EventHandler(this.keepAspectCheckBox_Changed);
@@ -308,7 +308,7 @@
             this.containerGroupBox.Location = new System.Drawing.Point(3, 59);
             this.containerGroupBox.Name = "containerGroupBox";
             this.containerGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.containerGroupBox.TabIndex = 2147483647;
+            this.containerGroupBox.TabIndex = 20;
             this.containerGroupBox.TabStop = false;
             this.containerGroupBox.Text = "Container - codec";
             // 
@@ -320,7 +320,7 @@
             this.audioCheckBox.Location = new System.Drawing.Point(528, 22);
             this.audioCheckBox.Name = "audioCheckBox";
             this.audioCheckBox.Size = new System.Drawing.Size(70, 17);
-            this.audioCheckBox.TabIndex = 5;
+            this.audioCheckBox.TabIndex = 23;
             this.audioCheckBox.Text = "Audio";
             this.audioCheckBox.UseVisualStyleBackColor = true;
             this.audioCheckBox.CheckedChanged += new System.EventHandler(this.audioCheckBox_CheckedChanged);
@@ -333,7 +333,7 @@
             this.videoCheckBox.Location = new System.Drawing.Point(452, 22);
             this.videoCheckBox.Name = "videoCheckBox";
             this.videoCheckBox.Size = new System.Drawing.Size(70, 17);
-            this.videoCheckBox.TabIndex = 4;
+            this.videoCheckBox.TabIndex = 22;
             this.videoCheckBox.Text = "Video";
             this.videoCheckBox.UseVisualStyleBackColor = true;
             this.videoCheckBox.CheckedChanged += new System.EventHandler(this.videoCheckBox_CheckedChanged);
@@ -347,7 +347,7 @@
             this.containerComboBox.Location = new System.Drawing.Point(6, 19);
             this.containerComboBox.Name = "containerComboBox";
             this.containerComboBox.Size = new System.Drawing.Size(430, 21);
-            this.containerComboBox.TabIndex = 3;
+            this.containerComboBox.TabIndex = 21;
             this.containerComboBox.SelectedIndexChanged += new System.EventHandler(this.containerComboBox_SelectedIndexChanged);
             // 
             // outputGroupBox
@@ -359,7 +359,7 @@
             this.outputGroupBox.Location = new System.Drawing.Point(2, 361);
             this.outputGroupBox.Name = "outputGroupBox";
             this.outputGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.outputGroupBox.TabIndex = 2147483647;
+            this.outputGroupBox.TabIndex = 70;
             this.outputGroupBox.TabStop = false;
             this.outputGroupBox.Text = "Output";
             // 
@@ -374,7 +374,7 @@
             this.outputTextBox.Location = new System.Drawing.Point(6, 18);
             this.outputTextBox.Name = "outputTextBox";
             this.outputTextBox.Size = new System.Drawing.Size(512, 21);
-            this.outputTextBox.TabIndex = 17;
+            this.outputTextBox.TabIndex = 71;
             // 
             // browseOutputButton
             // 
@@ -382,7 +382,7 @@
             this.browseOutputButton.Location = new System.Drawing.Point(524, 17);
             this.browseOutputButton.Name = "browseOutputButton";
             this.browseOutputButton.Size = new System.Drawing.Size(75, 23);
-            this.browseOutputButton.TabIndex = 18;
+            this.browseOutputButton.TabIndex = 72;
             this.browseOutputButton.Text = "Browse";
             this.browseOutputButton.UseVisualStyleBackColor = true;
             this.browseOutputButton.Click += new System.EventHandler(this.browseOutputButton_Click);
@@ -396,7 +396,7 @@
             this.inputGroupBox.Location = new System.Drawing.Point(2, 305);
             this.inputGroupBox.Name = "inputGroupBox";
             this.inputGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.inputGroupBox.TabIndex = 2147483647;
+            this.inputGroupBox.TabIndex = 60;
             this.inputGroupBox.TabStop = false;
             this.inputGroupBox.Text = "Input";
             // 
@@ -406,7 +406,7 @@
             this.browseInputButton.Location = new System.Drawing.Point(524, 18);
             this.browseInputButton.Name = "browseInputButton";
             this.browseInputButton.Size = new System.Drawing.Size(75, 23);
-            this.browseInputButton.TabIndex = 16;
+            this.browseInputButton.TabIndex = 62;
             this.browseInputButton.Text = "Browse";
             this.browseInputButton.UseVisualStyleBackColor = true;
             this.browseInputButton.Click += new System.EventHandler(this.browseInputButton_Click);
@@ -422,7 +422,7 @@
             this.inputTextBox.Location = new System.Drawing.Point(6, 19);
             this.inputTextBox.Name = "inputTextBox";
             this.inputTextBox.Size = new System.Drawing.Size(512, 21);
-            this.inputTextBox.TabIndex = 15;
+            this.inputTextBox.TabIndex = 61;
             this.inputTextBox.SelectedIndexChanged += new System.EventHandler(this.inputTextBox_SelectedIndexChanged);
             // 
             // paramGroupBox
@@ -434,7 +434,7 @@
             this.paramGroupBox.Location = new System.Drawing.Point(2, 3);
             this.paramGroupBox.Name = "paramGroupBox";
             this.paramGroupBox.Size = new System.Drawing.Size(605, 50);
-            this.paramGroupBox.TabIndex = 2147483647;
+            this.paramGroupBox.TabIndex = 10;
             this.paramGroupBox.TabStop = false;
             this.paramGroupBox.Text = "Parameters";
             // 
@@ -444,7 +444,7 @@
             this.editCheckBox.Location = new System.Drawing.Point(529, 21);
             this.editCheckBox.Name = "editCheckBox";
             this.editCheckBox.Size = new System.Drawing.Size(70, 17);
-            this.editCheckBox.TabIndex = 1;
+            this.editCheckBox.TabIndex = 12;
             this.editCheckBox.Text = "Edit";
             this.editCheckBox.UseVisualStyleBackColor = true;
             this.editCheckBox.CheckedChanged += new System.EventHandler(this.editCheckBox_CheckedChanged);
@@ -457,7 +457,7 @@
             this.paramBox.Name = "paramBox";
             this.paramBox.ReadOnly = true;
             this.paramBox.Size = new System.Drawing.Size(516, 20);
-            this.paramBox.TabIndex = 0;
+            this.paramBox.TabIndex = 11;
             // 
             // infoTextBox
             // 
@@ -488,6 +488,7 @@
             this.MinimumSize = new System.Drawing.Size(610, 415);
             this.Name = "ParametersControl";
             this.Size = new System.Drawing.Size(610, 415);
+            this.Load += new System.EventHandler(this.ParametersControl_Load);
             this.othersGroupBox.ResumeLayout(false);
             this.othersGroupBox.PerformLayout();
             this.audioGroupBox.ResumeLayout(false);

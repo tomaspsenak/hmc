@@ -16,7 +16,7 @@ namespace HomeMediaCenterGUI
 {
     public partial class MainForm : Form
     {
-        private MediaServerDevice mediaCenter = new MediaServerDevice();
+        private readonly MediaServerDevice mediaCenter;
         private ToolTip mainToolTip = new ToolTip();
 
         private EventHandler<LogEventArgs> logEventHandler;
@@ -24,31 +24,39 @@ namespace HomeMediaCenterGUI
         private enum AfterStopped { Nothing, Close, LoadSettings };
         private AfterStopped afterStopped;
 
-        private readonly string directoryPath;
-        private readonly string settingsPath;
-        private readonly string databasePath;
         private readonly string regRunName = "HomeMediaCenter";
+        private readonly string[] supportedLanguages = new string[] { null, "en-US", "sk-SK", "da-DK" };
 
         public MainForm()
         {
+            DirectoryInfo di = Directory.CreateDirectory(Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Home Media Center"));
+
+            this.mediaCenter = new MediaServerDevice(di.FullName);
+
             this.logEventHandler = new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
             this.mediaCenter.AsyncStartEnd += new EventHandler<ExceptionEventArgs>(mediaCenter_AsyncStartEnd);
             this.mediaCenter.AsyncStopEnd += new EventHandler<ExceptionEventArgs>(mediaCenter_AsyncStopEnd);
             this.mediaCenter.ItemManager.AsyncBuildDatabaseStart += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseStart);
             this.mediaCenter.ItemManager.AsyncBuildDatabaseEnd += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseEnd);
 
-            DirectoryInfo di = Directory.CreateDirectory(Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Home Media Center"));
-            this.directoryPath = di.FullName;
-            this.settingsPath = Path.Combine(di.FullName, "settings.xml");
-            this.databasePath = Path.Combine(di.FullName, "database.db");
-
             InitializeComponent();
-
-            InitLanguage();
         }
 
         private void InitLanguage()
         {
+            this.ffdshowLabel.Text = DirectShowEncoder.IsFFDSHOWInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.wmvLabel.Text = DirectShowEncoder.IsWMVInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.mpeg2Label.Text = DirectShowEncoder.IsMPEG2Installed() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.webmLabel.Text = DirectShowEncoder.IsWEBMInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.hmcLabel.Text = DirectShowEncoder.IsHMCInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+
+            this.languageComboBox.Items.Clear();
+            this.languageComboBox.Items.Add(LanguageResource.Automatic);
+            foreach (string language in this.supportedLanguages.Where(a => a != null))
+            {
+                this.languageComboBox.Items.Add(new System.Globalization.CultureInfo(language).NativeName);
+            }
+
             this.addDirButton.Text = LanguageResource.Add;
             this.removeDirButton.Text = LanguageResource.Remove;
             this.directoriesGroup.Text = LanguageResource.Directories;
@@ -70,6 +78,8 @@ namespace HomeMediaCenterGUI
             this.streamGroupBox.Text = LanguageResource.Stream;
             this.friendlyNameLabel.Text = LanguageResource.FriendlyName;
             this.portLabel.Text = LanguageResource.Port;
+            this.languageLabel.Text = LanguageResource.Language;
+            this.generateThumbnailsCheckBox.Text = LanguageResource.GenerateThumbnails;
             this.audioNativeCheck.Text = LanguageResource.AllowNative;
             this.imageNativeCheck.Text = LanguageResource.AllowNative;
             this.videoNativeCheck.Text = LanguageResource.AllowNative;
@@ -105,11 +115,12 @@ namespace HomeMediaCenterGUI
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            this.ffdshowLabel.Text = DirectShowEncoder.IsFFDSHOWInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.wmvLabel.Text = DirectShowEncoder.IsWMVInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.mpeg2Label.Text = DirectShowEncoder.IsMPEG2Installed() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.webmLabel.Text = DirectShowEncoder.IsWEBMInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.hmcLabel.Text = DirectShowEncoder.IsHMCInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            try { this.mediaCenter.LoadSettings(); }
+            catch { MessageBox.Show(this, LanguageResource.ConfigCorrupted, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+
+            //InitLanguage az po LoadSettings - nastavi sa jazyk
+            this.mediaCenter.SetCurrentThreadCulture();
+            InitLanguage();
 
             string str0 = System.Environment.Is64BitProcess ? "x64" : "x86";
 
@@ -122,10 +133,8 @@ namespace HomeMediaCenterGUI
             catch { str2 = string.Empty; }
 
             string str3 = System.Reflection.Assembly.GetAssembly(typeof(HomeMediaCenter.MediaServerDevice)).FullName;
-            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2013\r\ntomaspsenak@gmail.com\r\n----------------------------------------------\r\n{1}\r\n{2}\r\n{3}", str0, str1, str2, str3);
-
-            try { this.mediaCenter.LoadSettings(this.settingsPath, this.databasePath); }
-            catch { MessageBox.Show(this, LanguageResource.ConfigCorrupted, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2014\r\ntomaspsenak@gmail.com\r\n{1}\r\n----------------------------------------------\r\n{2}\r\n{3}\r\n{4}",
+                str0, LanguageResource.TranslatedBy, str1, str2, str3);
 
             try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
             catch { this.startupCheckBox.Checked = false; }
@@ -148,18 +157,23 @@ namespace HomeMediaCenterGUI
             if (e.CloseReason == CloseReason.ApplicationExitCall)
                 return;
 
+            if (!this.mediaCenter.Started)
+                return;
+
             e.Cancel = true;
 
-            if (this.startButton.Enabled)
-                StopMediaCenterAsync(AfterStopped.Close);
+            //Skryje form - na pozadi este korektne ukonci server a ulozi nastavenia
+            Hide();
+
+            StopMediaCenterAsync(AfterStopped.Close);
         }
 
         private void addDirButton_Click(object sender, EventArgs e)
         {
-            FolderBrowserDialog dialog = new FolderBrowserDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            AddDirForm adf = new AddDirForm();
+            if (adf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                this.dirListBox.DataSource = this.mediaCenter.ItemManager.AddDirectory(dialog.SelectedPath);
+                this.dirListBox.DataSource = this.mediaCenter.ItemManager.AddDirectory(adf.PathText, adf.TitleText);
             }
         }
 
@@ -167,7 +181,10 @@ namespace HomeMediaCenterGUI
         {
             string dir = this.dirListBox.SelectedItem as string;
             if (dir == null)
+            {
                 MessageBox.Show(this, LanguageResource.SelectDirectory);
+                return;
+            }
 
             if (MessageBox.Show(this, string.Format(LanguageResource.RemoveFolderQuestion, dir), LanguageResource.Directories, 
                 MessageBoxButtons.YesNo) == DialogResult.Yes)
@@ -179,7 +196,7 @@ namespace HomeMediaCenterGUI
             try
             {
                 string address = "localhost";
-                System.Diagnostics.Process.Start(string.Format("http://{0}:{1}/web/", address, this.mediaCenter.Server.HttpPort));
+                System.Diagnostics.Process.Start(string.Format("http://{0}:{1}/", address, this.mediaCenter.Server.HttpPort));
             }
             catch { }
         }
@@ -248,10 +265,10 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
+            SetButtonEnabled(true);
+
             if (e.Exception != null)
             {
-                SetButtonEnabled(true);
-
                 this.statusTextLabel.Text = LanguageResource.Stopped;
                 this.statusTextLabel.ForeColor = Color.Red;
 
@@ -272,8 +289,6 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            SetButtonEnabled(false);
-
             this.statusTextLabel.Text = LanguageResource.RefreshingDatabase;
             this.statusTextLabel.ForeColor = Color.Orange;
         }
@@ -285,8 +300,6 @@ namespace HomeMediaCenterGUI
                 BeginInvoke(new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseEnd), sender, e);
                 return;
             }
-
-            SetButtonEnabled(true);
 
             if (this.mediaCenter.Started)
             {
@@ -328,7 +341,7 @@ namespace HomeMediaCenterGUI
 
             if (this.afterStopped == AfterStopped.Close)
             {
-                this.mediaCenter.SaveSettings(this.settingsPath, this.databasePath);
+                this.mediaCenter.SaveSettings();
                 Application.Exit();
             }
             else if (this.afterStopped == AfterStopped.LoadSettings)
@@ -358,12 +371,24 @@ namespace HomeMediaCenterGUI
             this.realTimeDatabaseRefreshCheckBox.Enabled = enabled;
             this.tryToForwardPortCheckBox.Enabled = enabled;
             this.streamSourcesButton.Enabled = enabled;
+            this.generateThumbnailsCheckBox.Enabled = enabled;
+            this.languageComboBox.Enabled = enabled;
         }
 
         private void mainTabControl_Selected(object sender, TabControlEventArgs e)
         {
             if (this.mainTabControl.SelectedTab == this.settingsTabPage)
             {
+                string langName = (this.mediaCenter.CultureInfo == null) ? null : this.mediaCenter.CultureInfo.Name;
+                for (int i = 0; i < this.supportedLanguages.Length; i++)
+                {
+                    if (this.supportedLanguages[i] == langName)
+                    {
+                        this.languageComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+
                 this.friendlyNameText.Text = this.mediaCenter.FriendlyName;
                 this.portText.Text = this.mediaCenter.Server.HttpPort.ToString();
                 this.tryToForwardPortCheckBox.Checked = this.mediaCenter.TryToForwardPort;
@@ -371,6 +396,7 @@ namespace HomeMediaCenterGUI
                 this.webcamStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableWebcamStreaming;
                 this.desktopStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableDesktopStreaming;
                 this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.ItemManager.RealTimeDatabaseRefresh;
+                this.generateThumbnailsCheckBox.Checked = this.mediaCenter.GenerateThumbnails;
 
                 MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
 
@@ -401,13 +427,21 @@ namespace HomeMediaCenterGUI
         private void applySettingsButton_Click(object sender, EventArgs e)
         {
             if (this.mediaCenter.Started)
+            {
                 StopMediaCenterAsync(AfterStopped.LoadSettings);
+            }
             else
+            {
                 ApplySettings();
+                this.mediaCenter.SaveSettings();
+            }
         }
 
         private void ApplySettings()
         {
+            string language = this.supportedLanguages[this.languageComboBox.SelectedIndex];
+            this.mediaCenter.CultureInfo = (language == null) ? null : new System.Globalization.CultureInfo(language);
+
             this.mediaCenter.FriendlyName = this.friendlyNameText.Text;
             this.mediaCenter.Server.HttpPort = int.Parse(this.portText.Text);
             this.mediaCenter.TryToForwardPort = this.tryToForwardPortCheckBox.Checked;
@@ -415,6 +449,7 @@ namespace HomeMediaCenterGUI
             this.mediaCenter.ItemManager.EnableWebcamStreaming = this.webcamStreamingCheck.Checked;
             this.mediaCenter.ItemManager.EnableDesktopStreaming = this.desktopStreamingCheck.Checked;
             this.mediaCenter.ItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
+            this.mediaCenter.GenerateThumbnails = this.generateThumbnailsCheckBox.Checked;
 
             MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
 
@@ -606,7 +641,7 @@ namespace HomeMediaCenterGUI
         {
             try
             {
-                System.Diagnostics.Process.Start(this.directoryPath);
+                System.Diagnostics.Process.Start(this.mediaCenter.DataDirectory);
             }
             catch { }
         }
@@ -673,7 +708,7 @@ namespace HomeMediaCenterGUI
                     {
                         source.SubmitChanges();
 
-                        this.mediaCenter.ItemManager.BuildDatabaseAsync("Stream");
+                        this.mediaCenter.ItemManager.BuildDatabaseAsync("Stream", true);
                     }
                 }
             }
