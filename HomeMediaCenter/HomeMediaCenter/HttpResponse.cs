@@ -8,7 +8,7 @@ using System.Xml;
 
 namespace HomeMediaCenter
 {
-    public enum HttpHeader { ContentLength, ContentType, Server, Date, Connection, AcceptRanges, TransferEncoding }
+    public enum HttpHeader { ContentLength, ContentType, Server, Date, Connection, AcceptRanges, TransferEncoding, CacheControl }
 
     public class HttpResponse
     {
@@ -47,6 +47,7 @@ namespace HomeMediaCenter
                 case HttpHeader.Server: AddHreader("Server", value); return;
                 case HttpHeader.Connection: AddHreader("Connection", value); return;
                 case HttpHeader.TransferEncoding: AddHreader("Transfer-Encoding", value); return;
+                case HttpHeader.CacheControl: AddHreader("Cache-Control", value); return;
             }
         }
 

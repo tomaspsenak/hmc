@@ -43,6 +43,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -128,6 +129,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>LanguageResource.resx</DependentUpon>
     </Compile>
+    <Compile Include="LanguageResource.da-DK.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>LanguageResource.da-DK.resx</DependentUpon>
+    </Compile>
     <Compile Include="LanguageResource.sk-SK.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -178,6 +184,10 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="LanguageResource.da-DK.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>LanguageResource.da-DK.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
     <EmbeddedResource Include="LanguageResource.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>LanguageResource.Designer.cs</LastGenOutput>
@@ -197,7 +207,6 @@
     <EmbeddedResource Include="Resources\htmlrightnav.gif" />
     <EmbeddedResource Include="Resources\htmlrightnava.gif" />
     <EmbeddedResource Include="Resources\htmlstyle.css" />
-    <EmbeddedResource Include="Resources\jquery-1.7.1.min.js" />
     <EmbeddedResource Include="Resources\jquery.lightbox-0.5.css" />
     <EmbeddedResource Include="Resources\jquery.lightbox-0.5.min.js" />
     <EmbeddedResource Include="Resources\lightbox-blank.gif" />
@@ -208,12 +217,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\player.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\jquery-ui-1.8.18.custom.min.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\jquery-ui-1.8.18.custom.css" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\webplayer.xap" />
@@ -251,6 +254,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\folder.png" />
     <EmbeddedResource Include="Resources\folderback.png" />
+    <EmbeddedResource Include="Resources\jquery-1.11.1.min.js" />
+    <EmbeddedResource Include="Resources\jquery-ui-1.10.4.custom.min.css" />
+    <EmbeddedResource Include="Resources\jquery-ui-1.10.4.custom.min.js" />
+    <EmbeddedResource Include="Resources\ui-icons_222222_256x240.png" />
     <Content Include="System.Data.SqlServerCe.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

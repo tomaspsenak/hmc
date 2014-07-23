@@ -52,8 +52,13 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.settingsTabPage = new System.Windows.Forms.TabPage();
+            this.generateThumbnailsCheckBox = new System.Windows.Forms.CheckBox();
+            this.languageComboBox = new System.Windows.Forms.ComboBox();
+            this.languageLabel = new System.Windows.Forms.Label();
             this.tryToForwardPortCheckBox = new System.Windows.Forms.CheckBox();
             this.streamGroupBox = new System.Windows.Forms.GroupBox();
+            this.webcamStreamingCheck = new System.Windows.Forms.CheckBox();
+            this.desktopStreamingCheck = new System.Windows.Forms.CheckBox();
             this.videoStreamParamEditButton = new System.Windows.Forms.Button();
             this.videoStreamParamAddButton = new System.Windows.Forms.Button();
             this.videoStreamParamRemoveButton = new System.Windows.Forms.Button();
@@ -105,8 +110,6 @@
             this.statusLabel = new System.Windows.Forms.Label();
             this.statusTextLabel = new System.Windows.Forms.Label();
             this.mainNotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.desktopStreamingCheck = new System.Windows.Forms.CheckBox();
-            this.webcamStreamingCheck = new System.Windows.Forms.CheckBox();
             this.paramControl = new HomeMediaCenterGUI.ParametersControl();
             this.directoriesGroup.SuspendLayout();
             this.mainTabControl.SuspendLayout();
@@ -154,7 +157,7 @@
             this.addDirButton.Location = new System.Drawing.Point(185, 330);
             this.addDirButton.Name = "addDirButton";
             this.addDirButton.Size = new System.Drawing.Size(75, 23);
-            this.addDirButton.TabIndex = 2;
+            this.addDirButton.TabIndex = 20;
             this.addDirButton.Text = "Add";
             this.addDirButton.UseVisualStyleBackColor = true;
             this.addDirButton.Click += new System.EventHandler(this.addDirButton_Click);
@@ -165,7 +168,7 @@
             this.removeDirButton.Location = new System.Drawing.Point(266, 330);
             this.removeDirButton.Name = "removeDirButton";
             this.removeDirButton.Size = new System.Drawing.Size(75, 23);
-            this.removeDirButton.TabIndex = 3;
+            this.removeDirButton.TabIndex = 30;
             this.removeDirButton.Text = "Remove";
             this.removeDirButton.UseVisualStyleBackColor = true;
             this.removeDirButton.Click += new System.EventHandler(this.removeDirButton_Click);
@@ -177,7 +180,7 @@
             this.webLinkLabel.Location = new System.Drawing.Point(469, 341);
             this.webLinkLabel.Name = "webLinkLabel";
             this.webLinkLabel.Size = new System.Drawing.Size(74, 13);
-            this.webLinkLabel.TabIndex = 4;
+            this.webLinkLabel.TabIndex = 40;
             this.webLinkLabel.TabStop = true;
             this.webLinkLabel.Text = "Web interface";
             this.webLinkLabel.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.webLinkLabel_LinkClicked);
@@ -204,7 +207,7 @@
             this.streamSourcesButton.Location = new System.Drawing.Point(10, 330);
             this.streamSourcesButton.Name = "streamSourcesButton";
             this.streamSourcesButton.Size = new System.Drawing.Size(75, 23);
-            this.streamSourcesButton.TabIndex = 4;
+            this.streamSourcesButton.TabIndex = 10;
             this.streamSourcesButton.Text = "Stream";
             this.streamSourcesButton.UseVisualStyleBackColor = true;
             this.streamSourcesButton.Click += new System.EventHandler(this.streamSourcesButton_Click);
@@ -349,6 +352,9 @@
             // settingsTabPage
             // 
             this.settingsTabPage.AutoScroll = true;
+            this.settingsTabPage.Controls.Add(this.generateThumbnailsCheckBox);
+            this.settingsTabPage.Controls.Add(this.languageComboBox);
+            this.settingsTabPage.Controls.Add(this.languageLabel);
             this.settingsTabPage.Controls.Add(this.tryToForwardPortCheckBox);
             this.settingsTabPage.Controls.Add(this.streamGroupBox);
             this.settingsTabPage.Controls.Add(this.realTimeDatabaseRefreshCheckBox);
@@ -369,14 +375,44 @@
             this.settingsTabPage.Text = "Settings";
             this.settingsTabPage.UseVisualStyleBackColor = true;
             // 
+            // generateThumbnailsCheckBox
+            // 
+            this.generateThumbnailsCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.generateThumbnailsCheckBox.Location = new System.Drawing.Point(175, 176);
+            this.generateThumbnailsCheckBox.Name = "generateThumbnailsCheckBox";
+            this.generateThumbnailsCheckBox.Size = new System.Drawing.Size(458, 17);
+            this.generateThumbnailsCheckBox.TabIndex = 15;
+            this.generateThumbnailsCheckBox.Text = "Generate thumbnails";
+            this.generateThumbnailsCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // languageComboBox
+            // 
+            this.languageComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.languageComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.languageComboBox.FormattingEnabled = true;
+            this.languageComboBox.Location = new System.Drawing.Point(175, 57);
+            this.languageComboBox.Name = "languageComboBox";
+            this.languageComboBox.Size = new System.Drawing.Size(362, 20);
+            this.languageComboBox.TabIndex = 3;
+            // 
+            // languageLabel
+            // 
+            this.languageLabel.Location = new System.Drawing.Point(9, 60);
+            this.languageLabel.Name = "languageLabel";
+            this.languageLabel.Size = new System.Drawing.Size(160, 13);
+            this.languageLabel.TabIndex = 35;
+            this.languageLabel.Text = "Language:";
+            // 
             // tryToForwardPortCheckBox
             // 
-            this.tryToForwardPortCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.tryToForwardPortCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.tryToForwardPortCheckBox.Location = new System.Drawing.Point(175, 126);
+            this.tryToForwardPortCheckBox.Location = new System.Drawing.Point(175, 153);
             this.tryToForwardPortCheckBox.Name = "tryToForwardPortCheckBox";
             this.tryToForwardPortCheckBox.Size = new System.Drawing.Size(458, 17);
-            this.tryToForwardPortCheckBox.TabIndex = 34;
+            this.tryToForwardPortCheckBox.TabIndex = 14;
             this.tryToForwardPortCheckBox.Text = "Enable UPnP port forwarding";
             this.tryToForwardPortCheckBox.UseVisualStyleBackColor = true;
             // 
@@ -391,12 +427,34 @@
             this.streamGroupBox.Controls.Add(this.videoStreamParamRemoveButton);
             this.streamGroupBox.Controls.Add(this.streamParamLabel);
             this.streamGroupBox.Controls.Add(this.videoStreamParamCombo);
-            this.streamGroupBox.Location = new System.Drawing.Point(6, 388);
+            this.streamGroupBox.Location = new System.Drawing.Point(6, 438);
             this.streamGroupBox.Name = "streamGroupBox";
             this.streamGroupBox.Size = new System.Drawing.Size(627, 95);
-            this.streamGroupBox.TabIndex = 30;
+            this.streamGroupBox.TabIndex = 50;
             this.streamGroupBox.TabStop = false;
             this.streamGroupBox.Text = "Stream";
+            // 
+            // webcamStreamingCheck
+            // 
+            this.webcamStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.webcamStreamingCheck.Location = new System.Drawing.Point(172, 42);
+            this.webcamStreamingCheck.Name = "webcamStreamingCheck";
+            this.webcamStreamingCheck.Size = new System.Drawing.Size(449, 17);
+            this.webcamStreamingCheck.TabIndex = 52;
+            this.webcamStreamingCheck.Text = "Enable webcam streaming";
+            this.webcamStreamingCheck.UseVisualStyleBackColor = true;
+            // 
+            // desktopStreamingCheck
+            // 
+            this.desktopStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.desktopStreamingCheck.Location = new System.Drawing.Point(172, 19);
+            this.desktopStreamingCheck.Name = "desktopStreamingCheck";
+            this.desktopStreamingCheck.Size = new System.Drawing.Size(449, 17);
+            this.desktopStreamingCheck.TabIndex = 51;
+            this.desktopStreamingCheck.Text = "Enable desktop streaming";
+            this.desktopStreamingCheck.UseVisualStyleBackColor = true;
             // 
             // videoStreamParamEditButton
             // 
@@ -405,7 +463,7 @@
             this.videoStreamParamEditButton.Location = new System.Drawing.Point(532, 63);
             this.videoStreamParamEditButton.Name = "videoStreamParamEditButton";
             this.videoStreamParamEditButton.Size = new System.Drawing.Size(29, 24);
-            this.videoStreamParamEditButton.TabIndex = 29;
+            this.videoStreamParamEditButton.TabIndex = 54;
             this.videoStreamParamEditButton.UseVisualStyleBackColor = true;
             this.videoStreamParamEditButton.Click += new System.EventHandler(this.videoStreamParamEditButton_Click);
             // 
@@ -416,7 +474,7 @@
             this.videoStreamParamAddButton.Location = new System.Drawing.Point(592, 63);
             this.videoStreamParamAddButton.Name = "videoStreamParamAddButton";
             this.videoStreamParamAddButton.Size = new System.Drawing.Size(29, 24);
-            this.videoStreamParamAddButton.TabIndex = 28;
+            this.videoStreamParamAddButton.TabIndex = 56;
             this.videoStreamParamAddButton.UseVisualStyleBackColor = true;
             this.videoStreamParamAddButton.Click += new System.EventHandler(this.videoStreamParamAddButton_Click);
             // 
@@ -427,7 +485,7 @@
             this.videoStreamParamRemoveButton.Location = new System.Drawing.Point(562, 63);
             this.videoStreamParamRemoveButton.Name = "videoStreamParamRemoveButton";
             this.videoStreamParamRemoveButton.Size = new System.Drawing.Size(29, 24);
-            this.videoStreamParamRemoveButton.TabIndex = 27;
+            this.videoStreamParamRemoveButton.TabIndex = 55;
             this.videoStreamParamRemoveButton.UseVisualStyleBackColor = true;
             this.videoStreamParamRemoveButton.Click += new System.EventHandler(this.videoStreamParamRemoveButton_Click);
             // 
@@ -441,46 +499,46 @@
             // 
             // videoStreamParamCombo
             // 
-            this.videoStreamParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.videoStreamParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoStreamParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.videoStreamParamCombo.FormattingEnabled = true;
             this.videoStreamParamCombo.Location = new System.Drawing.Point(172, 65);
             this.videoStreamParamCombo.Name = "videoStreamParamCombo";
             this.videoStreamParamCombo.Size = new System.Drawing.Size(353, 21);
-            this.videoStreamParamCombo.TabIndex = 25;
+            this.videoStreamParamCombo.TabIndex = 53;
             // 
             // realTimeDatabaseRefreshCheckBox
             // 
-            this.realTimeDatabaseRefreshCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.realTimeDatabaseRefreshCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.realTimeDatabaseRefreshCheckBox.Location = new System.Drawing.Point(175, 103);
+            this.realTimeDatabaseRefreshCheckBox.Location = new System.Drawing.Point(175, 130);
             this.realTimeDatabaseRefreshCheckBox.Name = "realTimeDatabaseRefreshCheckBox";
             this.realTimeDatabaseRefreshCheckBox.Size = new System.Drawing.Size(458, 17);
-            this.realTimeDatabaseRefreshCheckBox.TabIndex = 33;
+            this.realTimeDatabaseRefreshCheckBox.TabIndex = 13;
             this.realTimeDatabaseRefreshCheckBox.Text = "Real time database refresh";
             this.realTimeDatabaseRefreshCheckBox.UseVisualStyleBackColor = true;
             // 
             // minimizeCheckBox
             // 
-            this.minimizeCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.minimizeCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.minimizeCheckBox.Location = new System.Drawing.Point(175, 80);
+            this.minimizeCheckBox.Location = new System.Drawing.Point(175, 107);
             this.minimizeCheckBox.Name = "minimizeCheckBox";
             this.minimizeCheckBox.Size = new System.Drawing.Size(458, 17);
-            this.minimizeCheckBox.TabIndex = 32;
+            this.minimizeCheckBox.TabIndex = 12;
             this.minimizeCheckBox.Text = "Minimize to tray";
             this.minimizeCheckBox.UseVisualStyleBackColor = true;
             this.minimizeCheckBox.CheckedChanged += new System.EventHandler(this.minimizeCheckBox_CheckedChanged);
             // 
             // startupCheckBox
             // 
-            this.startupCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.startupCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.startupCheckBox.Location = new System.Drawing.Point(175, 57);
+            this.startupCheckBox.Location = new System.Drawing.Point(175, 84);
             this.startupCheckBox.Name = "startupCheckBox";
             this.startupCheckBox.Size = new System.Drawing.Size(458, 17);
-            this.startupCheckBox.TabIndex = 31;
+            this.startupCheckBox.TabIndex = 11;
             this.startupCheckBox.Text = "Run at system startup";
             this.startupCheckBox.UseVisualStyleBackColor = true;
             this.startupCheckBox.CheckedChanged += new System.EventHandler(this.startupCheckBox_CheckedChanged);
@@ -491,14 +549,14 @@
             this.applySettingsButton.Location = new System.Drawing.Point(543, 5);
             this.applySettingsButton.Name = "applySettingsButton";
             this.applySettingsButton.Size = new System.Drawing.Size(90, 46);
-            this.applySettingsButton.TabIndex = 30;
+            this.applySettingsButton.TabIndex = 100;
             this.applySettingsButton.Text = "Apply and restart";
             this.applySettingsButton.UseVisualStyleBackColor = true;
             this.applySettingsButton.Click += new System.EventHandler(this.applySettingsButton_Click);
             // 
             // videoGroupBox
             // 
-            this.videoGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.videoGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoGroupBox.Controls.Add(this.videoParamEditButton);
             this.videoGroupBox.Controls.Add(this.videoParamAddButton);
@@ -506,10 +564,10 @@
             this.videoGroupBox.Controls.Add(this.videoNativeCheck);
             this.videoGroupBox.Controls.Add(this.videoParamCombo);
             this.videoGroupBox.Controls.Add(this.videoParamLabel);
-            this.videoGroupBox.Location = new System.Drawing.Point(6, 309);
+            this.videoGroupBox.Location = new System.Drawing.Point(6, 359);
             this.videoGroupBox.Name = "videoGroupBox";
             this.videoGroupBox.Size = new System.Drawing.Size(627, 73);
-            this.videoGroupBox.TabIndex = 29;
+            this.videoGroupBox.TabIndex = 40;
             this.videoGroupBox.TabStop = false;
             this.videoGroupBox.Text = "Video";
             // 
@@ -520,7 +578,7 @@
             this.videoParamEditButton.Location = new System.Drawing.Point(532, 40);
             this.videoParamEditButton.Name = "videoParamEditButton";
             this.videoParamEditButton.Size = new System.Drawing.Size(29, 24);
-            this.videoParamEditButton.TabIndex = 18;
+            this.videoParamEditButton.TabIndex = 43;
             this.videoParamEditButton.UseVisualStyleBackColor = true;
             this.videoParamEditButton.Click += new System.EventHandler(this.videoParamEditButton_Click);
             // 
@@ -531,7 +589,7 @@
             this.videoParamAddButton.Location = new System.Drawing.Point(592, 40);
             this.videoParamAddButton.Name = "videoParamAddButton";
             this.videoParamAddButton.Size = new System.Drawing.Size(29, 24);
-            this.videoParamAddButton.TabIndex = 19;
+            this.videoParamAddButton.TabIndex = 45;
             this.videoParamAddButton.UseVisualStyleBackColor = true;
             this.videoParamAddButton.Click += new System.EventHandler(this.videoParamAddButton_Click);
             // 
@@ -542,31 +600,31 @@
             this.videoParamRemoveButton.Location = new System.Drawing.Point(562, 40);
             this.videoParamRemoveButton.Name = "videoParamRemoveButton";
             this.videoParamRemoveButton.Size = new System.Drawing.Size(29, 24);
-            this.videoParamRemoveButton.TabIndex = 18;
+            this.videoParamRemoveButton.TabIndex = 44;
             this.videoParamRemoveButton.UseVisualStyleBackColor = true;
             this.videoParamRemoveButton.Click += new System.EventHandler(this.videoParamRemoveButton_Click);
             // 
             // videoNativeCheck
             // 
-            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.videoNativeCheck.Name = "videoNativeCheck";
             this.videoNativeCheck.Size = new System.Drawing.Size(449, 17);
-            this.videoNativeCheck.TabIndex = 18;
+            this.videoNativeCheck.TabIndex = 41;
             this.videoNativeCheck.Text = "Allow native file";
             this.videoNativeCheck.UseVisualStyleBackColor = true;
             // 
             // videoParamCombo
             // 
-            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.videoParamCombo.FormattingEnabled = true;
             this.videoParamCombo.Location = new System.Drawing.Point(172, 42);
             this.videoParamCombo.Name = "videoParamCombo";
             this.videoParamCombo.Size = new System.Drawing.Size(353, 21);
-            this.videoParamCombo.TabIndex = 21;
+            this.videoParamCombo.TabIndex = 42;
             // 
             // videoParamLabel
             // 
@@ -578,7 +636,7 @@
             // 
             // imageGroupBox
             // 
-            this.imageGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.imageGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageGroupBox.Controls.Add(this.imageParamEditButton);
             this.imageGroupBox.Controls.Add(this.imageParamAddButton);
@@ -586,10 +644,10 @@
             this.imageGroupBox.Controls.Add(this.imageNativeCheck);
             this.imageGroupBox.Controls.Add(this.imageParamCombo);
             this.imageGroupBox.Controls.Add(this.imageParamLabel);
-            this.imageGroupBox.Location = new System.Drawing.Point(6, 230);
+            this.imageGroupBox.Location = new System.Drawing.Point(6, 280);
             this.imageGroupBox.Name = "imageGroupBox";
             this.imageGroupBox.Size = new System.Drawing.Size(627, 73);
-            this.imageGroupBox.TabIndex = 28;
+            this.imageGroupBox.TabIndex = 30;
             this.imageGroupBox.TabStop = false;
             this.imageGroupBox.Text = "Image";
             // 
@@ -600,7 +658,7 @@
             this.imageParamEditButton.Location = new System.Drawing.Point(532, 40);
             this.imageParamEditButton.Name = "imageParamEditButton";
             this.imageParamEditButton.Size = new System.Drawing.Size(29, 24);
-            this.imageParamEditButton.TabIndex = 15;
+            this.imageParamEditButton.TabIndex = 33;
             this.imageParamEditButton.UseVisualStyleBackColor = true;
             this.imageParamEditButton.Click += new System.EventHandler(this.imageParamEditButton_Click);
             // 
@@ -611,7 +669,7 @@
             this.imageParamAddButton.Location = new System.Drawing.Point(592, 40);
             this.imageParamAddButton.Name = "imageParamAddButton";
             this.imageParamAddButton.Size = new System.Drawing.Size(29, 24);
-            this.imageParamAddButton.TabIndex = 15;
+            this.imageParamAddButton.TabIndex = 35;
             this.imageParamAddButton.UseVisualStyleBackColor = true;
             this.imageParamAddButton.Click += new System.EventHandler(this.imageParamAddButton_Click);
             // 
@@ -622,31 +680,31 @@
             this.imageParamRemoveButton.Location = new System.Drawing.Point(562, 40);
             this.imageParamRemoveButton.Name = "imageParamRemoveButton";
             this.imageParamRemoveButton.Size = new System.Drawing.Size(29, 24);
-            this.imageParamRemoveButton.TabIndex = 14;
+            this.imageParamRemoveButton.TabIndex = 34;
             this.imageParamRemoveButton.UseVisualStyleBackColor = true;
             this.imageParamRemoveButton.Click += new System.EventHandler(this.imageParamRemoveButton_Click);
             // 
             // imageNativeCheck
             // 
-            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.imageNativeCheck.Name = "imageNativeCheck";
             this.imageNativeCheck.Size = new System.Drawing.Size(449, 17);
-            this.imageNativeCheck.TabIndex = 11;
+            this.imageNativeCheck.TabIndex = 31;
             this.imageNativeCheck.Text = "Allow native file";
             this.imageNativeCheck.UseVisualStyleBackColor = true;
             // 
             // imageParamCombo
             // 
-            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.imageParamCombo.FormattingEnabled = true;
             this.imageParamCombo.Location = new System.Drawing.Point(172, 42);
             this.imageParamCombo.Name = "imageParamCombo";
             this.imageParamCombo.Size = new System.Drawing.Size(353, 21);
-            this.imageParamCombo.TabIndex = 14;
+            this.imageParamCombo.TabIndex = 32;
             // 
             // imageParamLabel
             // 
@@ -658,7 +716,7 @@
             // 
             // audioGroupBox
             // 
-            this.audioGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.audioGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioGroupBox.Controls.Add(this.audioParamEditButton);
             this.audioGroupBox.Controls.Add(this.audioParamAddButton);
@@ -666,10 +724,10 @@
             this.audioGroupBox.Controls.Add(this.audioNativeCheck);
             this.audioGroupBox.Controls.Add(this.audioParamCombo);
             this.audioGroupBox.Controls.Add(this.audioParamLabel);
-            this.audioGroupBox.Location = new System.Drawing.Point(6, 149);
+            this.audioGroupBox.Location = new System.Drawing.Point(6, 199);
             this.audioGroupBox.Name = "audioGroupBox";
             this.audioGroupBox.Size = new System.Drawing.Size(627, 75);
-            this.audioGroupBox.TabIndex = 27;
+            this.audioGroupBox.TabIndex = 20;
             this.audioGroupBox.TabStop = false;
             this.audioGroupBox.Text = "Audio";
             // 
@@ -680,7 +738,7 @@
             this.audioParamEditButton.Location = new System.Drawing.Point(532, 40);
             this.audioParamEditButton.Name = "audioParamEditButton";
             this.audioParamEditButton.Size = new System.Drawing.Size(29, 24);
-            this.audioParamEditButton.TabIndex = 14;
+            this.audioParamEditButton.TabIndex = 23;
             this.audioParamEditButton.UseVisualStyleBackColor = true;
             this.audioParamEditButton.Click += new System.EventHandler(this.audioParamEditButton_Click);
             // 
@@ -691,7 +749,7 @@
             this.audioParamAddButton.Location = new System.Drawing.Point(592, 40);
             this.audioParamAddButton.Name = "audioParamAddButton";
             this.audioParamAddButton.Size = new System.Drawing.Size(29, 24);
-            this.audioParamAddButton.TabIndex = 13;
+            this.audioParamAddButton.TabIndex = 25;
             this.audioParamAddButton.UseVisualStyleBackColor = true;
             this.audioParamAddButton.Click += new System.EventHandler(this.audioParamAddButton_Click);
             // 
@@ -702,31 +760,31 @@
             this.audioParamRemoveButton.Location = new System.Drawing.Point(562, 40);
             this.audioParamRemoveButton.Name = "audioParamRemoveButton";
             this.audioParamRemoveButton.Size = new System.Drawing.Size(29, 24);
-            this.audioParamRemoveButton.TabIndex = 12;
+            this.audioParamRemoveButton.TabIndex = 24;
             this.audioParamRemoveButton.UseVisualStyleBackColor = true;
             this.audioParamRemoveButton.Click += new System.EventHandler(this.audioParamRemoveButton_Click);
             // 
             // audioNativeCheck
             // 
-            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.audioNativeCheck.Name = "audioNativeCheck";
             this.audioNativeCheck.Size = new System.Drawing.Size(449, 17);
-            this.audioNativeCheck.TabIndex = 4;
+            this.audioNativeCheck.TabIndex = 21;
             this.audioNativeCheck.Text = "Allow native file";
             this.audioNativeCheck.UseVisualStyleBackColor = true;
             // 
             // audioParamCombo
             // 
-            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.audioParamCombo.FormattingEnabled = true;
             this.audioParamCombo.Location = new System.Drawing.Point(172, 42);
             this.audioParamCombo.Name = "audioParamCombo";
             this.audioParamCombo.Size = new System.Drawing.Size(353, 21);
-            this.audioParamCombo.TabIndex = 9;
+            this.audioParamCombo.TabIndex = 22;
             // 
             // audioParamLabel
             // 
@@ -738,12 +796,12 @@
             // 
             // portText
             // 
-            this.portText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.portText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.portText.Location = new System.Drawing.Point(175, 31);
             this.portText.Name = "portText";
             this.portText.Size = new System.Drawing.Size(362, 20);
-            this.portText.TabIndex = 3;
+            this.portText.TabIndex = 2;
             // 
             // portLabel
             // 
@@ -755,7 +813,7 @@
             // 
             // friendlyNameText
             // 
-            this.friendlyNameText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.friendlyNameText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.friendlyNameText.Location = new System.Drawing.Point(175, 5);
             this.friendlyNameText.Name = "friendlyNameText";
@@ -831,7 +889,7 @@
             0});
             this.logLengthUpDown.Name = "logLengthUpDown";
             this.logLengthUpDown.Size = new System.Drawing.Size(63, 20);
-            this.logLengthUpDown.TabIndex = 2;
+            this.logLengthUpDown.TabIndex = 20;
             this.logLengthUpDown.Value = new decimal(new int[] {
             100,
             0,
@@ -845,22 +903,22 @@
             this.logCheckBox.Location = new System.Drawing.Point(6, 7);
             this.logCheckBox.Name = "logCheckBox";
             this.logCheckBox.Size = new System.Drawing.Size(76, 17);
-            this.logCheckBox.TabIndex = 1;
+            this.logCheckBox.TabIndex = 10;
             this.logCheckBox.Text = "Enable log";
             this.logCheckBox.UseVisualStyleBackColor = true;
             this.logCheckBox.CheckedChanged += new System.EventHandler(this.logCheckBox_CheckedChanged);
             // 
             // logListBox
             // 
-            this.logListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+            this.logListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.logListBox.FormattingEnabled = true;
             this.logListBox.HorizontalScrollbar = true;
             this.logListBox.Location = new System.Drawing.Point(6, 30);
             this.logListBox.Name = "logListBox";
             this.logListBox.Size = new System.Drawing.Size(624, 342);
-            this.logListBox.TabIndex = 0;
+            this.logListBox.TabIndex = 30;
             // 
             // converterTabPage
             // 
@@ -880,7 +938,7 @@
             this.convertButton.Location = new System.Drawing.Point(210, 422);
             this.convertButton.Name = "convertButton";
             this.convertButton.Size = new System.Drawing.Size(120, 32);
-            this.convertButton.TabIndex = 31;
+            this.convertButton.TabIndex = 20;
             this.convertButton.Text = "Convert";
             this.convertButton.UseVisualStyleBackColor = true;
             this.convertButton.Click += new System.EventHandler(this.convertButton_Click);
@@ -902,7 +960,7 @@
             // 
             this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.label5.Location = new System.Drawing.Point(3, 144);
+            this.label5.Location = new System.Drawing.Point(3, 154);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(633, 81);
             this.label5.TabIndex = 3;
@@ -915,7 +973,7 @@
             // 
             this.homepageLinkLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.homepageLinkLabel.Location = new System.Drawing.Point(3, 125);
+            this.homepageLinkLabel.Location = new System.Drawing.Point(3, 135);
             this.homepageLinkLabel.Name = "homepageLinkLabel";
             this.homepageLinkLabel.Size = new System.Drawing.Size(633, 21);
             this.homepageLinkLabel.TabIndex = 2;
@@ -928,7 +986,7 @@
             // 
             this.settingsLinkLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.settingsLinkLabel.Location = new System.Drawing.Point(3, 108);
+            this.settingsLinkLabel.Location = new System.Drawing.Point(3, 118);
             this.settingsLinkLabel.Name = "settingsLinkLabel";
             this.settingsLinkLabel.Size = new System.Drawing.Size(633, 17);
             this.settingsLinkLabel.TabIndex = 1;
@@ -943,7 +1001,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.aboutLabel.Location = new System.Drawing.Point(3, 9);
             this.aboutLabel.Name = "aboutLabel";
-            this.aboutLabel.Size = new System.Drawing.Size(633, 99);
+            this.aboutLabel.Size = new System.Drawing.Size(633, 109);
             this.aboutLabel.TabIndex = 0;
             this.aboutLabel.Text = "aboutLabel";
             this.aboutLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -976,28 +1034,6 @@
             this.mainNotifyIcon.Text = "Home Media Center";
             this.mainNotifyIcon.Click += new System.EventHandler(this.mainNotifyIcon_Click);
             // 
-            // desktopStreamingCheck
-            // 
-            this.desktopStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.desktopStreamingCheck.Location = new System.Drawing.Point(172, 19);
-            this.desktopStreamingCheck.Name = "desktopStreamingCheck";
-            this.desktopStreamingCheck.Size = new System.Drawing.Size(432, 17);
-            this.desktopStreamingCheck.TabIndex = 30;
-            this.desktopStreamingCheck.Text = "Enable desktop streaming";
-            this.desktopStreamingCheck.UseVisualStyleBackColor = true;
-            // 
-            // webcamStreamingCheck
-            // 
-            this.webcamStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.webcamStreamingCheck.Location = new System.Drawing.Point(172, 42);
-            this.webcamStreamingCheck.Name = "webcamStreamingCheck";
-            this.webcamStreamingCheck.Size = new System.Drawing.Size(432, 17);
-            this.webcamStreamingCheck.TabIndex = 31;
-            this.webcamStreamingCheck.Text = "Enable webcam streaming";
-            this.webcamStreamingCheck.UseVisualStyleBackColor = true;
-            // 
             // paramControl
             // 
             this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -1006,7 +1042,7 @@
             this.paramControl.MinimumSize = new System.Drawing.Size(610, 415);
             this.paramControl.Name = "paramControl";
             this.paramControl.Size = new System.Drawing.Size(633, 415);
-            this.paramControl.TabIndex = 32;
+            this.paramControl.TabIndex = 10;
             // 
             // MainForm
             // 
@@ -1126,6 +1162,9 @@
         private System.Windows.Forms.CheckBox tryToForwardPortCheckBox;
         private System.Windows.Forms.CheckBox webcamStreamingCheck;
         private System.Windows.Forms.CheckBox desktopStreamingCheck;
+        private System.Windows.Forms.CheckBox generateThumbnailsCheckBox;
+        private System.Windows.Forms.ComboBox languageComboBox;
+        private System.Windows.Forms.Label languageLabel;
     }
 }
 

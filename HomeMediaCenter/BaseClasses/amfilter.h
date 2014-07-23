@@ -296,6 +296,8 @@ public:
     // pmt is the type to reconnect with - can be NULL
     // Calls ReconnectEx on the filter graph
     HRESULT ReconnectPin(IPin *pPin, __in_opt AM_MEDIA_TYPE const *pmt);
+	//Synchronous reconnect
+	HRESULT ReconnectPinSync(IPin *pPin, __in_opt AM_MEDIA_TYPE const *pmt);
 
     // find out the current pin version (used by enumerators)
     virtual LONG GetPinVersion();

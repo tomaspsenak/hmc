@@ -129,6 +129,9 @@
   <data name="Device" xml:space="preserve">
     <value>device</value>
   </data>
+  <data name="Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
   <data name="Duration" xml:space="preserve">
     <value>duration</value>
   </data>
@@ -161,6 +164,9 @@
   </data>
   <data name="Of" xml:space="preserve">
     <value>of</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>The operation failed</value>
   </data>
   <data name="Or" xml:space="preserve">
     <value>or</value>

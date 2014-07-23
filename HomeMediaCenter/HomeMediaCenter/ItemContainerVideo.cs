@@ -11,9 +11,10 @@ namespace HomeMediaCenter
 {
     public class ItemContainerVideo : ItemContainer
     {
-        protected class SubtitlesPathItemEqualityComparer : ItemEqualityComparer<ItemVideo>
+        protected class SubtitlesPathItemEqualityComparer : ItemEqualityComparer<string, ItemVideo>
         {
-            public override object GetValue(ItemVideo item) { return item.SubtitlesPath; }
+            public override object GetValueX(string item) { return item; }
+            public override object GetValueY(ItemVideo item) { return item.SubtitlesPath; }
         }
 
         public ItemContainerVideo() : base() { }
@@ -80,8 +81,11 @@ namespace HomeMediaCenter
                 return false;
         }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMe(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
             //Rozdielova obnova video suborov ktore maju titulky v samostatnom subore
             string[] files = new DirectoryInfo(this.Parent.Path).GetFiles(System.IO.Path.GetFileNameWithoutExtension(this.Path) + "*.*").Where(
                 a => manager.ContainsSubtitleExt(a.Extension)).Select(a => a.Name).ToArray();
@@ -94,7 +98,7 @@ namespace HomeMediaCenter
             foreach (Item item in toRemove)
             {
                 this.Items.Remove(item);
-                item.RemoveMe(context);
+                item.RemoveMe(context, manager);
             }
             context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
 
@@ -105,10 +109,46 @@ namespace HomeMediaCenter
                 string name = System.IO.Path.GetFileNameWithoutExtension(path).Substring(videoName.Length);
                 new ItemVideo(string.Format("{0} Subtitles {1}", videoName.Truncate(30), name), null, path, this);
             }
+        }
+
+        public override void RefreshMetadata(DataContext context, ItemManager manager, bool recursive)
+        {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
+            string thumbnailPath = null;
+            if (manager.UpnpDevice.GenerateThumbnails && !this.HasThumbnail.HasValue)
+            {
+                //Ak sa ma generovat thumbnail a HasThumbnail je null - generuj
+                thumbnailPath = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+            }
+            else if (!manager.UpnpDevice.GenerateThumbnails && this.HasThumbnail == true)
+            {
+                //Ak sa nema generovat thumbnail a HasThumbnail je true - vymaz thumbnail
+                string thumbnailPath2 = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+
+                try { System.IO.File.Delete(thumbnailPath2); }
+                catch { }
+
+                this.HasThumbnail = null;
+            }
 
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
-            if (this.Resolution == null)
-                AssignValues(new FileInfo(System.IO.Path.Combine(this.Parent.Path, this.Path)));
+            if (!this.DurationTicks.HasValue || thumbnailPath != null)
+                AssignValues(manager, new FileInfo(System.IO.Path.Combine(this.Parent.Path, this.Path)), thumbnailPath);
+        }
+
+        public override void RemoveMe(DataContext context, ItemManager manager)
+        {
+            base.RemoveMe(context, manager);
+
+            if (this.HasThumbnail.HasValue && this.HasThumbnail.Value)
+            {
+                string thumbnailPath = System.IO.Path.Combine(manager.UpnpDevice.ThumbnailsPath, this.Id + ".jpg");
+
+                try { System.IO.File.Delete(thumbnailPath); }
+                catch { }
+            }
         }
 
         public override void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId)
@@ -127,14 +167,14 @@ namespace HomeMediaCenter
                 this.Items.First().BrowseWebMetadata(xmlWriter, settings, idParams);
         }
 
-        private void AssignValues(FileInfo file)
+        private void AssignValues(ItemManager manager, FileInfo file, string thumbnailPath)
         {
             TimeSpan duration;
             string resolution;
             int audioStreamsCount;
             List<string> subtitlesStreams;
 
-            int hr = DSWrapper.MediaFile.GetVideoInfo(file, out duration, out resolution, out audioStreamsCount, out subtitlesStreams);
+            int hr = DSWrapper.MediaFile.GetVideoInfo(file, thumbnailPath, out duration, out resolution, out audioStreamsCount, out subtitlesStreams);
             if (hr == 0)
             {
                 this.Resolution = resolution;
@@ -157,12 +197,23 @@ namespace HomeMediaCenter
                         string.Format("&subtitles={0}", i + 1), null, this);
                 }
             }
-            else if (hr != -2147024864)
+            else if (hr != -2147024864 && !HelperClass.IsFileLocked(file))
             {
                 //Chyba -2147024864 znamena ze subor nie je dostupny - napr. pouziva ho iny proces, nie je kompletne skopirovany,...
-                //V pripade inej chyby uz sa nepokusaj zistit metadata
+                //V pripade inej chyby este overi ci naozaj subor nepouziva iny proces
+
+                //Inak sa uz nepokusaj zistit metadata
                 this.DurationTicks = 0;
             }
+            else
+            {
+                return;
+            }
+
+            //Zisti ci existuje thumbnail subor ak je cesta k nemu zadana
+            //Nezistuje pokial je hr -2147024864 alebo zamknuty subor
+            if (thumbnailPath != null)
+                this.HasThumbnail = File.Exists(thumbnailPath);
         }
     }
 }

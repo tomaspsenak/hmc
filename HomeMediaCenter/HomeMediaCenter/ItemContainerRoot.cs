@@ -9,6 +9,12 @@ namespace HomeMediaCenter
 {
     public class ItemContainerRoot : ItemContainer
     {
+        private class PathNameItemEqualityComparer : ItemEqualityComparer<ItemManager.Dir, Item>
+        {
+            public override object GetValueX(ItemManager.Dir item) { return item.Path + item.Title; }
+            public override object GetValueY(Item item) { return item.Path + item.Title; }
+        }
+
         private static readonly KeyValuePair<string, string>[] rootCategories = new KeyValuePair<string, string>[] { 
             new KeyValuePair<string, string>(AudioIndex, "Audio"), new KeyValuePair<string, string>(ImageIndex, "Image"), 
             new KeyValuePair<string, string>(VideoIndex, "Video")
@@ -22,39 +28,40 @@ namespace HomeMediaCenter
 
         public override ItemContainer GetParentItem(MediaType type) { return this; }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMe(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
             //Overenie ci existuje stream container
             if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStreamRoot)))
                 new ItemContainerStreamRoot(this);
 
             //Rozdielova obnova adresarov zadanych uzivatelom
-            IEnumerable<string> directories = manager.GetWorkingDirectories();
-            Item[] toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Cast<object>().Except(
-                directories, new PathItemEqualityComparer()).Cast<Item>().ToArray();
-            string[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Select(a => a.Path)).ToArray();
+            IEnumerable<ItemManager.Dir> directories = manager.GetWorkingDirectories();
+            Item[] toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Except(directories, 
+                new PathNameItemEqualityComparer()).Cast<Item>().ToArray();
+            ItemManager.Dir[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)),
+                new PathNameItemEqualityComparer()).Cast<ItemManager.Dir>().ToArray();
 
             foreach (Item item in toRemove)
             {
                 this.Items.Remove(item);
-                item.RemoveMe(context);
+                item.RemoveMe(context, manager);
             }
             context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
 
-            foreach (string path in toAdd)
+            foreach (ItemManager.Dir dir in toAdd)
             {
                 //Title musi byt bez znaku '\' - problem so Samsung DLNA
-                Item item = new ItemContainer(path.Replace(":\\", "_").Replace('\\', '_'), path, this);
-                //Ak nie je rekurzia - obnovia sa iba nove adresare
-                if (!recursive)
-                    item.RefresMe(context, manager, false);
+                new ItemContainer(dir.Title.Replace(":\\", "_").Replace('\\', '_'), dir.Path, this);
             }
 
             if (recursive)
             {
                 //Volanie obnovy do podadresarov
                 foreach (Item item in this.Items)
-                    item.RefresMe(context, manager, true);
+                    item.RefreshMe(context, manager, true);
             }
         }
 

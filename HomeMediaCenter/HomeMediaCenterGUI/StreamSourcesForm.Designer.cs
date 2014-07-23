@@ -46,6 +46,7 @@
             this.streamsDataGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.streamsDataGrid.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
             this.streamsDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.streamsDataGrid.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.titleColumn,
@@ -79,7 +80,7 @@
             this.addButton.Location = new System.Drawing.Point(12, 417);
             this.addButton.Name = "addButton";
             this.addButton.Size = new System.Drawing.Size(29, 24);
-            this.addButton.TabIndex = 2;
+            this.addButton.TabIndex = 1;
             this.addButton.UseVisualStyleBackColor = true;
             this.addButton.Click += new System.EventHandler(this.addButton_Click);
             // 
@@ -90,7 +91,7 @@
             this.removeButton.Location = new System.Drawing.Point(47, 417);
             this.removeButton.Name = "removeButton";
             this.removeButton.Size = new System.Drawing.Size(29, 24);
-            this.removeButton.TabIndex = 3;
+            this.removeButton.TabIndex = 2;
             this.removeButton.UseVisualStyleBackColor = true;
             this.removeButton.Click += new System.EventHandler(this.removeButton_Click);
             // 
@@ -112,7 +113,7 @@
             this.applyButton.Location = new System.Drawing.Point(456, 417);
             this.applyButton.Name = "applyButton";
             this.applyButton.Size = new System.Drawing.Size(75, 24);
-            this.applyButton.TabIndex = 5;
+            this.applyButton.TabIndex = 3;
             this.applyButton.Text = "Apply";
             this.applyButton.UseVisualStyleBackColor = true;
             // 

@@ -327,4 +327,22 @@
   <data name="RemoveFolderQuestion" xml:space="preserve">
     <value>Chcete odobrať priečinok  „{0}“ z knižnice?</value>
   </data>
+  <data name="TranslatedBy" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Automatic" xml:space="preserve">
+    <value>Automaticky</value>
+  </data>
+  <data name="GenerateThumbnails" xml:space="preserve">
+    <value>Generovať miniatúry</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Jazyk:</value>
+  </data>
+  <data name="Path" xml:space="preserve">
+    <value>Cesta</value>
+  </data>
+  <data name="AddDirectory" xml:space="preserve">
+    <value>Pridať adresár</value>
+  </data>
 </root>

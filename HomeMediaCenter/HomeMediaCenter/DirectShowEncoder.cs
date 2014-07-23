@@ -137,7 +137,13 @@ namespace HomeMediaCenter
                     bool reqSeeking = (parameters.ContainsKey("starttime") || parameters.ContainsKey("endtime")) &&
                         this.codec != DSCodec.MPEG2_PS && this.codec != DSCodec.MPEG2_TS &&
                         this.codec != DSCodec.MPEG2LAYER1_PS && this.codec != DSCodec.MPEG2LAYER1_TS;
-                    enc.SetInput(parameters["source"], reqSeeking);
+
+                    //Nastavi sa preferovany demultiplexor podla guid, hodnoty su oddelene znakom |
+                    IEnumerable<Guid> prefDsDemux = null;
+                    if (parameters.ContainsKey("prefDsDemux"))
+                        prefDsDemux = parameters["prefDsDemux"].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(a => Guid.Parse(a));
+
+                    enc.SetInput(parameters["source"], reqSeeking, prefDsDemux);
                 }
 
                 uint setVideo = this.video.HasValue ? this.video.Value : 1;
@@ -287,12 +293,12 @@ namespace HomeMediaCenter
                         break;
                 }
 
-                //Nastavenie casu zaciatku a konca v sekundach
+                //Nastavenie casu zaciatku a konca v milisekundach (v parametroch su sekundy)
                 long startTime = 0, endTime = 0;
                 if (parameters.ContainsKey("starttime"))
-                    startTime = (long)(double.Parse(parameters["starttime"], System.Globalization.CultureInfo.InvariantCulture) * 10000000);
+                    startTime = (long)(double.Parse(parameters["starttime"], System.Globalization.CultureInfo.InvariantCulture) * 1000);
                 if (parameters.ContainsKey("endtime"))
-                    endTime = (long)(double.Parse(parameters["endtime"], System.Globalization.CultureInfo.InvariantCulture) * 10000000);
+                    endTime = (long)(double.Parse(parameters["endtime"], System.Globalization.CultureInfo.InvariantCulture) * 1000);
 
                 if (this.progressChangeDel != null)
                     enc.ProgressChange += new EventHandler<ProgressChangeEventArgs>(enc_ProgressChange);

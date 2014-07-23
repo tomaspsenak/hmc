@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Runtime.Remoting.Messaging;
+using System.Globalization;
 
 namespace HomeMediaCenter
 {
@@ -23,7 +24,11 @@ namespace HomeMediaCenter
         protected readonly UpnpServer server;
         protected bool settingsChanged;
 
+        protected CultureInfo cultureInfo;
+
         private bool started;
+        private bool starting;
+        private bool stopping;        
 
         private readonly Action asyncStartDel;
         private readonly Action asyncStopDel;
@@ -36,8 +41,8 @@ namespace HomeMediaCenter
         {
             this.server = new UpnpServer(this);
 
-            this.asyncStartDel = new Action(Start);
-            this.asyncStopDel = new Action(Stop);
+            this.asyncStartDel = new Action(OnStart);
+            this.asyncStopDel = new Action(OnStop);
         }
 
         public IEnumerable<UpnpService> Services
@@ -82,6 +87,23 @@ namespace HomeMediaCenter
             get { return this.started; }
         }
 
+        public bool Stopping
+        {
+            get { return this.stopping; }
+        }
+
+        public CultureInfo CultureInfo
+        {
+            get { return this.cultureInfo; }
+            set
+            {
+                CheckStopped();
+
+                this.cultureInfo = value;
+                SettingsChanged();
+            }
+        }
+
         public virtual void WriteDescription(XmlTextWriter descWriter)
         {
             descWriter.WriteElementString("UDN", "uuid:" + this.udn);
@@ -118,36 +140,63 @@ namespace HomeMediaCenter
             descWriter.WriteEndElement();
         }
 
-        public virtual void Start()
+        public void Start(bool async = false)
         {
-            try
-            {
-                this.started = true;
-                this.server.Start();
-            }
-            catch
-            {
-                try { Stop(); }
-                catch { }
+            if (this.started == true || this.starting == true || this.stopping == true)
+                return;
 
-                throw;
+            this.started = true;
+            this.starting = true;
+
+            if (async)
+            {
+                this.asyncStartDel.BeginInvoke(new AsyncCallback(AsyncStartResult), null);
+            }
+            else
+            {
+                try
+                {
+                    OnStart();
+                }
+                catch
+                {
+                    this.started = false;
+                    throw;
+                }
+                finally { this.starting = false; }
             }
         }
 
         public void StartAsync()
         {
-            this.asyncStartDel.BeginInvoke(new AsyncCallback(AsyncStartResult), null);
+            Start(true);
         }
 
-        public virtual void Stop()
+        public void Stop(bool async = false)
         {
-            this.server.Stop();
-            this.started = false;
+            if (this.started == false || this.starting == true || this.stopping == true)
+                return;
+            
+            this.stopping = true;
+
+            if (async)
+            {
+                this.asyncStopDel.BeginInvoke(new AsyncCallback(AsyncStopResult), null);
+            }
+            else
+            {
+                try
+                {
+                    OnStop();
+                    this.started = false;
+                }
+                finally { this.stopping = false; }
+            }
         }
 
         public void StopAsync()
         {
-            this.asyncStopDel.BeginInvoke(new AsyncCallback(AsyncStopResult), null);
+            Stop(true);
         }
 
         public void OnLogEvent(string message)
@@ -168,6 +217,15 @@ namespace HomeMediaCenter
             }
         }
 
+        public void SetCurrentThreadCulture()
+        {
+            if (this.cultureInfo != null)
+            {
+                System.Threading.Thread.CurrentThread.CurrentCulture = this.cultureInfo;
+                System.Threading.Thread.CurrentThread.CurrentUICulture = this.cultureInfo;
+            }
+        }
+
         protected virtual void WriteSpecificDescription(XmlTextWriter descWriter) { }
 
         protected void OnExceptionEvent(Exception ex, EventHandler<ExceptionEventArgs> handler)
@@ -178,20 +236,58 @@ namespace HomeMediaCenter
             }
         }
 
+        protected virtual void OnStart()
+        {
+            SetCurrentThreadCulture();
+
+            try
+            {
+                this.server.Start();
+            }
+            catch
+            {
+                try { OnStop(); }
+                catch { }
+
+                throw;
+            }
+        }
+
+        protected virtual void OnStop()
+        {
+            SetCurrentThreadCulture();
+
+            this.server.Stop();
+        }
+
         private void AsyncStartResult(IAsyncResult result)
         {
             Exception exc = null;
             try { this.asyncStartDel.EndInvoke(result); }
-            catch (Exception ex) { exc = ex; }
+            catch (Exception ex)
+            {
+                exc = ex;
+                this.started = false;
+            }
 
             OnExceptionEvent(exc, AsyncStartEnd);
+
+            this.starting = false;
         }
 
         private void AsyncStopResult(IAsyncResult result)
         {
             Exception exc = null;
-            try { this.asyncStopDel.EndInvoke(result); }
+            try
+            {
+                this.asyncStopDel.EndInvoke(result);
+                this.started = false;
+            }
             catch (Exception ex) { exc = ex; }
+
+            //Pri restarte (start servera v udalosti stop) sa nemusi server spustit
+            //Preto je stopping nastavene pred vyvolanim udalosti stop
+            this.stopping = false;
 
             OnExceptionEvent(exc, AsyncStopEnd);
         }

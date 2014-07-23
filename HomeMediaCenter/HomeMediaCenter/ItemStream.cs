@@ -74,7 +74,7 @@ namespace HomeMediaCenter
 
         public override TimeSpan? GetDuration()
         {
-            return TimeSpan.Zero;
+            return null;
         }
 
         public override string GetEncodeFeature(MediaSettings settings)
@@ -86,7 +86,7 @@ namespace HomeMediaCenter
             return string.Empty;
         }
 
-        public override void RemoveMe(DataContext context)
+        public override void RemoveMe(DataContext context, ItemManager manager)
         {
             this.Parent.CheckMediaType(this.Audio ? MediaType.Audio : MediaType.Video);
         }
@@ -159,9 +159,9 @@ namespace HomeMediaCenter
         public override void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams)
         {
             if (this.Audio)
-                ItemAudio.WriteHTML(xmlWriter, this.Id.ToString(), this.Title, "0:00:00", string.Empty, string.Empty, string.Empty);
+                ItemAudio.WriteHTML(xmlWriter, this.Id.ToString(), this.Title, "0:00:00", string.Empty, string.Empty, string.Empty, false, null);
             else
-                ItemVideo.WriteHTML(xmlWriter, this.Id.ToString(), this.Title, "0:00:00", this.Resolution);
+                ItemVideo.WriteHTML(xmlWriter, this.Id.ToString(), this.Title, "0:00:00", this.Resolution, false, null);
         }
 
         public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)

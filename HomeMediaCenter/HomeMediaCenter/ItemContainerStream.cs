@@ -10,32 +10,38 @@ namespace HomeMediaCenter
 {
     public class ItemContainerStream : ItemContainer
     {
-        protected class SubtitlesPathItemEqualityComparer : ItemEqualityComparer<ItemStream>
+        protected class SubtitlesPathItemEqualityComparer : ItemEqualityComparer<string, ItemStream>
         {
-            public override object GetValue(ItemStream item) { return item.SubtitlesPath; }
+            public override object GetValueX(string item) { return item; }
+            public override object GetValueY(ItemStream item) { return item.SubtitlesPath; }
         }
 
         public ItemContainerStream() : base() { }
 
         public ItemContainerStream(string title, string path, ItemContainer parent) : base(title, path, parent) { }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMe(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
             //Rozdielova obnova parametrov poloziek v tomto kontajnery
             IEnumerable<string> paramString = manager.MediaSettings.Stream.Encode.Select(a => a.GetParamString()).ToArray();
 
-            Item[] toRemove = this.Items.Cast<object>().Except(paramString, new SubtitlesPathItemEqualityComparer()).Cast<Item>().ToArray();
+            Item[] toRemove = this.Items.Except(paramString, new SubtitlesPathItemEqualityComparer()).Cast<Item>().ToArray();
             string[] toAdd = paramString.Except(this.Items.OfType<ItemStream>().Select(a => a.SubtitlesPath)).ToArray();
 
             foreach (Item item in toRemove)
             {
                 this.Items.Remove(item);
-                item.RemoveMe(context);
+                item.RemoveMe(context, manager);
             }
             context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
 
             foreach (string param in toAdd)
                 new ItemStream(this.Title, this, EncoderBuilder.GetEncoder(param));
         }
+
+        public override void RefreshMetadata(DataContext context, ItemManager manager, bool recursive) { }
     }
 }

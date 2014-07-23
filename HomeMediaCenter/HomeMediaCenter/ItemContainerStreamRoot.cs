@@ -8,22 +8,26 @@ namespace HomeMediaCenter
 {
     public class ItemContainerStreamRoot : ItemContainerStream
     {
-        protected class TitleItemEqualityComparer : ItemEqualityComparer<Item>
+        protected class TitleItemEqualityComparer : ItemEqualityComparer<string, Item>
         {
-            public override object GetValue(Item item) { return item.Title; }
+            public override object GetValueX(string item) { return item; }
+            public override object GetValueY(Item item) { return item.Title; }
         }
 
         public ItemContainerStreamRoot() : base() { }
 
         public ItemContainerStreamRoot(ItemContainer parent) : base("Stream", "Stream", parent) { }
 
-        public override void RefresMe(DataContext context, ItemManager manager, bool recursive)
+        public override void RefreshMe(DataContext context, ItemManager manager, bool recursive)
         {
+            if (manager.UpnpDevice.Stopping)
+                return;
+
             try
             {
                 //Rozdielova obnova webcams
                 IEnumerable<string> webcams = manager.EnableWebcamStreaming ? DSWrapper.WebcamInput.GetVideoInputNames() : Enumerable.Empty<string>();
-                List<Item> toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title != "Desktop").Cast<object>().Except(
+                List<Item> toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title != "Desktop").Except(
                         webcams, new TitleItemEqualityComparer()).Cast<Item>().ToList();
                 string[] toAdd = webcams.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title != "Desktop").Select(
                     a => a.Title)).ToArray();
@@ -42,7 +46,7 @@ namespace HomeMediaCenter
                 foreach (Item item in toRemove)
                 {
                     this.Items.Remove(item);
-                    item.RemoveMe(context);
+                    item.RemoveMe(context, manager);
                 }
                 context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
 
@@ -51,7 +55,7 @@ namespace HomeMediaCenter
 
                 //Volanie obnovy do podadresarov - bez ohladu na premennu recursive - napr. treba obnovit aj nazvy
                 foreach (Item item in this.Items)
-                    item.RefresMe(context, manager, true);
+                    item.RefreshMe(context, manager, true);
             }
             catch { }
         }

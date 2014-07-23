@@ -129,6 +129,9 @@
   <data name="Device" xml:space="preserve">
     <value>zariadenia</value>
   </data>
+  <data name="Download" xml:space="preserve">
+    <value>Stiahnuť</value>
+  </data>
   <data name="Duration" xml:space="preserve">
     <value>dĺžka</value>
   </data>
@@ -161,6 +164,9 @@
   </data>
   <data name="Of" xml:space="preserve">
     <value>z</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>Operácia zlyhala</value>
   </data>
   <data name="Or" xml:space="preserve">
     <value>alebo</value>

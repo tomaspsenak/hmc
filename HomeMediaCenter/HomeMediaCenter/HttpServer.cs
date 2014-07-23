@@ -73,6 +73,9 @@ namespace HomeMediaCenter
                 }
 
                 this.listenerThread = new Thread(new ThreadStart(Listen));
+                if (this.upnpServer.RootDevice.CultureInfo != null)
+                    this.listenerThread.CurrentCulture = this.listenerThread.CurrentUICulture = this.upnpServer.RootDevice.CultureInfo;
+
                 this.listenerThread.Start();
             }
         }
@@ -129,6 +132,8 @@ namespace HomeMediaCenter
                 //Pre poziadavku vytvori uzol v zretazenom zozname
                 LinkedListNode<HttpRequest> lln = new LinkedListNode<HttpRequest>(new HttpRequest(socket, 
                     new Thread(new ParameterizedThreadStart(ProceedRequest))));
+                if (this.upnpServer.RootDevice.CultureInfo != null)
+                    lln.Value.Thread.CurrentCulture = lln.Value.Thread.CurrentUICulture = this.upnpServer.RootDevice.CultureInfo;
 
                 //Prida uzol do lzz, vytvori nove vlakno pre poziadavku, ako parameter da uzol z lzz
                 Monitor.Enter(this.requestList);
@@ -167,6 +172,7 @@ namespace HomeMediaCenter
                         {
                             str += fragments[j] + "/";
                         }
+                        str += "*";
 
                         if ((del = GetRoute(lln.Value.Method, str)) != null)
                             break;

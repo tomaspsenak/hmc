@@ -92,6 +92,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddDirForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddDirForm.Designer.cs">
+      <DependentUpon>AddDirForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ContainerItem.cs" />
     <Compile Include="ConvertForm.cs">
       <SubType>Form</SubType>
@@ -103,6 +109,11 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>LanguageResource.resx</DependentUpon>
+    </Compile>
+    <Compile Include="LanguageResource.da-DK.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>LanguageResource.da-DK.resx</DependentUpon>
     </Compile>
     <Compile Include="LanguageResource.sk-SK.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -135,8 +146,15 @@
     <Compile Include="StreamSourcesForm.Designer.cs">
       <DependentUpon>StreamSourcesForm.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="AddDirForm.resx">
+      <DependentUpon>AddDirForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ConvertForm.resx">
       <DependentUpon>ConvertForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LanguageResource.da-DK.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>LanguageResource.da-DK.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="LanguageResource.resx">
       <Generator>ResXFileCodeGenerator</Generator>

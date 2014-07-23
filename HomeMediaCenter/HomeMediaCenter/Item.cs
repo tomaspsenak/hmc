@@ -59,6 +59,12 @@ namespace HomeMediaCenter
             get; set;
         }
 
+        [Column(IsPrimaryKey = false, DbType = "bit", CanBeNull = true)]
+        public bool? HasThumbnail
+        {
+            get; set;
+        }
+
         [Column(IsPrimaryKey = false, DbType = "tinyint", CanBeNull = false, IsDiscriminator = true)]
         public int Type
         {
@@ -91,13 +97,17 @@ namespace HomeMediaCenter
 
         public virtual string GetSubtitlesPath() { return null; }
 
+        public virtual string GetThumbnailPath(ItemManager manager) { return null; }
+
         public virtual string GetFileFeature(MediaSettings settings) { return string.Empty; }
 
         public virtual string GetEncodeFeature(MediaSettings settings) { return string.Empty; }
 
-        public virtual void RefresMe(DataContext context, ItemManager manager, bool recursive) { }
+        public virtual void RefreshMe(DataContext context, ItemManager manager, bool recursive) { }
 
-        public virtual void RemoveMe(DataContext context) { }
+        public virtual void RefreshMetadata(DataContext context, ItemManager manager, bool recursive) { }
+
+        public virtual void RemoveMe(DataContext context, ItemManager manager) { }
 
         public virtual void BrowseDirectChildren(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet,
             uint startingIndex, uint requestedCount, string sortCriteria, out string numberReturned, out string totalMatches, ItemContainer skippedItem = null)
@@ -115,6 +125,11 @@ namespace HomeMediaCenter
         public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet);
 
         public abstract void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId);
+
+        public virtual void BrowseMetadata(XmlWriter xmlWriter, MediaSettings settings, string host, string idParams, HashSet<string> filterSet, int parentId, TimeSpan? startTime)
+        {
+            BrowseMetadata(xmlWriter, settings, host, idParams, filterSet, parentId);
+        }
 
         public abstract void BrowseWebMetadata(XmlWriter xmlWriter, MediaSettings settings, string idParams);
     }
