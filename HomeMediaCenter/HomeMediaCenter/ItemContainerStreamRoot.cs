@@ -43,12 +43,7 @@ namespace HomeMediaCenter
                     toRemove.AddRange(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title == "Desktop"));
                 }
 
-                foreach (Item item in toRemove)
-                {
-                    this.Items.Remove(item);
-                    item.RemoveMe(context, manager);
-                }
-                context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+                RemoveRange(context, manager, toRemove.ToArray());
 
                 foreach (string webcam in toAdd)
                     new ItemContainerStream(webcam, "webcam_" + webcam, this);

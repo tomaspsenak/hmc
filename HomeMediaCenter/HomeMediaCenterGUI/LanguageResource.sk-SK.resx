@@ -345,4 +345,13 @@
   <data name="AddDirectory" xml:space="preserve">
     <value>Pridať adresár</value>
   </data>
+  <data name="ShowHiddenFiles" xml:space="preserve">
+    <value>Zobraziť skryté súbory</value>
+  </data>
+  <data name="OutputBufferSize" xml:space="preserve">
+    <value>Veľkosť výstup. zásobníka (kbyte)</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Kopírovať</value>
+  </data>
 </root>

@@ -118,6 +118,21 @@ namespace HomeMediaCenter
                 writer.WriteEndElement();
             }
 
+            //Vlozi titulkovy subor, vynecha sa item s titulkami vo videu
+            if ((filterSet == null || filterSet.Contains("sec:CaptionInfoEx")) && (this.SubtitlesPath == null))
+            {
+                ItemVideo subItem = this.Parent.Children.OfType<ItemVideo>().Where(a => a.SubtitlesPath != null).FirstOrDefault();
+                if (subItem != null)
+                {
+                    string type = System.IO.Path.GetExtension(subItem.SubtitlesPath).TrimStart('.');
+
+                    writer.WriteStartElement("sec", "CaptionInfoEx", null);
+                    writer.WriteAttributeString("sec", "type", null, type);
+                    writer.WriteValue(host + "/subtitle/subtitle." + type + "?id=" + subItem.Id);
+                    writer.WriteEndElement();
+                }
+            }
+
             if (filterSet == null || filterSet.Any(a => a.StartsWith("res")))
             {
                 TimeSpan? duration = this.GetDuration();
@@ -191,7 +206,10 @@ namespace HomeMediaCenter
             xmlWriter.WriteStartElement("td");
             xmlWriter.WriteStartElement("div");
             xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteStartElement("div");
             xmlWriter.WriteRaw(string.Format(@"<a href=""/web/player.html?id={0}"" target=""_blank"">{1}</a>", id, LanguageResource.Play));
+            xmlWriter.WriteRaw(string.Format(@"<a href=""#"">{0}</a>", LanguageResource.Other));
+            xmlWriter.WriteEndElement();
             xmlWriter.WriteStartElement("ul");
             if (noStreamExtension != null)
                 xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/video{0}?id={1}"" target=""_blank"">{2}</a></li>", noStreamExtension, id, LanguageResource.Download));
@@ -247,7 +265,7 @@ namespace HomeMediaCenter
 
             if (codec == "wmv")
             {
-                string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&width={1}&height={2}{3}", id, width, height, encodeParams);
+                string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&width={1}&height={2}&obufsize=1024{3}", id, width, height, encodeParams);
                 switch (quality)
                 {
                     case "low": sourceUrl += "&vidbitrate=200&audbitrate=40&quality=1&fps=25"; break;
@@ -291,9 +309,10 @@ namespace HomeMediaCenter
                 xmlWriter.WriteRaw(@"</object>");
                 xmlWriter.WriteRaw(@"</div>");
             }
-            else if (codec == "flv")
+            else if (codec == "flv" || codec == "flvhd")
             {
-                string sourceUrl = string.Format("/encode/web%3Fid={0}&codec=flv_ts&width={1}&height={2}{3}", id, width, height, encodeParams);
+                string sourceUrl = string.Format("/encode/web%3Fid={0}&codec={1}&width={2}&height={3}&obufsize=1024{4}", 
+                    id, (codec == "flv") ? "flv_ts" : "flv_h264_ts", width, height, encodeParams);
                 switch (quality)
                 {
                     case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1&fps=25"; break;
@@ -316,7 +335,7 @@ namespace HomeMediaCenter
             {
                 codec = "webm";
 
-                string sourceUrl = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}{3}", id, width, height, encodeParams);
+                string sourceUrl = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}&obufsize=1024{3}", id, width, height, encodeParams);
                 switch (quality)
                 {
                     case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1"; break;
@@ -368,6 +387,8 @@ namespace HomeMediaCenter
             xmlWriter.WriteRaw(@"<div id=""streamToolbar"" class=""ui-widget-header ui-corner-all"">");
             xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""playButton"">{0}</button>", LanguageResource.Play));
             xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""pauseButton"">{0}</button>", LanguageResource.Pause));
+            if (codec == "webm")
+                xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""fullScreenButton"">{0}</button>", LanguageResource.Fullscreen));
 
             xmlWriter.WriteRaw(@"<span id=""codecRadios"">");
             xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""webmRadio"" name=""codec"" value=""webm"" {0} /><label for=""webmRadio"">WebM</label>",
@@ -376,17 +397,24 @@ namespace HomeMediaCenter
                 codec == "wmv" ? "checked=\"checked\"" : string.Empty));
             xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""flvRadio"" name=""codec"" value=""flv"" {0} /><label for=""flvRadio"">Flash</label>",
                 codec == "flv" ? "checked=\"checked\"" : string.Empty));
+            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""flvHdRadio"" name=""codec"" value=""flvhd"" {0} /><label for=""flvHdRadio"">Flash HD</label>",
+                codec == "flvhd" ? "checked=\"checked\"" : string.Empty));
             xmlWriter.WriteRaw(@"</span>");
 
+            bool resChecked = false;
             xmlWriter.WriteRaw(@"<span id=""resolutionRadios"">");
-            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r1280x720Radio"" name=""resolution"" value=""1280x720"" {0} /><label for=""r1280x720Radio"">1280x720</label>",
-                resolution == "1280x720" ? "checked=\"checked\"" : string.Empty));
-            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r800x480Radio"" name=""resolution"" value=""800x480"" {0} /><label for=""r800x480Radio"">800x480</label>",
-                resolution == "800x480" ? "checked=\"checked\"" : string.Empty));
-            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r640x480Radio"" name=""resolution"" value=""640x480"" {0} /><label for=""r640x480Radio"">640x480</label>",
-                resolution == "640x480" ? "checked=\"checked\"" : string.Empty));
-            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r320x240Radio"" name=""resolution"" value=""320x240"" {0} /><label for=""r320x240Radio"">320x240</label>",
-                resolution == "320x240" ? "checked=\"checked\"" : string.Empty));
+            foreach (string res in new[] { "1280x720", "800x480", "640x480", "320x240" })
+            {
+                xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r{0}Radio"" name=""resolution"" value=""{0}""", res));
+                if (resolution == res)
+                {
+                    xmlWriter.WriteRaw(@" checked=""checked""");
+                    resChecked = true;
+                }
+                xmlWriter.WriteRaw(string.Format(@"/><label for=""r{0}Radio"">{0}</label>", res));
+            }
+            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""r0x0Radio"" name=""resolution"" value=""0x0"" {0}/><label for=""r0x0Radio"">{1}</label>",
+                resChecked ? string.Empty : "checked=\"checked\"", LanguageResource.Other));
             xmlWriter.WriteRaw(@"</span>");
 
             xmlWriter.WriteRaw(@"<span id=""qualityRadios"">");
@@ -398,11 +426,18 @@ namespace HomeMediaCenter
                 quality == "high" ? "checked=\"checked\"" : string.Empty, LanguageResource.High));
             xmlWriter.WriteRaw(@"</span>");
 
-            xmlWriter.WriteRaw(@"<button id=""submitButton"" type=""submit"">Ok</button>");
             xmlWriter.WriteRaw(@"</div>");
 
             //Koniec form
             xmlWriter.WriteEndElement();
+
+            xmlWriter.WriteStartElement("div");
+            xmlWriter.WriteAttributeString("id", "resDlg");
+            xmlWriter.WriteAttributeString("title", LanguageResource.Resolution);
+            xmlWriter.WriteRaw(string.Format(@"<label for=""resDlgWidth"">{0}</label><input type=""text"" name=""resDlgWidth"" id=""resDlgWidth"" value=""{1}"" class=""text ui-widget-content ui-corner-all"">", LanguageResource.Width, width));
+            xmlWriter.WriteRaw(string.Format(@"<label for=""resDlgHeight"">{0}</label><input type=""text"" name=""resDlgHeight"" id=""resDlgHeight"" value=""{1}"" class=""text ui-widget-content ui-corner-all"">", LanguageResource.Height, height));
+            xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""resDlgButton"">{0}</button>", LanguageResource.Apply));
+            xmlWriter.WriteFullEndElement();
         }
     }
 }

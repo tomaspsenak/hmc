@@ -159,10 +159,12 @@ img.box_img{
 }
 #main_content table a{
 	padding:0px;
-	margin:5px;
 	font-size:13px;
 	color:#f7951e;
 	text-decoration:none;
+}
+#main_content table .libPlayButton a:first-child{
+    width:73px;
 }
 #main_content table{
     border-collapse:collapse;
@@ -214,7 +216,7 @@ img.box_img{
 #main_content #right_content p{
     margin:0px 0px 0px 15px;
 }
-#main_content #right_content input{
+#main_content #right_content button{
     margin:10px 0px 0px 15px;
     width:100px;
 }
@@ -231,21 +233,43 @@ img.box_img{
     width:100px;
     display:inline-block;
 }
-#main_content #streamPos, #streamLength, #volumeVal{
+#main_content #streamPos, #main_content #streamLength, #main_content #volumeVal{
     margin:10px 15px 0px 15px;
     display:inline-block;
+}
+#main_content #volumeVal{
+    width:30px;
+}
+#main_content #mainForm{
+    text-align:center;  
 }
 #main_content #streamToolbar{
     margin:10px 0px 0px 0px;
 	padding:4px 4px 4px 4px;
+	text-align:center;
+	display:inline-block;
 }
-#main_content #playButton, #pauseButton, #submitButton{
-    margin-right:10px;
-    width:80px;
+#main_content #playButton, #main_content #pauseButton, #main_content #fullScreenButton, #main_content #submitButton{
+    width:40px;
+}
+#main_content #codecRadios, #main_content #resolutionRadios, #main_content #qualityRadios{
+    display:inline-block;
 }
 #main_content #silverlightControlHost{
     width:500px;
     height:50px;
+}
+#resDlg input{
+    display: block;
+    width: 100%;
+    height:20px;
+    margin-bottom:10px;
+}
+#resDlg button{
+    position:absolute;
+    right:0px;
+    width:80px;
+    margin-right:9px;
 }
 .videoLink{
 	font-size:18px;
@@ -257,6 +281,12 @@ img.box_img{
 }
 .videoLink:hover{
     text-decoration:underline;
+}
+#main_content #left_content #devices{
+    width:100%;
+}
+#main_content #left_content #refreshBtn{
+    margin-top:10px;
 }
 /*----------------------top right navigation-------------------------*/
 #right_nav{
@@ -289,6 +319,10 @@ img.box_img{
 	color:#d4f0ba;
 	background:url(/web/images/htmlrightnav.gif) no-repeat center;
 	background-position:0px 0px;
+	-webkit-transition: background 0.5s linear;
+    -moz-transition: background 0.1s linear;
+    -o-transition: background 0.1s linear;
+    transition: background 0.1s linear;
 }
 #right_nav ul li a:hover{
 	height:29px;
@@ -298,8 +332,7 @@ img.box_img{
 	color:#d4f0ba;
 	padding:0 0 0 35px;
 	margin:7px 0 7px 0;
-	background:url(/web/images/htmlrightnava.gif) no-repeat center;
-	background-position:0px 0px;
+	background-position:0px -29px;
 }
 #right_nav ul li a.current{
 	height:29px;

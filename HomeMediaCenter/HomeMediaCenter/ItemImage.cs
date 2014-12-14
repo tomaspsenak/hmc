@@ -163,7 +163,10 @@ namespace HomeMediaCenter
             xmlWriter.WriteStartElement("td");
             xmlWriter.WriteStartElement("div");
             xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteStartElement("div");
             xmlWriter.WriteRaw(string.Format(@"<a href=""/files/image?id={0}"" target=""_blank"">{1}</a>", this.Id, LanguageResource.Play));
+            xmlWriter.WriteRaw(string.Format(@"<a href=""#"">{0}</a>", LanguageResource.Other));
+            xmlWriter.WriteEndElement();
             xmlWriter.WriteStartElement("ul");
             xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/image{0}?id={1}"" target=""_blank"">{2}</a></li>", 
                 System.IO.Path.GetExtension(this.Path), this.Id, LanguageResource.Download));

@@ -31,12 +31,7 @@ namespace HomeMediaCenter
             Item[] toRemove = this.Items.Except(paramString, new SubtitlesPathItemEqualityComparer()).Cast<Item>().ToArray();
             string[] toAdd = paramString.Except(this.Items.OfType<ItemStream>().Select(a => a.SubtitlesPath)).ToArray();
 
-            foreach (Item item in toRemove)
-            {
-                this.Items.Remove(item);
-                item.RemoveMe(context, manager);
-            }
-            context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+            RemoveRange(context, manager, toRemove);
 
             foreach (string param in toAdd)
                 new ItemStream(this.Title, this, EncoderBuilder.GetEncoder(param));

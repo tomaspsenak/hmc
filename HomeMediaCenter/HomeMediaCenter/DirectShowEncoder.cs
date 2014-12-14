@@ -10,7 +10,7 @@ namespace HomeMediaCenter
 {
     public class DirectShowEncoder : EncoderBuilder
     {
-        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, MPEG2_TS_H264, WEBM, WEBM_TS, WMV2, WMV3, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS }
+        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, MPEG2_TS_H264, WEBM, WEBM_TS, WMV2, WMV3, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS, FLV_H264, FLV_H264_TS }
 
         private DSEncoder encoder;
         private DSCodec codec;
@@ -46,14 +46,14 @@ namespace HomeMediaCenter
             return ContainerType.IsMPEG2Installed();
         }
 
-        public static bool IsWEBMInstalled()
-        {
-            return ContainerType.IsWEBMInstalled();
-        }
-
         public static bool IsHMCInstalled()
         {
             return ContainerType.IsHMCInstalled();
+        }
+
+        public static bool IsLAVSplitInstalled()
+        {
+            return ContainerType.IsLAVSplitInstalled();
         }
 
         public static string[] GetVideoInputNames()
@@ -80,6 +80,8 @@ namespace HomeMediaCenter
                 case DSCodec.AVI: return "video/avi";
                 case DSCodec.FLV: return "video/x-flv";
                 case DSCodec.FLV_TS: goto case DSCodec.FLV;
+                case DSCodec.FLV_H264: goto case DSCodec.FLV;
+                case DSCodec.FLV_H264_TS: goto case DSCodec.FLV;
                 default: return string.Empty;
             }
         }
@@ -245,6 +247,16 @@ namespace HomeMediaCenter
                         scanType = ScanType.Progressive;
                 }
 
+                //Nastavenie velkosti buffera (KByte) pre async stream - mozne iba pre non-seekable container
+                int outBufferSize = 0;
+                if (parameters.ContainsKey("obufsize"))
+                {
+                    outBufferSize = int.Parse(parameters["obufsize"]);
+                    if (outBufferSize < 1)
+                        throw new HttpException(400, "Output buffer size must be non-negative");
+                    outBufferSize *= 1024;
+                }
+
                 ContainerType container = null;
                 switch (this.codec)
                 {
@@ -263,11 +275,12 @@ namespace HomeMediaCenter
                     case DSCodec.MPEG2_TS_H264: container = ContainerType.MPEG2_TS_H264(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
                         subtitles, subPath, keepAspect, audBitrate * 1000);
                         break;
-                    case DSCodec.WEBM: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate, quality, fps, subtitles, 
-                        subPath, keepAspect, audBitrate);
+                    case DSCodec.WEBM: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, 
+                        subPath, keepAspect, audBitrate * 1000, false);
+                        outBufferSize = 0;
                         break;
-                    case DSCodec.WEBM_TS: container = ContainerType.WEBM_TS(width, height, BitrateMode.CBR, vidBitrate, quality, fps, subtitles,
-                        subPath, keepAspect, audBitrate);
+                    case DSCodec.WEBM_TS: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles,
+                        subPath, keepAspect, audBitrate * 1000, true);
                         break;
                     case DSCodec.WMV2: container = ContainerType.WMV(width, height, WMVideoSubtype.WMMEDIASUBTYPE_WMV2, vidBitrate * 1000, quality, 
                         fps, subtitles, subPath, audBitrate * 1000);
@@ -277,19 +290,30 @@ namespace HomeMediaCenter
                         break;
                     case DSCodec.AVI: container = ContainerType.AVI(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
                         scanType.HasValue ? scanType.Value : ScanType.Progressive, subtitles, subPath, keepAspect, audBitrate * 1000);
+                        outBufferSize = 0;
                         break;
                     case DSCodec.MP4: container = ContainerType.MP4(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath, 
                         keepAspect, audBitrate * 1000);
+                        outBufferSize = 0;
                         break;
-                    case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate * 1000, quality);
+                    case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate * 1000, quality, false);
+                        outBufferSize = 0;
                         break;
-                    case DSCodec.MP3_TS: container = ContainerType.MP3_TS(BitrateMode.CBR, audBitrate * 1000, quality);
+                    case DSCodec.MP3_TS: container = ContainerType.MP3(BitrateMode.CBR, audBitrate * 1000, quality, true);
                         break;
                     case DSCodec.FLV: container = ContainerType.FLV(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
-                        keepAspect, audBitrate * 1000);
+                        keepAspect, audBitrate * 1000, false);
+                        outBufferSize = 0;
                         break;
-                    case DSCodec.FLV_TS: container = ContainerType.FLV_TS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
-                        keepAspect, audBitrate * 1000);
+                    case DSCodec.FLV_TS: container = ContainerType.FLV(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000, true);
+                        break;
+                    case DSCodec.FLV_H264: container = ContainerType.FLV_H264(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000, false);
+                        outBufferSize = 0;
+                        break;
+                    case DSCodec.FLV_H264_TS: container = ContainerType.FLV_H264(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000, true);
                         break;
                 }
 
@@ -303,10 +327,19 @@ namespace HomeMediaCenter
                 if (this.progressChangeDel != null)
                     enc.ProgressChange += new EventHandler<ProgressChangeEventArgs>(enc_ProgressChange);
 
-                //Nastavenie vystupu
-                enc.SetOutput(output, container, startTime, endTime);
+                using (BufferedAsyncStream bufferedOutput = new BufferedAsyncStream(output, outBufferSize))
+                {
+                    if (outBufferSize > 0)
+                    {
+                        bufferedOutput.Start();
+                        output = bufferedOutput;
+                    }
 
-                enc.StartEncode();
+                    //Nastavenie vystupu
+                    enc.SetOutput(output, container, startTime, endTime);
+
+                    enc.StartEncode();
+                }
             }
         }
 

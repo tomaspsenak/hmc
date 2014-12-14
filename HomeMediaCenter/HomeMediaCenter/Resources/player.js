@@ -101,9 +101,7 @@ $(function () {
         SetNewPosition(currenttime);
     });
 
-    $("#playButton").button();
-    $("#playButton").css("background-color", "#416271");
-    $("#playButton").css("color", "#ffffff");
+    $("#playButton").button({ icons: { primary: "ui-icon-play" }, text: false });
     $("#playButton").click(function () {
         if ($("#streamVideo").get(0))
             $("#streamVideo").get(0).play();
@@ -113,7 +111,7 @@ $(function () {
             $f("videoLink").play();
     });
 
-    $("#pauseButton").button();
+    $("#pauseButton").button({ icons: { primary: "ui-icon-pause" }, text: false });
     $("#pauseButton").click(function () {
         if ($("#streamVideo").get(0))
             $("#streamVideo").get(0).pause();
@@ -130,18 +128,73 @@ $(function () {
     $("#codecRadios").buttonset();
     $("#codecRadios").change(submitForm);
 
-    $("#resolutionRadios").buttonset();
-    $("#resolutionRadios").change(submitForm);
+    if ($("#resDlg").is("div")) {
+        $("#resDlg").dialog({
+            autoOpen: false,
+            height: 165,
+            width: 250,
+            modal: true,
+            close: function () {
+                var lastCheck = $.data($("#resolutionRadios").get(0), "lastCheck");
+                $("#" + lastCheck).prop("checked", true);
+                $("#resolutionRadios").buttonset("refresh");
+
+                $(this).dialog("close");
+            }
+        });
+
+        $("#resDlgButton").button().click(function () {
+            var width = $("#resDlgWidth").val();
+            var height = $("#resDlgHeight").val();
+            $("#r0x0Radio").val(width + "x" + height);
+
+            submitForm();
+        });
+
+        $("#resolutionRadios").buttonset();
+        $("#resolutionRadios").change(function () {
+            if ($("#r0x0Radio").is(":checked"))
+                return;
+
+            submitForm();
+        });
+        $.data($("#resolutionRadios").get(0), "lastCheck", $("#resolutionRadios input:checked").prop("id"));
+
+        $("#r0x0Radio").button({ icons: { primary: "ui-icon-gear" }, text: false }).click(function () {
+            $("#resDlg").dialog("open");
+        });
+    }
 
     $("#qualityRadios").buttonset();
     $("#qualityRadios").change(submitForm);
 
-    $("#submitButton").button();
-    $("#submitButton").css("background-color", "#416271");
-    $("#submitButton").css("color", "#ffffff");
+    $("#fullScreenButton").button({ icons: { primary: "ui-icon-arrow-4-diag" }, text: false });
+    $("#fullScreenButton").click(function () {
+        if ($("#streamVideo").get(0)) {
+            var videoElement = $("#streamVideo").get(0);
+
+            if (videoElement.requestFullscreen)
+                videoElement.requestFullscreen();
+            else if (videoElement.msRequestFullscreen)
+                videoElement.msRequestFullscreen();
+            else if (videoElement.mozRequestFullScreen)
+                videoElement.mozRequestFullScreen();
+            else if (videoElement.webkitRequestFullScreen)
+                videoElement.webkitRequestFullScreen();
+        }
+    });
 
     if ($("#streamVideo").get(0)) {
         SetNewVolume($("#streamVideo").prop("volume"));
+
+        //Nepodporovany autoplay - zobraz controls
+        $("#streamVideo").get(0).addEventListener("stalled", function () {
+            $("#streamVideo").get(0).controls = true;
+        });
+
+        $("#streamVideo").get(0).addEventListener("playing", function () {
+            $("#streamVideo").get(0).controls = false;
+        });
     }
     else if ($("#silverlightControlHost").get(0)) {
     }

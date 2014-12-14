@@ -95,12 +95,7 @@ namespace HomeMediaCenter
             string[] toAdd = files.Except(this.Items.OfType<ItemVideo>().Where(a => a.SubtitlesPath != null).Select(
                 a => a.SubtitlesPath)).ToArray();
 
-            foreach (Item item in toRemove)
-            {
-                this.Items.Remove(item);
-                item.RemoveMe(context, manager);
-            }
-            context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+            RemoveRange(context, manager, toRemove);
 
             foreach (string path in toAdd)
             {
@@ -135,7 +130,13 @@ namespace HomeMediaCenter
 
             //Ak sa nepodarilo zistit metadata - skus ich zistit pri kazdom refresh (napr. ak subor este nebol cely skopirovany)
             if (!this.DurationTicks.HasValue || thumbnailPath != null)
+            {
+                //Vymazat stream pridane cez AssignValues
+                Item[] toRemove = this.Items.OfType<ItemVideo>().Where(a => a.Path != null).ToArray();
+                RemoveRange(context, manager, toRemove);
+
                 AssignValues(manager, new FileInfo(System.IO.Path.Combine(this.Parent.Path, this.Path)), thumbnailPath);
+            }
         }
 
         public override void RemoveMe(DataContext context, ItemManager manager)

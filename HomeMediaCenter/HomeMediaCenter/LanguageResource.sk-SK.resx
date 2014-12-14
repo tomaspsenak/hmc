@@ -120,6 +120,9 @@
   <data name="Album" xml:space="preserve">
     <value>album</value>
   </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Použiť</value>
+  </data>
   <data name="Artist" xml:space="preserve">
     <value>interpret</value>
   </data>
@@ -135,8 +138,14 @@
   <data name="Duration" xml:space="preserve">
     <value>dĺžka</value>
   </data>
+  <data name="Fullscreen" xml:space="preserve">
+    <value>Fullscreen</value>
+  </data>
   <data name="Genre" xml:space="preserve">
     <value>žáner</value>
+  </data>
+  <data name="Height" xml:space="preserve">
+    <value>Výška</value>
   </data>
   <data name="High" xml:space="preserve">
     <value>Vysoká</value>
@@ -170,6 +179,9 @@
   </data>
   <data name="Or" xml:space="preserve">
     <value>alebo</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>Iné</value>
   </data>
   <data name="Pause" xml:space="preserve">
     <value>Pauza</value>
@@ -215,5 +227,8 @@
   </data>
   <data name="Volume" xml:space="preserve">
     <value>Hlasitosť</value>
+  </data>
+  <data name="Width" xml:space="preserve">
+    <value>Šírka</value>
   </data>
 </root>

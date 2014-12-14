@@ -49,6 +49,8 @@ namespace HomeMediaCenterGUI
                 new ContainerItem("MP4 - H264, AAC  (DirectShow)", ".mp4", "mp4", true, false, true, true, false, false),
                 new ContainerItem("FLV - Sorenson Spark, MP3  (DirectShow)", ".flv", "flv", true, false, true, true, false, false),
                 new ContainerItem("FLV - Sorenson Spark, MP3 for streaming  (DirectShow)", ".flv", "flv_ts", true, false, true, true, false, true),
+                new ContainerItem("FLV_H264 - H264, AAC  (DirectShow)", ".flv", "flv_h264", true, false, true, true, false, false),
+                new ContainerItem("FLV_H264 - H264, AAC for streaming  (DirectShow)", ".flv", "flv_h264_ts", true, false, true, true, false, true),
                 new ContainerItem("BMP", ".bmp", "bmp", true, false, false, false, true, true),
                 new ContainerItem("JPEG", ".jpeg", "jpeg", true, false, false, false, true, true),
                 new ContainerItem("PNG", ".png", "png", true, false, false, false, true, true)

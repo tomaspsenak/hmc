@@ -56,36 +56,40 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("GET", "/Encode/*", new HttpRouteDelegate(GetLibraryEncode));
             this.server.HttpServer.AddRoute("HEAD", "/Thumbnail/*", new HttpRouteDelegate(GetThumbnailFile));
             this.server.HttpServer.AddRoute("GET", "/Thumbnail/*", new HttpRouteDelegate(GetThumbnailFile));
+            this.server.HttpServer.AddRoute("HEAD", "/Subtitle/*", new HttpRouteDelegate(GetSubtitleFile));
+            this.server.HttpServer.AddRoute("GET", "/Subtitle/*", new HttpRouteDelegate(GetSubtitleFile));
 
             this.server.HttpServer.AddRoute("GET", "/", new HttpRouteDelegate(GetWeb));
             this.server.HttpServer.AddRoute("GET", "/Web/*", new HttpRouteDelegate(GetWeb));
+            this.server.HttpServer.AddRoute("GET", "/favicon.ico", new HttpRouteDelegate(GetWebIco));
             this.server.HttpServer.AddRoute("GET", "/Web/player.html", new HttpRouteDelegate(GetWebPlayer));
             this.server.HttpServer.AddRoute("HEAD", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/WebPlayer.xap", new HttpRouteDelegate(GetWebSilverlight));
             this.server.HttpServer.AddRoute("GET", "/Web/htmlstyle.css", new HttpRouteDelegate(GetWebStyle));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.css", new HttpRouteDelegate(GetWebStyle));
-            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.10.4.custom.min.css", new HttpRouteDelegate(GetWebStyle));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.11.1.custom.min.css", new HttpRouteDelegate(GetWebStyle));
             this.server.HttpServer.AddRoute("GET", "/Web/control.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/player.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery-1.11.1.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/jquery.lightbox-0.5.min.js", new HttpRouteDelegate(GetWebJavascript));
-            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.10.4.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery-ui-1.11.1.custom.min.js", new HttpRouteDelegate(GetWebJavascript));
+            this.server.HttpServer.AddRoute("GET", "/Web/jquery.ui.touch-punch.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/folder.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/folderback.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmllogo.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/ui-icons_222222_256x240.png", new HttpRouteDelegate(GetWebPng));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/ui-icons_454545_256x240.png", new HttpRouteDelegate(GetWebPng));
+            this.server.HttpServer.AddRoute("GET", "/Web/Images/ui-icons_888888_256x240.png", new HttpRouteDelegate(GetWebPng));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlarrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlorangearrow.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlleftcontent.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlgreenbox.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlrightnav.gif", new HttpRouteDelegate(GetWebGif));
-            this.server.HttpServer.AddRoute("GET", "/Web/Images/htmlrightnava.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-blank.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-btn-close.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-btn-next.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-btn-prev.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/Images/lightbox-ico-loading.gif", new HttpRouteDelegate(GetWebGif));
-            this.server.HttpServer.AddRoute("GET", "/Web/Images/loading.gif", new HttpRouteDelegate(GetWebGif));
             this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.min.js", new HttpRouteDelegate(GetWebJavascript));
             this.server.HttpServer.AddRoute("HEAD", "/Web/flowplayer.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.swf", new HttpRouteDelegate(GetWebShockwave));
@@ -226,6 +230,9 @@ namespace HomeMediaCenter
                 try { File.Delete(this.databasePath); }
                 catch { }
 
+                try { Directory.Delete(this.thumbnailsPath, true); }
+                catch { }
+
                 //treba nanovo zapisat settings kedze sa ho nepodarilo precitat
                 this.settingsChanged = true;
 
@@ -338,6 +345,18 @@ namespace HomeMediaCenter
                 GetEncode(request, path, null, null, null);
             else
                 GetFile(request, path, mime, null);
+        }
+
+        private void GetSubtitleFile(HttpRequest request)
+        {
+            if (!request.UrlParams.ContainsKey("id"))
+                throw new HttpException(404, "Unknown source");
+
+            string path, mime;
+            if (!this.itemManager.GetSubtitleFile(request.UrlParams["id"], out path, out mime))
+                throw new HttpException(404, "Bad parameter");
+
+            GetFile(request, path, mime, null);
         }
 
         private void GetFile(HttpRequest request, string path, string mime, string fileFeature)
@@ -519,10 +538,11 @@ namespace HomeMediaCenter
                 xmlWriter.WriteElementString("title", "Home Media Center");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/htmlstyle.css"" />");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery.lightbox-0.5.css"" />");
-                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.10.4.custom.min.css"" />");
+                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.11.1.custom.min.css"" />");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.11.1.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.lightbox-0.5.min.js""></script>");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.10.4.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.11.1.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.ui.touch-punch.min.js""></script>");
                 xmlWriter.WriteEndElement();
 
                 xmlWriter.WriteStartElement("body");
@@ -574,7 +594,6 @@ namespace HomeMediaCenter
                     xmlWriter.WriteStartElement("select");
                     xmlWriter.WriteAttributeString("id", "devices");
                     xmlWriter.WriteAttributeString("name", "devices");
-                    xmlWriter.WriteAttributeString("style", "margin-right:10px;");
 
                     xmlWriter.WriteStartElement("option");
                     xmlWriter.WriteAttributeString("value", "none");
@@ -585,8 +604,8 @@ namespace HomeMediaCenter
 
                     xmlWriter.WriteEndElement();
 
+                    xmlWriter.WriteRaw(@"<div id=""devicesWorkingBar""></div>");
                     xmlWriter.WriteRaw(string.Format(@"<button id=""refreshBtn"" type=""button"">{0}</button>", LanguageResource.Refresh));
-                    xmlWriter.WriteRaw(@"<img id=""loadingImg"" src=""/web/images/loading.gif"" alt="""" title="""" border=""0"" style=""display:none;"" />");
 
                     //Koniec left_content
                     xmlWriter.WriteEndElement();
@@ -617,36 +636,40 @@ namespace HomeMediaCenter
                         }
                     }
 
-                    xmlWriter.WriteRaw(string.Format(@"<input id=""volPBtn"" type=""submit"" name=""volP"" value=""{0} +"">", LanguageResource.Volume));
-                    xmlWriter.WriteRaw(string.Format(@"<input id=""volMBtn"" type=""submit"" name=""volM"" value=""{0} -"">", LanguageResource.Volume));
-                    xmlWriter.WriteRaw(string.Format(@"<input id=""playBtn"" type=""submit"" name=""play"" value=""{0}"">", LanguageResource.Play));
-                    xmlWriter.WriteRaw(string.Format(@"<input id=""stopBtn"" type=""submit"" name=""stop"" value=""{0}"">", LanguageResource.Stop));
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""volPBtn"" name=""action"" value=""volp""/>{0} +</button>", LanguageResource.Volume));
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""volMBtn"" name=""action"" value=""volm""/>{0} -</button>", LanguageResource.Volume));
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""playBtn"" name=""action"" value=""play""/>{0}</button>", LanguageResource.Play));
+                    xmlWriter.WriteRaw(string.Format(@"<button id=""stopBtn"" name=""action"" value=""stop""/>{0}</button>", LanguageResource.Stop));
 
-                    try
+                    if (request.UrlParams.ContainsKey("action"))
                     {
-                        if (request.UrlParams.ContainsKey("volP"))
-                            this.controlPoint.VolumePlus(device);
-                        else if (request.UrlParams.ContainsKey("volM"))
-                            this.controlPoint.VolumeMinus(device);
-                        else if (request.UrlParams.ContainsKey("play"))
-                            this.controlPoint.Play(device, this.server.HttpPort, id, this.itemManager, startTime);
-                        else if (request.UrlParams.ContainsKey("stop"))
-                            this.controlPoint.Stop(device);
-                    }
-                    catch (Exception ex)
-                    {
-                        xmlWriter.WriteStartElement("br");
-                        xmlWriter.WriteEndElement();
+                        string action = request.UrlParams["action"].ToLower();
+                        try
+                        {
+                            if (action == "volp")
+                                this.controlPoint.VolumePlus(device);
+                            else if (action == "volm")
+                                this.controlPoint.VolumeMinus(device);
+                            else if (action == "play")
+                                this.controlPoint.Play(device, this.server.HttpPort, id, this.itemManager, startTime);
+                            else if (action == "stop")
+                                this.controlPoint.Stop(device);
+                        }
+                        catch (Exception ex)
+                        {
+                            xmlWriter.WriteStartElement("br");
+                            xmlWriter.WriteEndElement();
 
-                        xmlWriter.WriteStartElement("span");
-                        xmlWriter.WriteAttributeString("class", "error");
-                        xmlWriter.WriteValue(LanguageResource.OperationFailed);
-                        xmlWriter.WriteEndElement();
+                            xmlWriter.WriteStartElement("span");
+                            xmlWriter.WriteAttributeString("class", "error");
+                            xmlWriter.WriteValue(LanguageResource.OperationFailed);
+                            xmlWriter.WriteEndElement();
 
-                        xmlWriter.WriteStartElement("span");
-                        xmlWriter.WriteAttributeString("class", "ui-icon ui-icon-info");
-                        xmlWriter.WriteAttributeString("title", ex.Message);
-                        xmlWriter.WriteFullEndElement();
+                            xmlWriter.WriteStartElement("span");
+                            xmlWriter.WriteAttributeString("class", "ui-icon ui-icon-info");
+                            xmlWriter.WriteAttributeString("title", ex.Message);
+                            xmlWriter.WriteFullEndElement();
+                        }
                     }
 
                     //Koniec right_content
@@ -702,9 +725,10 @@ namespace HomeMediaCenter
                 xmlWriter.WriteStartElement("head");
                 xmlWriter.WriteElementString("title", "Home Media Center - Player");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/htmlstyle.css"" />");
-                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.10.4.custom.min.css"" />");
+                xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.11.1.custom.min.css"" />");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-1.11.1.min.js""></script>");
-                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.10.4.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery-ui-1.11.1.custom.min.js""></script>");
+                xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/jquery.ui.touch-punch.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/flowplayer.min.js""></script>");
                 xmlWriter.WriteRaw(@"<script type=""text/javascript"" src=""/web/player.js""></script>");
                 xmlWriter.WriteEndElement();
@@ -753,6 +777,11 @@ namespace HomeMediaCenter
         private void GetWebStyle(HttpRequest request)
         {
             SendResource(request, "text/css");
+        }
+
+        private void GetWebIco(HttpRequest request)
+        {
+            SendResource(request, "image/x-icon");
         }
 
         private void GetWebGif(HttpRequest request)

@@ -46,7 +46,7 @@
             this.mpeg2Label = new System.Windows.Forms.Label();
             this.ffdshowLabel = new System.Windows.Forms.Label();
             this.wmvLabel = new System.Windows.Forms.Label();
-            this.webmLabel = new System.Windows.Forms.Label();
+            this.lavLabel = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -101,6 +101,7 @@
             this.logCheckBox = new System.Windows.Forms.CheckBox();
             this.logListBox = new System.Windows.Forms.ListBox();
             this.converterTabPage = new System.Windows.Forms.TabPage();
+            this.paramControl = new HomeMediaCenterGUI.ParametersControl();
             this.convertButton = new System.Windows.Forms.Button();
             this.aboutTabPage = new System.Windows.Forms.TabPage();
             this.label5 = new System.Windows.Forms.Label();
@@ -110,7 +111,7 @@
             this.statusLabel = new System.Windows.Forms.Label();
             this.statusTextLabel = new System.Windows.Forms.Label();
             this.mainNotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.paramControl = new HomeMediaCenterGUI.ParametersControl();
+            this.showHiddenCheckBox = new System.Windows.Forms.CheckBox();
             this.directoriesGroup.SuspendLayout();
             this.mainTabControl.SuspendLayout();
             this.homeTabPage.SuspendLayout();
@@ -262,7 +263,7 @@
             this.codecsGroup.Controls.Add(this.mpeg2Label);
             this.codecsGroup.Controls.Add(this.ffdshowLabel);
             this.codecsGroup.Controls.Add(this.wmvLabel);
-            this.codecsGroup.Controls.Add(this.webmLabel);
+            this.codecsGroup.Controls.Add(this.lavLabel);
             this.codecsGroup.Controls.Add(this.label4);
             this.codecsGroup.Controls.Add(this.label3);
             this.codecsGroup.Controls.Add(this.label2);
@@ -312,10 +313,10 @@
             // 
             // webmLabel
             // 
-            this.webmLabel.Location = new System.Drawing.Point(180, 22);
-            this.webmLabel.Name = "webmLabel";
-            this.webmLabel.Size = new System.Drawing.Size(80, 13);
-            this.webmLabel.TabIndex = 4;
+            this.lavLabel.Location = new System.Drawing.Point(180, 22);
+            this.lavLabel.Name = "webmLabel";
+            this.lavLabel.Size = new System.Drawing.Size(80, 13);
+            this.lavLabel.TabIndex = 4;
             // 
             // label4
             // 
@@ -323,7 +324,7 @@
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(150, 13);
             this.label4.TabIndex = 3;
-            this.label4.Text = "WebM Splitter, VP8, Vorbis";
+            this.label4.Text = "LAV Splitter";
             // 
             // label3
             // 
@@ -352,6 +353,7 @@
             // settingsTabPage
             // 
             this.settingsTabPage.AutoScroll = true;
+            this.settingsTabPage.Controls.Add(this.showHiddenCheckBox);
             this.settingsTabPage.Controls.Add(this.generateThumbnailsCheckBox);
             this.settingsTabPage.Controls.Add(this.languageComboBox);
             this.settingsTabPage.Controls.Add(this.languageLabel);
@@ -427,7 +429,7 @@
             this.streamGroupBox.Controls.Add(this.videoStreamParamRemoveButton);
             this.streamGroupBox.Controls.Add(this.streamParamLabel);
             this.streamGroupBox.Controls.Add(this.videoStreamParamCombo);
-            this.streamGroupBox.Location = new System.Drawing.Point(6, 438);
+            this.streamGroupBox.Location = new System.Drawing.Point(6, 461);
             this.streamGroupBox.Name = "streamGroupBox";
             this.streamGroupBox.Size = new System.Drawing.Size(627, 95);
             this.streamGroupBox.TabIndex = 50;
@@ -436,7 +438,7 @@
             // 
             // webcamStreamingCheck
             // 
-            this.webcamStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.webcamStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.webcamStreamingCheck.Location = new System.Drawing.Point(172, 42);
             this.webcamStreamingCheck.Name = "webcamStreamingCheck";
@@ -447,7 +449,7 @@
             // 
             // desktopStreamingCheck
             // 
-            this.desktopStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.desktopStreamingCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.desktopStreamingCheck.Location = new System.Drawing.Point(172, 19);
             this.desktopStreamingCheck.Name = "desktopStreamingCheck";
@@ -564,7 +566,7 @@
             this.videoGroupBox.Controls.Add(this.videoNativeCheck);
             this.videoGroupBox.Controls.Add(this.videoParamCombo);
             this.videoGroupBox.Controls.Add(this.videoParamLabel);
-            this.videoGroupBox.Location = new System.Drawing.Point(6, 359);
+            this.videoGroupBox.Location = new System.Drawing.Point(6, 382);
             this.videoGroupBox.Name = "videoGroupBox";
             this.videoGroupBox.Size = new System.Drawing.Size(627, 73);
             this.videoGroupBox.TabIndex = 40;
@@ -606,7 +608,7 @@
             // 
             // videoNativeCheck
             // 
-            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.videoNativeCheck.Name = "videoNativeCheck";
@@ -617,7 +619,7 @@
             // 
             // videoParamCombo
             // 
-            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.videoParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.videoParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.videoParamCombo.FormattingEnabled = true;
@@ -644,7 +646,7 @@
             this.imageGroupBox.Controls.Add(this.imageNativeCheck);
             this.imageGroupBox.Controls.Add(this.imageParamCombo);
             this.imageGroupBox.Controls.Add(this.imageParamLabel);
-            this.imageGroupBox.Location = new System.Drawing.Point(6, 280);
+            this.imageGroupBox.Location = new System.Drawing.Point(6, 303);
             this.imageGroupBox.Name = "imageGroupBox";
             this.imageGroupBox.Size = new System.Drawing.Size(627, 73);
             this.imageGroupBox.TabIndex = 30;
@@ -686,7 +688,7 @@
             // 
             // imageNativeCheck
             // 
-            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.imageNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.imageNativeCheck.Name = "imageNativeCheck";
@@ -697,7 +699,7 @@
             // 
             // imageParamCombo
             // 
-            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.imageParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.imageParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.imageParamCombo.FormattingEnabled = true;
@@ -724,7 +726,7 @@
             this.audioGroupBox.Controls.Add(this.audioNativeCheck);
             this.audioGroupBox.Controls.Add(this.audioParamCombo);
             this.audioGroupBox.Controls.Add(this.audioParamLabel);
-            this.audioGroupBox.Location = new System.Drawing.Point(6, 199);
+            this.audioGroupBox.Location = new System.Drawing.Point(6, 222);
             this.audioGroupBox.Name = "audioGroupBox";
             this.audioGroupBox.Size = new System.Drawing.Size(627, 75);
             this.audioGroupBox.TabIndex = 20;
@@ -766,7 +768,7 @@
             // 
             // audioNativeCheck
             // 
-            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.audioNativeCheck.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioNativeCheck.Location = new System.Drawing.Point(172, 19);
             this.audioNativeCheck.Name = "audioNativeCheck";
@@ -777,7 +779,7 @@
             // 
             // audioParamCombo
             // 
-            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.audioParamCombo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.audioParamCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.audioParamCombo.FormattingEnabled = true;
@@ -935,7 +937,7 @@
             // convertButton
             // 
             this.convertButton.Anchor = System.Windows.Forms.AnchorStyles.Top;
-            this.convertButton.Location = new System.Drawing.Point(210, 422);
+            this.convertButton.Location = new System.Drawing.Point(260, 447);
             this.convertButton.Name = "convertButton";
             this.convertButton.Size = new System.Drawing.Size(120, 32);
             this.convertButton.TabIndex = 20;
@@ -958,15 +960,15 @@
             // 
             // label5
             // 
-            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.label5.Location = new System.Drawing.Point(3, 154);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(633, 81);
             this.label5.TabIndex = 3;
             this.label5.Text = "----------------------------------------------\r\nHome Media Center uses external l" +
-    "ibraries:\r\nFFmpeg - http://ffmpeg.zeranoe.com/\r\nWebM for DirectShow - http://cod" +
-    "e.google.com/p/webm/\r\nDirectShow filters for Ogg Vorbis - http://xiph.org/dshow/";
+"ibraries:\r\nFFmpeg - http://ffmpeg.zeranoe.com/\r\nWebM for DirectShow - http://cod" +
+"e.google.com/p/webm/\r\nDirectShow filters for Ogg Vorbis - http://xiph.org/dshow/";
             this.label5.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // homepageLinkLabel
@@ -1036,13 +1038,24 @@
             // 
             // paramControl
             // 
-            this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.paramControl.Location = new System.Drawing.Point(3, 3);
-            this.paramControl.MinimumSize = new System.Drawing.Size(610, 415);
+            this.paramControl.MinimumSize = new System.Drawing.Size(610, 440);
             this.paramControl.Name = "paramControl";
-            this.paramControl.Size = new System.Drawing.Size(633, 415);
+            this.paramControl.Size = new System.Drawing.Size(633, 440);
             this.paramControl.TabIndex = 10;
+            // 
+            // showHiddenCheckBox
+            // 
+            this.showHiddenCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.showHiddenCheckBox.Location = new System.Drawing.Point(175, 199);
+            this.showHiddenCheckBox.Name = "showHiddenCheckBox";
+            this.showHiddenCheckBox.Size = new System.Drawing.Size(458, 17);
+            this.showHiddenCheckBox.TabIndex = 16;
+            this.showHiddenCheckBox.Text = "Show hidden files";
+            this.showHiddenCheckBox.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -1109,7 +1122,7 @@
         private System.Windows.Forms.Label mpeg2Label;
         private System.Windows.Forms.Label ffdshowLabel;
         private System.Windows.Forms.Label wmvLabel;
-        private System.Windows.Forms.Label webmLabel;
+        private System.Windows.Forms.Label lavLabel;
         private System.Windows.Forms.Label requestCountLabel;
         private System.Windows.Forms.Label requestLabel;
         private System.Windows.Forms.TabPage settingsTabPage;
@@ -1165,6 +1178,7 @@
         private System.Windows.Forms.CheckBox generateThumbnailsCheckBox;
         private System.Windows.Forms.ComboBox languageComboBox;
         private System.Windows.Forms.Label languageLabel;
+        private System.Windows.Forms.CheckBox showHiddenCheckBox;
     }
 }
 
