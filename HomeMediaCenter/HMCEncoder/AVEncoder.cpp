@@ -37,55 +37,58 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	//Inicializacia kontextu podla nazvu kontajnera
 	if (avformat_alloc_output_context2(&this->m_formatContext, NULL, params->m_containerStr, NULL) < 0)
 	{
-		CHECK_HR(hr = E_FAIL);
+		hr = E_FAIL;
+		goto done;
 	}
 
 	//Nastavenie videa - ak je pripojeny video pin
 	if (videoMT)
 	{
-		if (params->m_videoCodec != CODEC_ID_NONE)
-			this->m_formatContext->oformat->video_codec = params->m_videoCodec;
-
-		if (!(this->m_videoStream = AddVideo(params, videoMT)))
+		if (!(this->m_videoStream = AddVideo(params, videoMT, 
+			(params->m_videoCodec == CODEC_ID_NONE) ? this->m_formatContext->oformat->video_codec : params->m_videoCodec)))
 		{
-			CHECK_HR(hr = E_FAIL);
+			hr = E_FAIL;
+			goto done;
 		}
 	}
 
 	//Nastavenie audia - ak je pripojeny audio pin
 	if (audioMT)
 	{
-		if (params->m_audioCodec != CODEC_ID_NONE)
-			this->m_formatContext->oformat->audio_codec = params->m_audioCodec;
-
-		if (!(this->m_audioStream = AddAudio(params, audioMT)))
+		if (!(this->m_audioStream = AddAudio(params, audioMT, 
+			(params->m_audioCodec == CODEC_ID_NONE) ? this->m_formatContext->oformat->audio_codec : params->m_audioCodec)))
 		{
-			CHECK_HR(hr = E_FAIL);
+			hr = E_FAIL;
+			goto done;
 		}
 	}
 
 	unsigned char * buffer = (unsigned char *)av_malloc(buffer_size);
 	if (!buffer)
 	{
-		CHECK_HR(hr = E_OUTOFMEMORY);
+		hr = E_OUTOFMEMORY;
+		goto done;
 	}
 
 	this->m_formatContext->pb = avio_alloc_context(buffer, buffer_size, 1, opaque, 
 		read_packet, write_packet, params->m_streamable ? NULL : seek);
 	if (!this->m_formatContext->pb)
 	{
-		CHECK_HR(hr = E_FAIL);
+		hr = E_FAIL;
+		goto done;
 	}
 
 	this->m_formatContext->packet_size = 3072;
 	this->m_formatContext->max_delay = (int)(0.7 * AV_TIME_BASE);
 	this->m_formatContext->pb->seekable = !params->m_streamable;
 	this->m_formatContext->flags |= AVFMT_NOFILE;
+	this->m_formatContext->max_interleave_delta = INT64_MAX;
 
 	//Zapise hlavicku suboru ak ju kontajner obsahuje
 	if (avformat_write_header(this->m_formatContext, NULL) < 0)
 	{
-		CHECK_HR(hr = E_FAIL);
+		hr = E_FAIL;
+		goto done;
 	}
 
 	this->m_isStopped = FALSE;
@@ -181,7 +184,7 @@ HRESULT AVEncoder::Stop(BOOL isEOS)
 	return S_OK;
 }
 
-AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT)
+AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, AVCodecID codecID)
 {
     AVCodecContext * c;
 	AVCodec * codec;
@@ -194,7 +197,7 @@ AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * aud
 	else
 		return NULL;
 
-	codec = avcodec_find_encoder(this->m_formatContext->oformat->audio_codec);
+	codec = avcodec_find_encoder(codecID);
 	if (codec == NULL)
 		return NULL;
 
@@ -203,14 +206,28 @@ AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * aud
         return NULL;
 
     c = st->codec;
-	c->codec_id = this->m_formatContext->oformat->audio_codec;
+	c->codec_id = codecID;
     c->codec_type = AVMEDIA_TYPE_AUDIO;
-	c->sample_fmt = c->codec_id == AV_CODEC_ID_MP3 ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16;
+
+	//Vyberie format zhodujuci sa s AV_SAMPLE_FMT_S16 (nativny directshow) alebo prvy v sample_fmts
+	c->sample_fmt = codec->sample_fmts[0];
+	for (int i = 0; codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++)
+	{
+		if (codec->sample_fmts[i] == AV_SAMPLE_FMT_S16)
+		{
+			c->sample_fmt = AV_SAMPLE_FMT_S16;
+			break;
+		}
+	}
 
 	c->sample_rate = params->m_audioSamplerate;
 
 	c->channels = params->m_audioChannels;
 	c->channel_layout = av_get_default_channel_layout(params->m_audioChannels);
+
+	c->time_base.num = 1;
+	c->time_base.den = c->sample_rate;
+	st->time_base = c->time_base;
 
 	c->bit_rate = params->m_audioBitrate;
 	if (params->m_audioMode == BitrateMode_VBR)
@@ -267,11 +284,13 @@ AVStream * AVEncoder::AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * aud
     return st;
 }
 
-AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * videoMT)
+AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * videoMT, AVCodecID codecID)
 {
+	AVDictionary * options = NULL;
 	AVCodecContext * c;
 	AVCodec * codec;
     AVStream * st;
+	char optParams[256];
 
 	BITMAPINFOHEADER * inputFormat;
 	REFERENCE_TIME timePerFrame;
@@ -304,7 +323,7 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 		return NULL;
 	}
 
-	codec = avcodec_find_encoder(this->m_formatContext->oformat->video_codec);
+	codec = avcodec_find_encoder(codecID);
 	if (codec == NULL)
 		return NULL;
 
@@ -313,7 +332,7 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
         return NULL;
 
     c = st->codec;
-	c->codec_id = this->m_formatContext->oformat->video_codec;
+	c->codec_id = codecID;
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
 	//Vyberie format zhodujuci sa s m_pictureFormat alebo prvy v pix_fmts
@@ -334,6 +353,7 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 	AVRational frameRate =  av_d2q((double)UNITS / timePerFrame, 30000);
 	c->time_base.den =  frameRate.num;
 	c->time_base.num =  frameRate.den;
+	st->time_base = c->time_base;
 
 	c->width = (params->m_width < 1) ? inputFormat->biWidth : params->m_width;
 	c->height = (params->m_height < 1) ? inputFormat->biHeight : params->m_height;
@@ -371,8 +391,6 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 			//Nedodrzat standard
 			c->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
 		}
-
-		c->thread_count = min(av_cpu_count(), 8);
 	}
 
 	c->gop_size = params->m_videoGopSize;
@@ -385,8 +403,41 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 	if (this->m_formatContext->oformat->flags & AVFMT_GLOBALHEADER)
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-	if (avcodec_open2(c, codec, NULL) < 0)
+	//Nastavenie kvality videa
+	if (codecID == AV_CODEC_ID_VP8)
+	{
+		if (params->m_videoQuality < 50)
+			av_dict_set(&options, "quality", "realtime", 0);
+		else
+			av_dict_set(&options, "quality", "good", 0);
+	}
+	else
+	{
+		if (params->m_videoQuality < 20)
+			av_dict_set(&options, "preset", "faster", 0);
+		else if (params->m_videoQuality < 40)
+			av_dict_set(&options, "preset", "fast", 0);
+		else if (params->m_videoQuality < 60)
+			av_dict_set(&options, "preset", "medium", 0);
+		else if (params->m_videoQuality < 80)
+			av_dict_set(&options, "preset", "slow", 0);
+		else
+			av_dict_set(&options, "preset", "slower", 0);
+	}
+
+	//Nastavenie poctu vlakien, problem s VP8 good a best quality
+	if (codecID != AV_CODEC_ID_VP8)
+	{
+		_snprintf_s(optParams, _TRUNCATE, "%d", min(av_cpu_count(), 8));
+		av_dict_set(&options, "threads", optParams, 0);
+	}
+
+	if (avcodec_open2(c, codec, &options) < 0)
+	{
+		av_dict_free(&options);
 		return NULL;
+	}
+	av_dict_free(&options);
 
 	this->m_pictureOutFrame = CreateFrame(c->pix_fmt, c->width, c->height);
 	if (!this->m_pictureOutFrame)
@@ -673,8 +724,9 @@ HRESULT AVEncoder::EncodeAudio(BYTE * buffer, long length)
 		int audioInBufSize = av_samples_get_buffer_size(NULL, c->channels, outSamples, c->sample_fmt, 0);
 
 		this->m_audioFrame->nb_samples  = outSamples;
-		//nie je potrebne nastavit pts - nastavi sa automaticky
-		//this->m_audioFrame->pts = av_rescale_q(c->frame_number * this->m_audioFrame->nb_samples, c->time_base, this->m_audioStream->time_base);
+		//pre vorbis je potrebne nastavit pts, ostatne nastavi automaticky
+		if (c->codec_id == AV_CODEC_ID_VORBIS)
+			this->m_audioFrame->pts = av_rescale_q(c->frame_number * c->frame_size, c->time_base, this->m_audioStream->time_base);
 
 		avcodec_fill_audio_frame(this->m_audioFrame, c->channels, c->sample_fmt, this->m_audioInBuf[0], audioInBufSize, 0);
 
@@ -792,10 +844,7 @@ HRESULT AVEncoder::EncodeVideo(BYTE * buffer, long length)
 	{
 		pkt->stream_index = this->m_videoStream->index;
 
-		if (pkt->pts != AV_NOPTS_VALUE)
-			pkt->pts = av_rescale_q(pkt->pts, c->time_base, this->m_videoStream->time_base);
-		if (pkt->dts != AV_NOPTS_VALUE)
-			pkt->dts = av_rescale_q(pkt->dts, c->time_base, this->m_videoStream->time_base);
+		av_packet_rescale_ts(pkt, c->time_base, this->m_videoStream->time_base);
 		
 		CAutoLock cAutoLock2(&this->m_mainLock);
 		if (av_interleaved_write_frame(this->m_formatContext, pkt) != 0)
@@ -811,4 +860,16 @@ done:
 		delete pkt;
 
 	return hr;
+}
+
+void AVEncoder::av_packet_rescale_ts(AVPacket * pkt, AVRational src_tb, AVRational dst_tb)
+{
+	if (pkt->pts != AV_NOPTS_VALUE)
+		pkt->pts = av_rescale_q(pkt->pts, src_tb, dst_tb);
+	if (pkt->dts != AV_NOPTS_VALUE)
+		pkt->dts = av_rescale_q(pkt->dts, src_tb, dst_tb);
+	if (pkt->duration > 0)
+		pkt->duration = av_rescale_q(pkt->duration, src_tb, dst_tb);
+	if (pkt->convergence_duration > 0)
+		pkt->convergence_duration = av_rescale_q(pkt->convergence_duration, src_tb, dst_tb);
 }

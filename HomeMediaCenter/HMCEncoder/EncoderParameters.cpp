@@ -29,6 +29,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 15;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 48000;
@@ -46,6 +47,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 15;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 48000;
@@ -63,6 +65,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 15;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 44100;
@@ -91,6 +94,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 15;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 44100;
@@ -108,6 +112,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 15;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 44100;
@@ -125,12 +130,31 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 12;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(128 * 1000);
 			this->m_params.m_audioSamplerate = 44100;
 			this->m_params.m_audioChannels = 2;
 
 			SetVideoCBR(4000 * 1000);
+
+			break;
+		case Container_FLVH264:
+			strcpy_s(this->m_params.m_containerStr, "flv");
+			this->m_params.m_audioCodec = AV_CODEC_ID_AAC;
+			this->m_params.m_videoCodec = AV_CODEC_ID_H264;
+			this->m_params.m_streamable = true;
+			this->m_params.m_videoInterlaced = false;
+			this->m_params.m_videoBFrames = false;
+			this->m_params.m_videoGopSize = 15;
+			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
+
+			SetAudioCBR(128 * 1000);
+			this->m_params.m_audioSamplerate = 44100;
+			this->m_params.m_audioChannels = 2;
+
+			SetVideoCBR(800 * 1000);
 
 			break;
 		case Container_ASF:
@@ -142,12 +166,31 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			this->m_params.m_videoBFrames = false;
 			this->m_params.m_videoGopSize = 12;
 			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
 
 			SetAudioCBR(40 * 1000);
 			this->m_params.m_audioSamplerate = 32000;
 			this->m_params.m_audioChannels = 2;
 
 			SetVideoCBR(400 * 1000);
+
+			break;
+		case Container_WEBM:
+			strcpy_s(this->m_params.m_containerStr, "webm");
+			this->m_params.m_audioCodec = CODEC_ID_NONE;
+			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_streamable = true;
+			this->m_params.m_videoInterlaced = false;
+			this->m_params.m_videoBFrames = false;
+			this->m_params.m_videoGopSize = 12;
+			this->m_params.m_videoBufferSize = 224 * 1024 * 8;
+			this->m_params.m_videoQuality = 50;
+
+			SetAudioCBR(128 * 1000);
+			this->m_params.m_audioSamplerate = 44100;
+			this->m_params.m_audioChannels = 2;
+
+			SetVideoCBR(4000 * 1000);
 
 			break;
 		default:
@@ -186,7 +229,9 @@ HRESULT EncoderParameters::SetStreamable(BOOL streamable)
 		case Container_MPEG2TSH264:
 		case Container_MP3:
 		case Container_FLV:
+		case Container_FLVH264:
 		case Container_ASF:
+		case Container_WEBM:
 			this->m_params.m_streamable = streamable;
 			return S_OK;
 		default:
@@ -379,7 +424,9 @@ HRESULT EncoderParameters::SetWidth(UINT32 width)
 		case Container_AVI:
 		case Container_MP4:
 		case Container_FLV:
+		case Container_FLVH264:
 		case Container_ASF:
+		case Container_WEBM:
 			this->m_params.m_width = width;
 			return S_OK;
 		default:
@@ -416,7 +463,9 @@ HRESULT EncoderParameters::SetHeight(UINT32 height)
 		case Container_AVI:
 		case Container_MP4:
 		case Container_FLV:
+		case Container_FLVH264:
 		case Container_ASF:
+		case Container_WEBM:
 			this->m_params.m_height = height;
 			return S_OK;
 		default:
@@ -435,6 +484,42 @@ HRESULT EncoderParameters::GetHeight(UINT32 * pHeight)
 	return S_OK;
 }
 
+HRESULT EncoderParameters::SetVideoQuality(int videoQuality)
+{
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+
+	if (this->m_filter->IsActive())
+		return VFW_E_FILTER_ACTIVE;
+
+	switch (this->m_container)
+	{
+		case Container_MPEG2PS:
+		case Container_MPEG2TS:
+		case Container_MPEG2TSH264:
+		case Container_AVI:
+		case Container_MP4:
+		case Container_FLV:
+		case Container_FLVH264:
+		case Container_ASF:
+		case Container_WEBM:
+			this->m_params.m_videoQuality = videoQuality;
+			return S_OK;
+		default:
+			return E_FAIL;
+	}
+}
+
+HRESULT EncoderParameters::GetVideoQuality(int * pVideoQuality)
+{
+	CheckPointer(pVideoQuality, E_POINTER);
+
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+
+	*pVideoQuality = this->m_params.m_videoQuality;
+
+	return S_OK;
+}
+
 HRESULT EncoderParameters::SetVideoBFrames(BOOL bFrames)
 {
 	CAutoLock cObjectLock(this->m_filter->m_pLock);
@@ -449,6 +534,8 @@ HRESULT EncoderParameters::SetVideoBFrames(BOOL bFrames)
 		case Container_MPEG2TSH264:
 		case Container_AVI:
 		case Container_MP4:
+		case Container_FLVH264:
+		case Container_WEBM:
 			this->m_params.m_videoBFrames = bFrames;
 			return S_OK;
 		default:
@@ -486,6 +573,8 @@ HRESULT EncoderParameters::SetVideoGopSize(int gopSize)
 		case Container_AVI:
 		case Container_MP4:
 		case Container_FLV:
+		case Container_FLVH264:
+		case Container_WEBM:
 			this->m_params.m_videoGopSize = gopSize;
 			return S_OK;
 		default:

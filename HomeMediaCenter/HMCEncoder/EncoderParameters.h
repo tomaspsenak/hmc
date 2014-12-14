@@ -48,6 +48,8 @@ class EncoderParameters : public CUnknown, public IHMCEncoder
 				STDMETHODIMP GetWidth(UINT32 * pWidth);
 				STDMETHODIMP SetHeight(UINT32 height);
 				STDMETHODIMP GetHeight(UINT32 * pHeight);
+				STDMETHODIMP SetVideoQuality(int videoQuality);
+				STDMETHODIMP GetVideoQuality(int * pVideoQuality);
 				STDMETHODIMP SetVideoBFrames(BOOL bFrames);
 				STDMETHODIMP GetVideoBFrames(BOOL * bFrames);
 				STDMETHODIMP SetVideoGopSize(int gopSize);

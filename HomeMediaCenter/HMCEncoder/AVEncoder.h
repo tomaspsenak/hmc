@@ -61,13 +61,14 @@ class AVEncoder
 				HRESULT EncodeAudio(BYTE * buffer, long length);
 				HRESULT EncodeVideo(BYTE * buffer, long length);
 
-	private:	AVStream * AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT);
-				AVStream * AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * videoMT);
+	private:	AVStream * AddAudio(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, AVCodecID codecID);
+				AVStream * AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * videoMT, AVCodecID codecID);
 				HRESULT FreeContext(void);
 				static AVFrame * CreateFrame(AVPixelFormat pix_fmt, int width, int height);
 				static HRESULT CheckStream(AVStream* & stream, CCritSec & streamLock);
 				static int FreeInterleavePackets(AVFormatContext * s);
 				static int ff_interleave_packet_per_dts(AVFormatContext * s, AVPacket * out);
+				static void av_packet_rescale_ts(AVPacket * pkt, AVRational src_tb, AVRational dst_tb);
 		
 				AVFormatContext * m_formatContext;
 				AVStream * m_audioStream;

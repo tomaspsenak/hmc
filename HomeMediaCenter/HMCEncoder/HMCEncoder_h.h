@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Fri Jul 04 21:40:57 2014
+/* at Fri Nov 14 21:05:09 2014
  */
 /* Compiler settings for HMCEncoder.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
@@ -198,7 +198,9 @@ enum Container
 	Container_MP4	= ( Container_MP3 + 1 ) ,
 	Container_AVI	= ( Container_MP4 + 1 ) ,
 	Container_FLV	= ( Container_AVI + 1 ) ,
-	Container_ASF	= ( Container_FLV + 1 ) 
+	Container_FLVH264	= ( Container_FLV + 1 ) ,
+	Container_ASF	= ( Container_FLVH264 + 1 ) ,
+	Container_WEBM	= ( Container_ASF + 1 ) 
     } ;
 
 enum BitrateMode
@@ -290,6 +292,12 @@ EXTERN_C const IID IID_IHMCEncoder;
         
         virtual HRESULT STDMETHODCALLTYPE GetHeight( 
             /* [out] */ UINT32 *pHeight) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetVideoQuality( 
+            /* [in] */ int videoQuality) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetVideoQuality( 
+            /* [out] */ int *pVideoQuality) = 0;
         
     };
     
@@ -389,6 +397,14 @@ EXTERN_C const IID IID_IHMCEncoder;
             IHMCEncoder * This,
             /* [out] */ UINT32 *pHeight);
         
+        HRESULT ( STDMETHODCALLTYPE *SetVideoQuality )( 
+            IHMCEncoder * This,
+            /* [in] */ int videoQuality);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetVideoQuality )( 
+            IHMCEncoder * This,
+            /* [out] */ int *pVideoQuality);
+        
         END_INTERFACE
     } IHMCEncoderVtbl;
 
@@ -459,6 +475,12 @@ EXTERN_C const IID IID_IHMCEncoder;
 
 #define IHMCEncoder_GetHeight(This,pHeight)	\
     ( (This)->lpVtbl -> GetHeight(This,pHeight) ) 
+
+#define IHMCEncoder_SetVideoQuality(This,videoQuality)	\
+    ( (This)->lpVtbl -> SetVideoQuality(This,videoQuality) ) 
+
+#define IHMCEncoder_GetVideoQuality(This,pVideoQuality)	\
+    ( (This)->lpVtbl -> GetVideoQuality(This,pVideoQuality) ) 
 
 #endif /* COBJMACROS */
 

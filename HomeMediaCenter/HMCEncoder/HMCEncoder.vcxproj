@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib;$(SolutionDir)BaseClasses\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProgramDatabaseFile>$(SolutionDir)$(Configuration)\$(TargetName).pdb</ProgramDatabaseFile>
       <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
@@ -126,7 +126,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrtd.lib;strmbasd.lib;avcodec.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\x64\;$(SolutionDir)BaseClasses\x64\Debug\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
@@ -150,7 +150,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib;$(SolutionDir)BaseClasses\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProgramDatabaseFile>$(SolutionDir)$(Configuration)\$(TargetName).pdb</ProgramDatabaseFile>
       <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
@@ -175,12 +175,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>HMCEncoder.def</ModuleDefinitionFile>
       <OutputFile>$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>strmiids.lib;winmm.lib;msvcrt.lib;strmbase.lib;avcodec.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swscale.lib;swresample.lib;Avrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)Lib\x64\;$(SolutionDir)BaseClasses\x64\Release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>Avrt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DesktopSourceSilenceGenerator.h" />
     <ClInclude Include="EncoderAsyncInputPin.h" />
     <ClInclude Include="EncoderAudioInputPin.h" />
     <ClInclude Include="AVEncoder.h" />
@@ -207,6 +208,7 @@
     <ClInclude Include="EncoderVideoInputPin.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DesktopSourceSilenceGenerator.cpp" />
     <ClCompile Include="EncoderAsyncInputPin.cpp" />
     <ClCompile Include="EncoderAudioInputPin.cpp" />
     <ClCompile Include="AVEncoder.cpp" />

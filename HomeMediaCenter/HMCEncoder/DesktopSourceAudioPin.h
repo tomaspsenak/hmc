@@ -46,9 +46,7 @@ class DesktopSourceAudioPin  : public CSourceStream
 
 				HRESULT OnThreadDestroy(void);
 
-	private:	static DWORD WINAPI PlaySilenceFunction(LPVOID pContext);
-		
-				DWORD m_sleepTime;
+	private:	DWORD m_sleepTime;
 				REFERENCE_TIME m_rtLastFrame;
 				const REFERENCE_TIME m_rtFrameLength;
 				IMMDevice * m_device;
@@ -59,11 +57,6 @@ class DesktopSourceAudioPin  : public CSourceStream
 				BYTE * m_buffer;
 				DWORD m_cBufferData;
 				DesktopSourceFilter * m_pFilter;
-
-				HANDLE m_silenceStartedEvent;
-				HANDLE m_silenceStopEvent;
-				HANDLE m_silenceThread;
-				HRESULT m_silenceHr;
 };
 
 #endif //DESKTOPSOURCEAUDIOPIN_HMCENCODER_INCLUDED

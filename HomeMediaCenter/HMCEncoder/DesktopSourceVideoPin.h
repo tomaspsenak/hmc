@@ -47,12 +47,15 @@ class DesktopSourceVideoPin : public CSourceStream
 
 	private:	static HRESULT GetWidthHeight(const AM_MEDIA_TYPE * type, LONG * width, LONG * height); 
 				static HRESULT GetBitmapInfo(const AM_MEDIA_TYPE * type, BITMAPINFOHEADER * bitmapInfo);
-				static HBITMAP CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio);
+				
+				HBITMAP CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio);
 		
 				CCritSec m_cSharedState;
 				REFERENCE_TIME m_rtLastFrame;
 				DesktopSourceFilter * m_pFilter;
 				BITMAPINFO m_bitmapInfo;
+				BITMAPINFO m_rgbBitmapInfo;
+				BYTE * m_rgbBuffer;
 };
 
 #endif //DESKTOPSOURCEVIDEOPIN_HMCENCODER_INCLUDED
