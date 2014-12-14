@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BindingListStreamSources.cs" />
+    <Compile Include="BufferedAsyncStream.cs" />
     <Compile Include="ChunkedStream.cs" />
     <Compile Include="ConnectionManagerService.cs" />
     <Compile Include="ContentDirectoryService.cs" />
@@ -205,7 +206,6 @@
     <EmbeddedResource Include="Resources\htmllogo.png" />
     <EmbeddedResource Include="Resources\htmlorangearrow.gif" />
     <EmbeddedResource Include="Resources\htmlrightnav.gif" />
-    <EmbeddedResource Include="Resources\htmlrightnava.gif" />
     <EmbeddedResource Include="Resources\htmlstyle.css" />
     <EmbeddedResource Include="Resources\jquery.lightbox-0.5.css" />
     <EmbeddedResource Include="Resources\jquery.lightbox-0.5.min.js" />
@@ -249,15 +249,16 @@
     <EmbeddedResource Include="Resources\flowplayer.controls.swf" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\loading.gif" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Resources\folder.png" />
     <EmbeddedResource Include="Resources\folderback.png" />
     <EmbeddedResource Include="Resources\jquery-1.11.1.min.js" />
-    <EmbeddedResource Include="Resources\jquery-ui-1.10.4.custom.min.css" />
-    <EmbeddedResource Include="Resources\jquery-ui-1.10.4.custom.min.js" />
     <EmbeddedResource Include="Resources\ui-icons_222222_256x240.png" />
+    <EmbeddedResource Include="Resources\jquery-ui-1.11.1.custom.min.css" />
+    <EmbeddedResource Include="Resources\jquery-ui-1.11.1.custom.min.js" />
+    <EmbeddedResource Include="Resources\ui-icons_888888_256x240.png" />
+    <EmbeddedResource Include="Resources\ui-icons_454545_256x240.png" />
+    <EmbeddedResource Include="Resources\jquery.ui.touch-punch.min.js" />
+    <EmbeddedResource Include="Resources\favicon.ico" />
     <Content Include="System.Data.SqlServerCe.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

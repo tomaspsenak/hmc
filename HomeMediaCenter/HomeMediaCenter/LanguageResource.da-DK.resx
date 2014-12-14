@@ -120,6 +120,9 @@
   <data name="Album" xml:space="preserve">
     <value>album</value>
   </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Accepter</value>
+  </data>
   <data name="Artist" xml:space="preserve">
     <value>kunstner</value>
   </data>

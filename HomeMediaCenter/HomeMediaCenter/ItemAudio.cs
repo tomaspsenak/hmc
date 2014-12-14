@@ -262,7 +262,10 @@ namespace HomeMediaCenter
             xmlWriter.WriteStartElement("td");
             xmlWriter.WriteStartElement("div");
             xmlWriter.WriteAttributeString("class", "libPlayButton");
+            xmlWriter.WriteStartElement("div");
             xmlWriter.WriteRaw(string.Format(@"<a href=""/web/player.html?id={0}"" target=""_blank"">{1}</a>", id, LanguageResource.Play));
+            xmlWriter.WriteRaw(string.Format(@"<a href=""#"">{0}</a>", LanguageResource.Other));
+            xmlWriter.WriteEndElement();
             xmlWriter.WriteStartElement("ul");
             if (noStreamExtension != null)
                 xmlWriter.WriteRaw(string.Format(@"<li><a href=""/files/audio{0}?id={1}"" target=""_blank"">{2}</a></li>", noStreamExtension, id, LanguageResource.Download));
@@ -307,7 +310,7 @@ namespace HomeMediaCenter
 
             if (codec == "wma")
             {
-                string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&video=0&width=1&height=1&vidbitrate=1&fps=1", id);
+                string sourceUrl = string.Format("/encode/web?id={0}&codec=wmv2&video=0&width=1&height=1&vidbitrate=1&fps=1&obufsize=1024", id);
                 switch (quality)
                 {
                     case "low": sourceUrl += "&audbitrate=40&quality=1"; break;
@@ -353,7 +356,7 @@ namespace HomeMediaCenter
             }
             else if (codec == "flv")
             {
-                string sourceUrl = string.Format("/encode/web%3Fid={0}&codec=flv_ts&video=0", id);
+                string sourceUrl = string.Format("/encode/web%3Fid={0}&codec=flv_ts&video=0&obufsize=1024", id);
                 switch (quality)
                 {
                     case "low": sourceUrl += "&audbitrate=64&quality=1"; break;
@@ -386,8 +389,8 @@ namespace HomeMediaCenter
                         sourceUrlQuality = "&audbitrate=128&quality=51";
                         break;
                 }
-                string sourceUrl1 = string.Format("/encode/web?id={0}&codec=webm_ts&video=0{1}", id, sourceUrlQuality);
-                string sourceUrl2 = string.Format("/encode/web?id={0}&codec=mp3_ts&video=0{1}", id, sourceUrlQuality);
+                string sourceUrl1 = string.Format("/encode/web?id={0}&codec=webm_ts&video=0&obufsize=1024{1}", id, sourceUrlQuality);
+                string sourceUrl2 = string.Format("/encode/web?id={0}&codec=mp3_ts&video=0&obufsize=1024{1}", id, sourceUrlQuality);
 
                 xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" />");
 
@@ -454,7 +457,6 @@ namespace HomeMediaCenter
                 quality == "high" ? "checked=\"checked\"" : string.Empty, LanguageResource.High));
             xmlWriter.WriteRaw(@"</span>");
 
-            xmlWriter.WriteRaw(@"<button id=""submitButton"" type=""submit"">Ok</button>");
             xmlWriter.WriteRaw(@"</div>");
 
             //Koniec form

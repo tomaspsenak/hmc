@@ -223,12 +223,7 @@ namespace HomeMediaCenter
                     directories, new PathItemEqualityComparer()).Cast<Item>().ToArray();
                 string[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)).Select(a => a.Path)).ToArray();
 
-                foreach (Item item in toRemove)
-                {
-                    this.Items.Remove(item);
-                    item.RemoveMe(context, manager);
-                }
-                context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+                RemoveRange(context, manager, toRemove);
 
                 foreach (string path in toAdd)
                 {
@@ -253,12 +248,7 @@ namespace HomeMediaCenter
                 PathMime[] toAddFile = files.Cast<object>().Except(this.Items.Where(a => a.GetType() != typeof(ItemContainer)).Select(
                     a => a.Path), new PathMimeEqualityComparer()).Cast<PathMime>().ToArray();
 
-                foreach (Item item in toRemove)
-                {
-                    this.Items.Remove(item);
-                    item.RemoveMe(context, manager);
-                }
-                context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+                RemoveRange(context, manager, toRemove);
 
                 foreach (PathMime pathMime in toAddFile)
                 {
@@ -317,8 +307,11 @@ namespace HomeMediaCenter
 
         public override void RemoveMe(DataContext context, ItemManager manager)
         {
-            Item[] items = this.Items.ToArray();
+            RemoveRange(context, manager, this.Items.ToArray());
+        }
 
+        protected void RemoveRange(DataContext context, ItemManager manager, Item[] items)
+        {
             foreach (Item item in items)
             {
                 //Najprv musi byt prvok odstraneny zo setu lebo nasledne RemoveMe overuje typy kontajnera
@@ -460,16 +453,17 @@ namespace HomeMediaCenter
             xmlWriter.WriteCData(string.Format(@"
 $(function () {{
     {0}
-    $('.libPlayButton > a').button();
+    $('.libPlayButton div > a').button().next()
+        .button({{ icons: {{ primary: 'ui-icon-triangle-1-s' }}, text: false }})
+        .click(function() {{ $(this).parent().parent().children('ul').show().position({{ my: 'left top', at: 'left bottom', of: $(this) }});
+            return false; }}).parent()
+            .buttonset();
     $('.libPlayButton ul').menu().hide();
-    $('.libPlayButton').hover(function() {{
-	    $(this).children('ul').show().position({{ my: 'left top', at: 'right top', of: $(this).children('a:first') }});
-	    return false;
-    }}, function() {{
+    $('.libPlayButton').hover(null, function() {{
 	    $(this).children('ul').fadeOut('fast');
     }});
 }});
-//", (itemsType == MediaType.Image) ? string.Format("$('.libPlayButton > a').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxHeight: screen.height * 0.8, maxWidth: screen.width * 0.8 }});", LanguageResource.Photo, LanguageResource.Of) : string.Empty));
+//", (itemsType == MediaType.Image) ? string.Format("$('.libPlayButton div a:first-child').lightBox({{ txtImage: '{0}', txtOf: '{1}', maxHeight: screen.height * 0.8, maxWidth: screen.width * 0.8 }});", LanguageResource.Photo, LanguageResource.Of) : string.Empty));
             xmlWriter.WriteValue("\r\n");
             xmlWriter.WriteEndElement();
 
@@ -482,10 +476,10 @@ $(function () {{
                     xmlWriter.WriteStartElement("thead");
                     xmlWriter.WriteStartElement("tr");
                     xmlWriter.WriteStartElement("th");
-                    xmlWriter.WriteAttributeString("width", "90");
+                    xmlWriter.WriteAttributeString("width", "110");
                     xmlWriter.WriteFullEndElement();
                     xmlWriter.WriteStartElement("th");
-                    xmlWriter.WriteAttributeString("width", "20");
+                    xmlWriter.WriteAttributeString("width", "50");
                     xmlWriter.WriteFullEndElement();
                     xmlWriter.WriteElementString("th", LanguageResource.Title);
                     xmlWriter.WriteElementString("th", LanguageResource.Duration);
@@ -502,7 +496,7 @@ $(function () {{
                     xmlWriter.WriteStartElement("thead");
                     xmlWriter.WriteStartElement("tr");
                     xmlWriter.WriteStartElement("th");
-                    xmlWriter.WriteAttributeString("width", "90");
+                    xmlWriter.WriteAttributeString("width", "110");
                     xmlWriter.WriteFullEndElement();
                     xmlWriter.WriteStartElement("th");
                     xmlWriter.WriteAttributeString("width", "50");
@@ -522,7 +516,7 @@ $(function () {{
                     xmlWriter.WriteStartElement("thead");
                     xmlWriter.WriteStartElement("tr");
                     xmlWriter.WriteStartElement("th");
-                    xmlWriter.WriteAttributeString("width", "90");
+                    xmlWriter.WriteAttributeString("width", "110");
                     xmlWriter.WriteFullEndElement();
                     xmlWriter.WriteStartElement("th");
                     xmlWriter.WriteAttributeString("width", "50");

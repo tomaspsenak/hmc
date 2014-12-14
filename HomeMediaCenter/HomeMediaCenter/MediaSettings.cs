@@ -184,7 +184,7 @@ namespace HomeMediaCenter
                 "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000",
                 "DLNA.ORG_OP=10;DLNA.ORG_FLAGS=01500000000000000000000000000000",
                 "DLNA.ORG_OP=00;DLNA.ORG_FLAGS=01500000000000000000000000000000",
-                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100"));
+                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100&obufsize=1024"));
 
             this.image = new MediaSettingsIMG(upnpDevice, "ImageSettings",
                 true,
@@ -197,13 +197,13 @@ namespace HomeMediaCenter
                 "DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01500000000000000000000000000000",
                 "DLNA.ORG_OP=10;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000",
                 "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000",
-                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"));
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25&obufsize=2048"));
 
             this.stream = new MediaSettingsBase(upnpDevice, "StreamSettings",
-                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25"),
-                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0"),
-                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0"),
-                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100"));
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25&obufsize=2048"),
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0&obufsize=2048"),
+                EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0&obufsize=2048"),
+                EncoderBuilder.GetEncoder("&codec=mp3_ts&audbitrate=128&video=0&quality=100&obufsize=1024"));
         }
 
         public MediaSettingsAV Audio

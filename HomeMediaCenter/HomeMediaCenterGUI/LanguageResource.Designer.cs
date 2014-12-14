@@ -241,6 +241,15 @@ namespace HomeMediaCenterGUI {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Copy.
+        /// </summary>
+        internal static string Copy {
+            get {
+                return ResourceManager.GetString("Copy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Directories.
         /// </summary>
         internal static string Directories {
@@ -484,6 +493,15 @@ namespace HomeMediaCenterGUI {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Output buffer size (kbyte).
+        /// </summary>
+        internal static string OutputBufferSize {
+            get {
+                return ResourceManager.GetString("OutputBufferSize", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Parameter editor.
         /// </summary>
         internal static string ParameterEditor {
@@ -633,6 +651,15 @@ namespace HomeMediaCenterGUI {
         internal static string Settings {
             get {
                 return ResourceManager.GetString("Settings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show hidden files.
+        /// </summary>
+        internal static string ShowHiddenFiles {
+            get {
+                return ResourceManager.GetString("ShowHiddenFiles", resourceCulture);
             }
         }
         

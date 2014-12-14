@@ -133,6 +133,17 @@ namespace HomeMediaCenterGUI
                 this.bitrateAudioComboBox.SelectedIndex = -1;
             }
 
+            int oBufSize;
+            this.outBufSizeTextBox.Enabled = (audio || video) && streamable;
+            if (this.parameters.ContainsKey("obufsize") && int.TryParse(this.parameters["obufsize"], out oBufSize) && oBufSize >= 0)
+            {
+                this.outBufSizeTextBox.Text = oBufSize.ToString();
+            }
+            else
+            {
+                this.outBufSizeTextBox.Text = "2048";
+            }
+
             if (audio && !video)
             {
                 this.audioCheckBox.Enabled = false;
@@ -153,12 +164,15 @@ namespace HomeMediaCenterGUI
             }
 
             this.extended = extended;
-            this.othersGroupBox.Visible = extended && this.editCheckBox.Checked == false;
+
             this.inputGroupBox.Visible = extended && this.editCheckBox.Checked == false;
             this.outputGroupBox.Visible = extended && this.editCheckBox.Checked == false;
 
+            this.startTimeTextBox.Enabled = extended;
             this.startTimeTextBox.Text = "00:00:00";
+            this.endTimeTextBox.Enabled = extended;
             this.endTimeTextBox.Text = "00:00:00";
+            this.subtitlesIntCheckBox.Enabled = extended;
             this.subtitlesIntCheckBox.Checked = false;
             this.inputTextBox.Items[0] = "..";
             this.outputTextBox.Items[0] = "..";
@@ -188,6 +202,7 @@ namespace HomeMediaCenterGUI
             this.browseOutputButton.Text = LanguageResource.Browse;
             this.othersGroupBox.Text = LanguageResource.Others;
             this.startEndTimeLabel.Text = LanguageResource.StartEndTime + ":";
+            this.outBufSizeLabel.Text = LanguageResource.OutputBufferSize + ":";
             this.subtitlesIntCheckBox.Text = LanguageResource.IntegrateSubtitles;
             this.bitrateVideoLabel.Text = LanguageResource.BitRate + ":";
             this.bitrateAudioLabel.Text = LanguageResource.BitRate + ":";
@@ -199,6 +214,7 @@ namespace HomeMediaCenterGUI
             this.scanLabel.Text = LanguageResource.ScanType + ":";
             this.scanComboBox.Items[0] = LanguageResource.Interlaced;
             this.scanComboBox.Items[1] = LanguageResource.Progressive;
+            this.copyMenuItem.Text = LanguageResource.Copy;
 
             //Nastavenie infoTextBox - najprv zmazat
             this.infoTextBox.Clear();
@@ -215,6 +231,7 @@ namespace HomeMediaCenterGUI
             this.infoTextBox.AppendText("\twmv3\t\t(Windows Media Video 9, Windows Media Audio 10)\r\n");
             this.infoTextBox.AppendText("\tmp3_ts\t\t(MPEG audio layer 3)\r\n");
             this.infoTextBox.AppendText("\tflv_ts\t\t(Sorenson Spark, MPEG audio layer 3)\r\n");
+            this.infoTextBox.AppendText("\tflv_h264_ts\t(H264, AAC)\r\n");
             this.infoTextBox.AppendText("\tbmp\t\t(Bitmap image file)\r\n");
             this.infoTextBox.AppendText("\tjpeg\t\t(Joint Photographic Experts Group)\r\n");
             this.infoTextBox.AppendText("\tpng\t\t(Portable Network Graphics)\r\n");
@@ -249,7 +266,10 @@ namespace HomeMediaCenterGUI
 
             this.infoTextBox.AppendText("\r\n&scan= \r\n");
             this.infoTextBox.AppendText("\ti\t\t(interlaced scan type)\r\n");
-            this.infoTextBox.AppendText("\tp\t\t(progressive scan type)\r\n\r\n");
+            this.infoTextBox.AppendText("\tp\t\t(progressive scan type)\r\n");
+
+            this.infoTextBox.AppendText("\r\n&obufsize= \r\n");
+            this.infoTextBox.AppendText("\t0..2147483647\t(output buffer size in kbyte)\r\n\r\n");
 
             this.infoTextBox.AppendText(LanguageResource.Examples + "\r\n");
             this.infoTextBox.AppendText("&codec=mpeg2_ps&vidbitrate=9000&audbitrate=128&width=1920&height=1080&fps=25&keepaspect\r\n");
@@ -268,10 +288,10 @@ namespace HomeMediaCenterGUI
             this.containerGroupBox.Visible = !val;
             this.videoGroupBox.Visible = !val;
             this.audioGroupBox.Visible = !val;
+            this.othersGroupBox.Visible = !val;
 
             if (this.extended)
             {
-                this.othersGroupBox.Visible = !val;
                 this.inputGroupBox.Visible = !val;
                 this.outputGroupBox.Visible = !val;
             }
@@ -310,7 +330,7 @@ namespace HomeMediaCenterGUI
             }
 
             this.keepAspectCheckBox.Enabled = item.IsDirectShow;
-            this.subtitlesIntCheckBox.Enabled = item.IsDirectShow;
+            this.subtitlesIntCheckBox.Enabled = item.IsDirectShow && this.extended;
 
             while (this.inputTextBox.Items.Count > 1)
                 this.inputTextBox.Items.RemoveAt(1);
@@ -331,6 +351,8 @@ namespace HomeMediaCenterGUI
                 foreach (IPAddress address in Dns.GetHostAddresses(Dns.GetHostName()).Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork))
                     this.outputTextBox.Items.Add(string.Format("Multicast {0} - 239.255.255.251:12346", address));
             }
+
+            this.outBufSizeTextBox.Enabled = item.IsDirectShow && item.IsStreamable && (item.IsVideo || item.IsAudio);
 
             this.paramBox.Text = GetParamString();
         }
@@ -498,6 +520,22 @@ namespace HomeMediaCenterGUI
                 this.parameters.Remove("source");
 
             this.paramBox.Text = GetParamString();
+        }
+
+        private void outBufSizeTextBox_Changed(object sender, EventArgs e)
+        {
+            int oBufSize;
+            if (this.outBufSizeTextBox.Enabled && int.TryParse(this.outBufSizeTextBox.Text, out oBufSize) && oBufSize > 0)
+                this.parameters["obufsize"] = oBufSize.ToString();
+            else if (this.parameters.ContainsKey("obufsize"))
+                this.parameters.Remove("obufsize");
+
+            this.paramBox.Text = GetParamString();
+        }
+
+        private void copyMenuItem_Click(object sender, EventArgs e)
+        {
+            Clipboard.SetText(this.infoTextBox.SelectedText);
         }
     }
 }

@@ -28,7 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.othersGroupBox = new System.Windows.Forms.GroupBox();
+            this.outBufSizeLabel = new System.Windows.Forms.Label();
+            this.outBufSizeTextBox = new System.Windows.Forms.TextBox();
             this.subtitlesIntCheckBox = new System.Windows.Forms.CheckBox();
             this.endTimeTextBox = new System.Windows.Forms.TextBox();
             this.startTimeTextBox = new System.Windows.Forms.TextBox();
@@ -60,6 +63,8 @@
             this.editCheckBox = new System.Windows.Forms.CheckBox();
             this.paramBox = new System.Windows.Forms.TextBox();
             this.infoTextBox = new System.Windows.Forms.RichTextBox();
+            this.infoMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.copyMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.othersGroupBox.SuspendLayout();
             this.audioGroupBox.SuspendLayout();
             this.videoGroupBox.SuspendLayout();
@@ -67,22 +72,43 @@
             this.outputGroupBox.SuspendLayout();
             this.inputGroupBox.SuspendLayout();
             this.paramGroupBox.SuspendLayout();
+            this.infoMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // othersGroupBox
             // 
             this.othersGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.othersGroupBox.Controls.Add(this.outBufSizeLabel);
+            this.othersGroupBox.Controls.Add(this.outBufSizeTextBox);
             this.othersGroupBox.Controls.Add(this.subtitlesIntCheckBox);
             this.othersGroupBox.Controls.Add(this.endTimeTextBox);
             this.othersGroupBox.Controls.Add(this.startTimeTextBox);
             this.othersGroupBox.Controls.Add(this.startEndTimeLabel);
             this.othersGroupBox.Location = new System.Drawing.Point(2, 249);
             this.othersGroupBox.Name = "othersGroupBox";
-            this.othersGroupBox.Size = new System.Drawing.Size(605, 50);
+            this.othersGroupBox.Size = new System.Drawing.Size(605, 75);
             this.othersGroupBox.TabIndex = 50;
             this.othersGroupBox.TabStop = false;
             this.othersGroupBox.Text = "Others";
+            // 
+            // outBufSizeLabel
+            // 
+            this.outBufSizeLabel.Location = new System.Drawing.Point(4, 47);
+            this.outBufSizeLabel.Name = "outBufSizeLabel";
+            this.outBufSizeLabel.Size = new System.Drawing.Size(180, 13);
+            this.outBufSizeLabel.TabIndex = 55;
+            this.outBufSizeLabel.Text = "Output buffer size (kbyte):";
+            // 
+            // outBufSizeTextBox
+            // 
+            this.outBufSizeTextBox.Location = new System.Drawing.Point(189, 44);
+            this.outBufSizeTextBox.MaxLength = 10;
+            this.outBufSizeTextBox.Name = "outBufSizeTextBox";
+            this.outBufSizeTextBox.Size = new System.Drawing.Size(90, 20);
+            this.outBufSizeTextBox.TabIndex = 54;
+            this.outBufSizeTextBox.EnabledChanged += new System.EventHandler(this.outBufSizeTextBox_Changed);
+            this.outBufSizeTextBox.TextChanged += new System.EventHandler(this.outBufSizeTextBox_Changed);
             // 
             // subtitlesIntCheckBox
             // 
@@ -356,7 +382,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.outputGroupBox.Controls.Add(this.outputTextBox);
             this.outputGroupBox.Controls.Add(this.browseOutputButton);
-            this.outputGroupBox.Location = new System.Drawing.Point(2, 361);
+            this.outputGroupBox.Location = new System.Drawing.Point(2, 386);
             this.outputGroupBox.Name = "outputGroupBox";
             this.outputGroupBox.Size = new System.Drawing.Size(605, 50);
             this.outputGroupBox.TabIndex = 70;
@@ -393,7 +419,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.inputGroupBox.Controls.Add(this.browseInputButton);
             this.inputGroupBox.Controls.Add(this.inputTextBox);
-            this.inputGroupBox.Location = new System.Drawing.Point(2, 305);
+            this.inputGroupBox.Location = new System.Drawing.Point(2, 330);
             this.inputGroupBox.Name = "inputGroupBox";
             this.inputGroupBox.Size = new System.Drawing.Size(605, 50);
             this.inputGroupBox.TabIndex = 60;
@@ -464,14 +490,29 @@
             this.infoTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.infoTextBox.ContextMenuStrip = this.infoMenuStrip;
             this.infoTextBox.Location = new System.Drawing.Point(3, 59);
             this.infoTextBox.Name = "infoTextBox";
             this.infoTextBox.ReadOnly = true;
-            this.infoTextBox.Size = new System.Drawing.Size(604, 340);
+            this.infoTextBox.Size = new System.Drawing.Size(604, 320);
             this.infoTextBox.TabIndex = 17;
             this.infoTextBox.TabStop = false;
             this.infoTextBox.Text = "";
             this.infoTextBox.Visible = false;
+            // 
+            // infoMenuStrip
+            // 
+            this.infoMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.copyMenuItem});
+            this.infoMenuStrip.Name = "infoMenuStrip";
+            this.infoMenuStrip.Size = new System.Drawing.Size(153, 48);
+            // 
+            // copyMenuItem
+            // 
+            this.copyMenuItem.Name = "copyMenuItem";
+            this.copyMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.copyMenuItem.Text = "Copy";
+            this.copyMenuItem.Click += new System.EventHandler(this.copyMenuItem_Click);
             // 
             // ParametersControl
             // 
@@ -485,9 +526,9 @@
             this.Controls.Add(this.audioGroupBox);
             this.Controls.Add(this.paramGroupBox);
             this.Controls.Add(this.infoTextBox);
-            this.MinimumSize = new System.Drawing.Size(610, 415);
+            this.MinimumSize = new System.Drawing.Size(610, 440);
             this.Name = "ParametersControl";
-            this.Size = new System.Drawing.Size(610, 415);
+            this.Size = new System.Drawing.Size(610, 440);
             this.Load += new System.EventHandler(this.ParametersControl_Load);
             this.othersGroupBox.ResumeLayout(false);
             this.othersGroupBox.PerformLayout();
@@ -498,6 +539,7 @@
             this.inputGroupBox.ResumeLayout(false);
             this.paramGroupBox.ResumeLayout(false);
             this.paramGroupBox.PerformLayout();
+            this.infoMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -536,5 +578,9 @@
         private System.Windows.Forms.TextBox paramBox;
         private System.Windows.Forms.CheckBox editCheckBox;
         private System.Windows.Forms.RichTextBox infoTextBox;
+        private System.Windows.Forms.Label outBufSizeLabel;
+        private System.Windows.Forms.TextBox outBufSizeTextBox;
+        private System.Windows.Forms.ContextMenuStrip infoMenuStrip;
+        private System.Windows.Forms.ToolStripMenuItem copyMenuItem;
     }
 }

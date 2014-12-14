@@ -44,12 +44,7 @@ namespace HomeMediaCenter
             ItemManager.Dir[] toAdd = directories.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainer)),
                 new PathNameItemEqualityComparer()).Cast<ItemManager.Dir>().ToArray();
 
-            foreach (Item item in toRemove)
-            {
-                this.Items.Remove(item);
-                item.RemoveMe(context, manager);
-            }
-            context.GetTable<Item>().DeleteAllOnSubmit(toRemove);
+            RemoveRange(context, manager, toRemove);
 
             foreach (ItemManager.Dir dir in toAdd)
             {

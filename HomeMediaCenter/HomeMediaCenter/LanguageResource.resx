@@ -120,6 +120,9 @@
   <data name="Album" xml:space="preserve">
     <value>album</value>
   </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
   <data name="Artist" xml:space="preserve">
     <value>artist</value>
   </data>
@@ -135,8 +138,14 @@
   <data name="Duration" xml:space="preserve">
     <value>duration</value>
   </data>
+  <data name="Fullscreen" xml:space="preserve">
+    <value>Fullscreen</value>
+  </data>
   <data name="Genre" xml:space="preserve">
     <value>genre</value>
+  </data>
+  <data name="Height" xml:space="preserve">
+    <value>Height</value>
   </data>
   <data name="High" xml:space="preserve">
     <value>High</value>
@@ -170,6 +179,9 @@
   </data>
   <data name="Or" xml:space="preserve">
     <value>or</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>Other</value>
   </data>
   <data name="Pause" xml:space="preserve">
     <value>Pause</value>
@@ -215,5 +227,8 @@
   </data>
   <data name="Volume" xml:space="preserve">
     <value>Volume</value>
+  </data>
+  <data name="Width" xml:space="preserve">
+    <value>Width</value>
   </data>
 </root>

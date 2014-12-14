@@ -17,7 +17,8 @@ namespace HomeMediaCenterGUI
     public partial class MainForm : Form
     {
         private readonly MediaServerDevice mediaCenter;
-        private ToolTip mainToolTip = new ToolTip();
+        private readonly ToolTip mainToolTip = new ToolTip();
+        private readonly BackgroundWorker filtersWorker = new BackgroundWorker();
 
         private EventHandler<LogEventArgs> logEventHandler;
 
@@ -29,6 +30,9 @@ namespace HomeMediaCenterGUI
 
         public MainForm()
         {
+            this.filtersWorker.DoWork += new DoWorkEventHandler(filtersWorker_DoWork);
+            this.filtersWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(filtersWorker_RunWorkerCompleted);
+
             DirectoryInfo di = Directory.CreateDirectory(Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Home Media Center"));
 
             this.mediaCenter = new MediaServerDevice(di.FullName);
@@ -44,12 +48,6 @@ namespace HomeMediaCenterGUI
 
         private void InitLanguage()
         {
-            this.ffdshowLabel.Text = DirectShowEncoder.IsFFDSHOWInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.wmvLabel.Text = DirectShowEncoder.IsWMVInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.mpeg2Label.Text = DirectShowEncoder.IsMPEG2Installed() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.webmLabel.Text = DirectShowEncoder.IsWEBMInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-            this.hmcLabel.Text = DirectShowEncoder.IsHMCInstalled() ? LanguageResource.Installed : LanguageResource.NotInstalled;
-
             this.languageComboBox.Items.Clear();
             this.languageComboBox.Items.Add(LanguageResource.Automatic);
             foreach (string language in this.supportedLanguages.Where(a => a != null))
@@ -80,6 +78,7 @@ namespace HomeMediaCenterGUI
             this.portLabel.Text = LanguageResource.Port;
             this.languageLabel.Text = LanguageResource.Language;
             this.generateThumbnailsCheckBox.Text = LanguageResource.GenerateThumbnails;
+            this.showHiddenCheckBox.Text = LanguageResource.ShowHiddenFiles;
             this.audioNativeCheck.Text = LanguageResource.AllowNative;
             this.imageNativeCheck.Text = LanguageResource.AllowNative;
             this.videoNativeCheck.Text = LanguageResource.AllowNative;
@@ -150,6 +149,32 @@ namespace HomeMediaCenterGUI
                 this.ShowInTaskbar = false;
                 this.mainNotifyIcon.Visible = true;
             }
+
+            this.filtersWorker.RunWorkerAsync();
+        }
+
+        private void filtersWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            e.Result = new bool[] {
+                DirectShowEncoder.IsFFDSHOWInstalled(),
+                DirectShowEncoder.IsWMVInstalled(),
+                DirectShowEncoder.IsMPEG2Installed(),
+                DirectShowEncoder.IsLAVSplitInstalled(),
+                DirectShowEncoder.IsHMCInstalled()
+            };
+        }
+
+        private void filtersWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error != null)
+                return;
+
+            bool[] results = (bool[])e.Result;
+            this.ffdshowLabel.Text = results[0] ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.wmvLabel.Text = results[1] ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.mpeg2Label.Text = results[2] ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.lavLabel.Text = results[3] ? LanguageResource.Installed : LanguageResource.NotInstalled;
+            this.hmcLabel.Text = results[4] ? LanguageResource.Installed : LanguageResource.NotInstalled;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -157,13 +182,15 @@ namespace HomeMediaCenterGUI
             if (e.CloseReason == CloseReason.ApplicationExitCall)
                 return;
 
+            //Skryje form - na pozadi este korektne ukonci server a ulozi nastavenia
+            Hide();
+
+            this.mediaCenter.SaveSettings();
+
             if (!this.mediaCenter.Started)
                 return;
 
             e.Cancel = true;
-
-            //Skryje form - na pozadi este korektne ukonci server a ulozi nastavenia
-            Hide();
 
             StopMediaCenterAsync(AfterStopped.Close);
         }
@@ -341,7 +368,6 @@ namespace HomeMediaCenterGUI
 
             if (this.afterStopped == AfterStopped.Close)
             {
-                this.mediaCenter.SaveSettings();
                 Application.Exit();
             }
             else if (this.afterStopped == AfterStopped.LoadSettings)
@@ -373,6 +399,7 @@ namespace HomeMediaCenterGUI
             this.streamSourcesButton.Enabled = enabled;
             this.generateThumbnailsCheckBox.Enabled = enabled;
             this.languageComboBox.Enabled = enabled;
+            this.showHiddenCheckBox.Enabled = enabled;
         }
 
         private void mainTabControl_Selected(object sender, TabControlEventArgs e)
@@ -396,6 +423,7 @@ namespace HomeMediaCenterGUI
                 this.webcamStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableWebcamStreaming;
                 this.desktopStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableDesktopStreaming;
                 this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.ItemManager.RealTimeDatabaseRefresh;
+                this.showHiddenCheckBox.Checked = this.mediaCenter.ItemManager.ShowHiddenFiles;
                 this.generateThumbnailsCheckBox.Checked = this.mediaCenter.GenerateThumbnails;
 
                 MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
@@ -433,7 +461,6 @@ namespace HomeMediaCenterGUI
             else
             {
                 ApplySettings();
-                this.mediaCenter.SaveSettings();
             }
         }
 
@@ -449,6 +476,7 @@ namespace HomeMediaCenterGUI
             this.mediaCenter.ItemManager.EnableWebcamStreaming = this.webcamStreamingCheck.Checked;
             this.mediaCenter.ItemManager.EnableDesktopStreaming = this.desktopStreamingCheck.Checked;
             this.mediaCenter.ItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
+            this.mediaCenter.ItemManager.ShowHiddenFiles = this.showHiddenCheckBox.Checked;
             this.mediaCenter.GenerateThumbnails = this.generateThumbnailsCheckBox.Checked;
 
             MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;

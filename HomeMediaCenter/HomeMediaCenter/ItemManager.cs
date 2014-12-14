@@ -442,11 +442,40 @@ namespace HomeMediaCenter
             }
         }
 
+        internal bool GetSubtitleFile(string objectID, out string path, out string mime)
+        {
+            int id;
+            if (!ParseIdAndParams(objectID, out id))
+                throw new HttpException(402, "GetSubtitleFile - parse exception");
+
+            using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+            using (DataContext context = new DataContext(conn))
+            {
+                Item item = context.GetTable<Item>().FirstOrDefault(a => a.Id == id);
+                if (item == null)
+                {
+                    path = null;
+                    mime = null;
+                    return false;
+                }
+
+                if ((path = item.GetSubtitlesPath()) == null)
+                {
+                    mime = null;
+                    return false;
+                }
+
+                mime = "text/" + Path.GetExtension(path).TrimStart('.');
+            }
+
+            return true;
+        }
+
         internal bool GetThumbnailFile(string objectID, out string path, out string mime)
         {
             int id;
             if (!ParseIdAndParams(objectID, out id))
-                throw new HttpException(402, "GetFile - parse exception");
+                throw new HttpException(402, "GetThumbnailFile - parse exception");
 
             using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
             using (DataContext context = new DataContext(conn))
@@ -556,6 +585,7 @@ namespace HomeMediaCenter
                 writer.WriteStartElement("DIDL-Lite", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/");
                 writer.WriteAttributeString("xmlns", "dc", null, "http://purl.org/dc/elements/1.1/");
                 writer.WriteAttributeString("xmlns", "upnp", null, "urn:schemas-upnp-org:metadata-1-0/upnp/");
+                writer.WriteAttributeString("xmlns", "sec", null, "http://www.sec.co.kr/dlna");
 
                 using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
                 using (DataContext context = new DataContext(conn))
@@ -598,6 +628,7 @@ namespace HomeMediaCenter
                 writer.WriteStartElement("DIDL-Lite", "urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/");
                 writer.WriteAttributeString("xmlns", "dc", null, "http://purl.org/dc/elements/1.1/");
                 writer.WriteAttributeString("xmlns", "upnp", null, "urn:schemas-upnp-org:metadata-1-0/upnp/");
+                writer.WriteAttributeString("xmlns", "sec", null, "http://www.sec.co.kr/dlna");
                 writer.WriteAttributeString("xmlns", "av", null, "urn:schemas-sony-com:av");
 
                 using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
