@@ -30,7 +30,7 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 				CPosPassThru * m_passThru;
 };
 
-private class FileWriterPin : public CBaseInputPin, public IStream, public CAMThread
+private class FileWriterPin : public CBaseInputPin, public IStream
 {
 	public:		FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, 
 					LPCWSTR pName, System::IO::Stream^ outputStream);
@@ -41,10 +41,6 @@ private class FileWriterPin : public CBaseInputPin, public IStream, public CAMTh
 				
 				//CBasePin
 				HRESULT CheckMediaType(const CMediaType * pmt);
-
-				//CBaseInputPin
-				HRESULT Active(void);
-				HRESULT Inactive(void);
 
 				//IPin
 				STDMETHODIMP BeginFlush(void);
@@ -68,17 +64,9 @@ private class FileWriterPin : public CBaseInputPin, public IStream, public CAMTh
 				STDMETHODIMP Stat(STATSTG * pstatstg, DWORD grfStatFlag);
 				STDMETHODIMP Clone(IStream ** ppstm);
 
-				//CAMThread
-				DWORD ThreadProc(void);
-
-	private:	HRESULT Write(array<System::Byte> ^ buffer);
-		
-				gcroot<System::IO::Stream^> m_outputStream;
-				gcroot<array<System::Byte>^> m_buffer;
+	private:	gcroot<System::IO::Stream^> m_outputStream;
 				LONGLONG m_position;
 				CCritSec m_readWriteSect;
-
-				enum Command { CMD_STOP, CMD_WRITE };
 };
 
 #endif //FILEWRITERFILTER_DSWRAPPER_INCLUDED

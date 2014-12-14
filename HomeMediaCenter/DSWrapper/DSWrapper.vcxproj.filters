@@ -63,15 +63,6 @@
     <ClInclude Include="SinkSourceFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Extern\vp8encoderidl.h">
-      <Filter>Header Files\Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="Extern\webmmuxidl.h">
-      <Filter>Header Files\Extern</Filter>
-    </ClInclude>
-    <ClInclude Include="Extern\IVorbisEncodeSettings.h">
-      <Filter>Header Files\Extern</Filter>
-    </ClInclude>
     <ClInclude Include="FileWriterFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>

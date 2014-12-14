@@ -2,11 +2,9 @@
 #include "ContainerType.h"
 #include "DSWrapper.h"
 #include "Extern/IffdshowBase.h"
-#include "Extern/vp8encoderidl.h"
 #include <Ks.h>
 #include <codecapi.h>
 #include "Extern/IffDecoder.h"
-#include "Extern/IVorbisEncodeSettings.h"
 #include "HMCEncoder_i.c"
 #include "FileWriterFilter.h"
 #include <wmsdk.h>
@@ -20,12 +18,8 @@
 #include <wmcodecdsp.h>
 
 DEFINE_GUID(CLSID_Mpeg2Encoder, 0x5F5AFF4A, 0x2F7F, 0x4279, 0x88, 0xC2, 0xCD, 0x88, 0xEB, 0x39, 0xD1, 0x44);
-DEFINE_GUID(CLSID_WebmMux, 0xED3110F0, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
-DEFINE_GUID(CLSID_WebmVideo, 0xED3110F5, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
-DEFINE_GUID(CLSID_VorbisEncodeFilter, 0x5C94FE86, 0xB93B, 0x467F, 0xBF, 0xC3, 0xBD, 0x6C, 0x91, 0x41, 0x6F, 0x9B);  
-DEFINE_GUID(CLSID_IVorbisEncodeSettings, 0xA4C6A887, 0x7BD3, 0x4B33, 0x9A, 0x57, 0xA3, 0xEB, 0x10, 0x92, 0x4D, 0x3A);  
-DEFINE_GUID(CLSID_WebmOut, 0xED3110EB, 0x5211, 0x11DF, 0x94, 0xAF, 0x00, 0x26, 0xB9, 0x77, 0xEE, 0xAA);
 DEFINE_GUID(CLSID_FFDSHOWRaw, 0x0B390488, 0xD80F, 0x4A68, 0x84, 0x08, 0x48, 0xDC, 0x19, 0x9F, 0x0E, 0x97);
+DEFINE_GUID(CLSID_LAVSplit, 0x171252A0, 0x8820, 0x4AFE, 0x9D, 0xF8, 0x5C, 0x92, 0xB2, 0xD6, 0x6B, 0x04);
 
 namespace DSWrapper 
 {
@@ -70,17 +64,10 @@ namespace DSWrapper
 	}
 	
 	ContainerType ^ ContainerType::WEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
-		return gcnew ContainerWEBM(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, 
-			keepAspectRatio, audBitrate, kWebmMuxModeDefault);
-	}
-
-	ContainerType ^ ContainerType::WEBM_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
-	{
-		return gcnew ContainerWEBM(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath,
-			keepAspectRatio, audBitrate, kWebmMuxModeLive);
+		return gcnew ContainerHMC(Container_WEBM, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
 	}
 
 	ContainerType ^ ContainerType::WMV(UINT32 width, UINT32 height, WMVideoSubtype videoSubtype, UINT32 vidBitrate, UINT32 percentQuality, 
@@ -112,29 +99,23 @@ namespace DSWrapper
 			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
 	}
 
-	ContainerType ^ ContainerType::MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality)
+	ContainerType ^ ContainerType::MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality, bool streamable)
 	{
-		return gcnew ContainerHMC(Container_MP3, false, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
-			false, audBitrate);
-	}
-
-	ContainerType ^ ContainerType::MP3_TS(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality)
-	{
-		return gcnew ContainerHMC(Container_MP3, true, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
+		return gcnew ContainerHMC(Container_MP3, streamable, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
 			false, audBitrate);
 	}
 
 	ContainerType ^ ContainerType::FLV(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
-		return gcnew ContainerHMC(Container_FLV, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+		return gcnew ContainerHMC(Container_FLV, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
 			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
 	}
 
-	ContainerType ^ ContainerType::FLV_TS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+	ContainerType ^ ContainerType::FLV_H264(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
-		return gcnew ContainerHMC(Container_FLV, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+		return gcnew ContainerHMC(Container_FLVH264, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
 			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
 	}
 
@@ -144,24 +125,6 @@ namespace DSWrapper
 		HRESULT hr = CoCreateInstance(CLSID_Mpeg2Encoder, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&filter);
 		SAFE_RELEASE(filter);
 
-		return hr == S_OK;
-	}
-
-	System::Boolean ContainerType::IsWEBMInstalled(void)
-	{
-		IUnknown * filter = NULL;
-		HRESULT hr = DLLManager::GetManager().CreateWebmmux(CLSID_WebmMux, &filter);
-		SAFE_RELEASE(filter);
-		if (hr != S_OK)
-			return false;
-
-		hr = DLLManager::GetManager().CreateVP8Encoder(CLSID_WebmVideo, &filter);
-		SAFE_RELEASE(filter);
-		if (hr != S_OK)
-			return false;
-
-		hr = DLLManager::GetManager().CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &filter);
-		SAFE_RELEASE(filter);
 		return hr == S_OK;
 	}
 
@@ -187,6 +150,15 @@ namespace DSWrapper
 	{
 		IUnknown * filter = NULL;
 		HRESULT hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCEncoder, &filter);
+		SAFE_RELEASE(filter);
+
+		return hr == S_OK;
+	}
+
+	System::Boolean ContainerType::IsLAVSplitInstalled(void)
+	{
+		IBaseFilter * filter = NULL;
+		HRESULT hr = CoCreateInstance(CLSID_LAVSplit, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&filter);
 		SAFE_RELEASE(filter);
 
 		return hr == S_OK;
@@ -522,141 +494,6 @@ namespace DSWrapper
 		return hr;
 	}
 
-	HRESULT ContainerWEBM::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
-		IPin * writerPin, IMediaSeeking ** mediaSeekingMux)
-	{
-		HRESULT hr = S_OK;
-
-		IPin * inputPin = NULL;
-		IPin * outputPin = NULL;
-		IUnknown * unknown = NULL;
-		IVP8Encoder * webmEnc = NULL;
-		IWebmMux * webmMux = NULL;
-		IBaseFilter * webmMuxFilter = NULL;
-		IBaseFilter * webmVideoFilter = NULL;
-		IBaseFilter * webmAudioFilter = NULL;
-		IVorbisEncodeSettings * webmAudio = NULL;
-
-		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
-		SAFE_ADDREF(videoPin);
-		SAFE_ADDREF(audioPin);
-		SAFE_ADDREF(subtitlePin);
-
-		//Najprv nastavit piny az potom pridat enkoder do grafu (piny sa pokusaju na vsetky filtre v grafe)
-		CHECK_HR(hr = ConfigureDecoder(graphBuilder, &videoPin, &audioPin, &subtitlePin));
-
-		CHECK_HR(hr = DLLManager::GetManager().CreateWebmmux(CLSID_WebmMux, &unknown));
-		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmMuxFilter));
-		SAFE_RELEASE(unknown);
-
-		CHECK_HR(hr = DLLManager::GetManager().CreateVP8Encoder(CLSID_WebmVideo, &unknown));
-		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmVideoFilter));
-		SAFE_RELEASE(unknown);
-
-		CHECK_HR(hr = DLLManager::GetManager().CreateVorbisEncoder(CLSID_VorbisEncodeFilter, &unknown));
-		CHECK_HR(hr = unknown->QueryInterface(IID_IBaseFilter, (void **)&webmAudioFilter));
-		SAFE_RELEASE(unknown);
-
-		CHECK_HR(hr = webmMuxFilter->QueryInterface(__uuidof(IWebmMux), (void **)&webmMux));
-		webmMuxFilter->QueryInterface(IID_IMediaSeeking, (void**)mediaSeekingMux);
-
-		CHECK_HR(hr = webmVideoFilter->QueryInterface(__uuidof(IVP8Encoder), (void **)&webmEnc));
-		CHECK_HR(hr = webmAudioFilter->QueryInterface(CLSID_IVorbisEncodeSettings, (void **)&webmAudio));
-
-		CHECK_HR(hr = webmMux->SetMuxMode(this->m_muxMode));
-
-		CHECK_SUCCEED(hr = graphBuilder->AddFilter(webmMuxFilter, NULL));
-
-		if (this->m_bitrateMode == BitrateMode::CBR)
-		{
-			//Konstantny bitrate
-			CHECK_HR(hr = webmEnc->SetEndUsage(kEndUsageCBR));
-		}
-		else
-		{
-			//Variabilny bitrate
-			CHECK_HR(hr = webmEnc->SetEndUsage(kEndUsageVBR));
-		}
-
-		if (this->m_vidBitrate > 0)
-			CHECK_HR(hr = webmEnc->SetTargetBitrate(this->m_vidBitrate));
-
-		if (this->m_percentQuality < 51)
-		{
-			CHECK_HR(hr = webmEnc->SetDeadline(kDeadlineRealtime));
-		}
-		else if (this->m_percentQuality < 70)
-		{
-			CHECK_HR(hr = webmEnc->SetDeadline(kDeadlineGoodQuality));
-		}
-		else
-		{
-			CHECK_HR(hr = webmEnc->SetDeadline(kDeadlineBestQuality));
-		}
-
-		CHECK_SUCCEED(hr = webmEnc->ApplySettings());
-
-		if (this->m_audBitrate != 0)
-			CHECK_HR(hr = webmAudio->setBitrateQualityMode(this->m_audBitrate));
-
-		if (videoPin != NULL)
-		{
-			CHECK_SUCCEED(hr = graphBuilder->AddFilter(webmVideoFilter, NULL));
-
-			inputPin = DSEncoder::GetFirstPin(webmVideoFilter, PINDIR_INPUT);
-			CHECK_SUCCEED(hr = graphBuilder->Connect(videoPin, inputPin));
-			SAFE_RELEASE(inputPin);
-
-			outputPin = DSEncoder::GetFirstPin(webmVideoFilter, PINDIR_OUTPUT);
-			inputPin = DSEncoder::GetFirstPin(webmMuxFilter, PINDIR_INPUT);
-			CHECK_SUCCEED(hr = graphBuilder->Connect(outputPin, inputPin));
-			SAFE_RELEASE(outputPin);
-			SAFE_RELEASE(inputPin);
-		}
-
-		if (audioPin != NULL)
-		{
-			CHECK_SUCCEED(hr = graphBuilder->AddFilter(webmAudioFilter, NULL));
-
-			inputPin = DSEncoder::GetFirstPin(webmAudioFilter, PINDIR_INPUT);
-			CHECK_SUCCEED(hr = graphBuilder->Connect(audioPin, inputPin));
-			SAFE_RELEASE(inputPin);
-
-			outputPin = DSEncoder::GetFirstPin(webmAudioFilter, PINDIR_OUTPUT);
-			inputPin = DSEncoder::GetPin(webmMuxFilter, PINDIR_INPUT, 1);
-			CHECK_SUCCEED(hr = graphBuilder->Connect(outputPin, inputPin));
-			SAFE_RELEASE(outputPin);
-			SAFE_RELEASE(inputPin);
-		}
-
-		outputPin = DSEncoder::GetFirstPin(webmMuxFilter, PINDIR_OUTPUT);
-		CHECK_SUCCEED(hr = graphBuilder->Connect(outputPin, writerPin));
-		SAFE_RELEASE(outputPin);
-
-	done:
-
-		SAFE_RELEASE(outputPin);
-		SAFE_RELEASE(inputPin);
-		SAFE_RELEASE(webmVideoFilter);
-		SAFE_RELEASE(webmAudioFilter);
-		SAFE_RELEASE(webmMuxFilter);
-		SAFE_RELEASE(webmEnc);
-		SAFE_RELEASE(webmAudio);
-		SAFE_RELEASE(webmMux);
-		SAFE_RELEASE(unknown);
-
-		SAFE_RELEASE(videoPin);
-		SAFE_RELEASE(audioPin);
-		SAFE_RELEASE(subtitlePin);
-		
-		return hr;
-	}
-
-	GUID ContainerWEBM::GetSubtype()
-	{ 
-		return CLSID_WebmOut; 
-	}
-
 	HRESULT ContainerWMV::ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
 		IPin * writerPin, IMediaSeeking ** mediaSeekingMux)
 	{
@@ -989,6 +826,7 @@ namespace DSWrapper
 				{
 					//Konstantny bitrate
 					CHECK_HR(hr = encoderProp->SetVideoCBR(this->m_vidBitrate));
+					CHECK_HR(hr = encoderProp->SetVideoQuality(this->m_percentQuality));
 				}
 				else
 				{
