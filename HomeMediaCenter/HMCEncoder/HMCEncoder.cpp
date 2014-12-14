@@ -8,6 +8,7 @@
 #include "FrameWriterFilter.h"
 #include "FrameWriterPage.h"
 #include "EncoderLogPage.h"
+#include "DesktopSourceSilenceGenerator.h"
 
 STDAPI DllRegisterServer()
 {
@@ -22,6 +23,9 @@ STDAPI DllUnregisterServer()
 extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE, ULONG, LPVOID);
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 {
+	//Inicializacia silence generatora - automaticka inicializacia nie je bezpecna pri multithread
+	DesktopSourceSilenceGenerator::Init();
+
 	return DllEntryPoint((HINSTANCE)(hModule), dwReason, lpReserved);
 }
 

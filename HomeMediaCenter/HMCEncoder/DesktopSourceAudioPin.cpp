@@ -1,14 +1,13 @@
 #include "StdAfx.h"
 #include "DesktopSourceAudioPin.h"
 #include "DesktopSourceFilter.h"
-#include <avrt.h>
+#include "DesktopSourceSilenceGenerator.h"
 
 #define REFTIMES_PER_SEC 10000000
 
 DesktopSourceAudioPin::DesktopSourceAudioPin(TCHAR * pObjectName, HRESULT * phr, DesktopSourceFilter * filter, LPCWSTR pName)
 	: CSourceStream(pObjectName, phr, filter, pName), m_device(NULL), m_audioClient(NULL), m_captureClient(NULL), m_blockAlign(0), 
-	  m_rtLastFrame(0), m_rtFrameLength(REFTIMES_PER_SEC), m_sleepTime(0), m_cBufferData(0), m_buffer(NULL), m_pFilter(filter),
-	  m_silenceStartedEvent(NULL), m_silenceStopEvent(NULL), m_silenceThread(NULL), m_silenceHr(S_OK)
+	  m_rtLastFrame(0), m_rtFrameLength(REFTIMES_PER_SEC), m_sleepTime(0), m_cBufferData(0), m_buffer(NULL), m_pFilter(filter)
 {
 	HRESULT hr = S_OK;
 
@@ -152,8 +151,6 @@ done:
 HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 {
 	HRESULT hr = S_OK;
-	DWORD waitResult;
-	HANDLE waitArray[2];
 
 	WAVEFORMATEX * waveFormat = NULL;
 	IAudioCaptureClient * captureClient = NULL;
@@ -163,19 +160,7 @@ HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 	if (this->m_captureClient != NULL)
 		CHECK_HR(hr = E_FAIL);
 
-	//Nastavenie argumentov a spustenie vlakna generujuceho ticho - koli kontinualnemu zaznamu cez WASAPI
-    this->m_silenceHr = S_OK;
-    if ((this->m_silenceStartedEvent = waitArray[0] = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL)
-		CHECK_HR(hr = E_FAIL);
-    if ((this->m_silenceStopEvent = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL)
-		CHECK_HR(hr = E_FAIL);
-    if ((this->m_silenceThread = waitArray[1] = CreateThread(NULL, 0, PlaySilenceFunction, this, 0, NULL)) == NULL)
-		CHECK_HR(hr = E_FAIL);
-
-	//Pocka sa, kym sa spusti alebo ukonci vlakno generujuce ticho
-    waitResult = WaitForMultipleObjects(ARRAYSIZE(waitArray), waitArray, FALSE, INFINITE);
-	if (waitResult != WAIT_OBJECT_0)
-		CHECK_HR(hr = E_FAIL);
+	CHECK_HR(hr = DesktopSourceSilenceGenerator::Get()->Start(this->m_device));
 
 	//Nastavenie parametrov pri prvom spusteni
 	CHECK_SUCCEED(hr = this->m_audioClient->GetMixFormat(&waveFormat));
@@ -245,7 +230,7 @@ HRESULT DesktopSourceAudioPin::FillBuffer(IMediaSample * pSample)
 	while (true)
     {
 		//Skontroluje sa, ci je spustene vlakno generujuce ticho
-		CHECK_HR(hr = this->m_silenceHr);
+		CHECK_HR(hr = DesktopSourceSilenceGenerator::Get()->GeneratorHR());
 
 		//Ak je nieco v buffery / zaznamenavaj do vystupneho buffera
         CHECK_SUCCEED(hr = this->m_captureClient->GetBuffer(&inData, &numFramesAvailable, &flags, NULL, NULL));
@@ -307,138 +292,7 @@ HRESULT DesktopSourceAudioPin::OnThreadDestroy(void)
 		SAFE_RELEASE(this->m_captureClient);
 	}
 
-	//Pockanie na ukoncenie vlakna generujuceho ticho
-	if (this->m_silenceStopEvent != NULL)
-		SetEvent(this->m_silenceStopEvent);
-	if (this->m_silenceThread != NULL)
-	{
-		WaitForSingleObject(this->m_silenceThread, INFINITE);
-		CloseHandle(this->m_silenceThread);
-	}
-
-	//Uzavrenie premennych typu HANDLE a nastavenie na NULL
-	if (this->m_silenceStartedEvent != NULL)
-		CloseHandle(this->m_silenceStartedEvent);
-
-	if (this->m_silenceStopEvent != NULL)
-		CloseHandle(this->m_silenceStopEvent);
-
-	this->m_silenceThread = NULL;
-	this->m_silenceStopEvent = NULL;
-	this->m_silenceStartedEvent = NULL;
+	DesktopSourceSilenceGenerator::Get()->Stop();
 
 	return CSourceStream::OnThreadDestroy();
-}
-
-//SOURCE: http://blogs.msdn.com/b/matthew_van_eerde/archive/2008/12/10/sample-playing-silence-via-wasapi-event-driven-pull-mode.aspx
-
-DWORD WINAPI DesktopSourceAudioPin::PlaySilenceFunction(LPVOID pContext)
-{
-    DesktopSourceAudioPin * pArgs = (DesktopSourceAudioPin *)pContext;
-
-	HRESULT hr = S_OK;
-	DWORD dwWaitResult, nTaskIndex = 0;
-	UINT32 nFramesInBuffer, nFramesOfPadding;
-	BYTE * pData;
-
-	WAVEFORMATEX * pwfx = NULL;
-	IAudioClient * pAudioClient = NULL;
-	IAudioRenderClient * pAudioRenderClient = NULL;
-	HANDLE hTask, waitArray[2] = { pArgs->m_silenceStopEvent, NULL };
-	waitArray[1] = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-    if (waitArray[1] == NULL)
-        CHECK_HR(hr = E_FAIL);
-
-    CHECK_HR(hr = CoInitialize(NULL));
-
-    CHECK_HR(hr = pArgs->m_device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&pAudioClient));
-
-    CHECK_HR(hr = pAudioClient->GetMixFormat(&pwfx));
-
-    CHECK_HR(hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 0, 0, pwfx, NULL));
-    
-    CHECK_HR(hr = pAudioClient->GetBufferSize(&nFramesInBuffer));
-
-    CHECK_HR(hr = pAudioClient->GetService(__uuidof(IAudioRenderClient), (void**)&pAudioRenderClient));
-
-    CHECK_HR(hr = pAudioClient->SetEventHandle(waitArray[1]));
-    
-    CHECK_HR(hr = pAudioRenderClient->GetBuffer(nFramesInBuffer, &pData));
-
-    CHECK_HR(hr = pAudioRenderClient->ReleaseBuffer(nFramesInBuffer, AUDCLNT_BUFFERFLAGS_SILENT));
-
-    hTask = AvSetMmThreadCharacteristics(L"Playback", &nTaskIndex);
-    if (NULL == hTask)
-		CHECK_HR(hr = E_FAIL);
-
-    CHECK_HR(hr = pAudioClient->Start());
-
-    SetEvent(pArgs->m_silenceStartedEvent);
-
-    while (true)
-	{
-        dwWaitResult = WaitForMultipleObjects(ARRAYSIZE(waitArray), waitArray, FALSE, INFINITE);
-
-        if (WAIT_OBJECT_0 == dwWaitResult)
-		{
-            break;
-        }
-
-        if (WAIT_OBJECT_0 + 1 != dwWaitResult)
-		{
-            CHECK_HR(hr = E_UNEXPECTED);
-        }
-
-        // got "feed me" event - see how much padding there is
-        //
-        // padding is how much of the buffer is currently in use
-        //
-        // note in particular that event-driven (pull-mode) render should not
-        // call GetCurrentPadding multiple times
-        // in a single processing pass
-        // this is in stark contrast to timer-driven (push-mode) render
-        
-        CHECK_HR(hr = pAudioClient->GetCurrentPadding(&nFramesOfPadding));
-
-        if (nFramesOfPadding == nFramesInBuffer)
-		{
-			continue;
-        }
-    
-        CHECK_HR(hr = pAudioRenderClient->GetBuffer(nFramesInBuffer - nFramesOfPadding, &pData));
-
-        // *** AT THIS POINT ***
-        // If you wanted to render something besides silence,
-        // you would fill the buffer pData
-        // with (nFramesInBuffer - nFramesOfPadding) worth of audio data
-        // this should be in the same wave format
-        // that the stream was initialized with
-        //
-        // In particular, if you didn't want to use the mix format,
-        // you would need to either ask for a different format in IAudioClient::Initialize
-        // or do a format conversion
-        //
-        // If you do, then change the AUDCLNT_BUFFERFLAGS_SILENT flags value below to 0
-
-        CHECK_HR(hr = pAudioRenderClient->ReleaseBuffer(nFramesInBuffer - nFramesOfPadding, AUDCLNT_BUFFERFLAGS_SILENT));     
-    }
-
-done:
-
-	if (pAudioClient != NULL)
-	{
-		pAudioClient->Stop();
-		SAFE_RELEASE(pAudioClient);
-	}
-	SAFE_RELEASE(pAudioRenderClient);
-    AvRevertMmThreadCharacteristics(hTask);
-    CloseHandle(waitArray[1]);
-	if (pwfx != NULL)
-		CoTaskMemFree(pwfx);
-
-	CoUninitialize();
-
-	pArgs->m_silenceHr = hr;
-    return 0;
 }

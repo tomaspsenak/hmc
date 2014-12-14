@@ -4,13 +4,16 @@
 #include "DesktopSourceFilter.h"
 
 DesktopSourceVideoPin::DesktopSourceVideoPin(TCHAR * pObjectName, HRESULT * phr, DesktopSourceFilter * filter, LPCWSTR pName) 
-	: CSourceStream(pObjectName, phr, filter, pName), m_rtLastFrame(0), m_pFilter(filter)
+	: CSourceStream(pObjectName, phr, filter, pName), m_rtLastFrame(0), m_pFilter(filter), m_rgbBuffer(NULL)
 {
 	ZeroMemory(&this->m_bitmapInfo, sizeof(BITMAPINFO));
+	ZeroMemory(&this->m_rgbBitmapInfo, sizeof(BITMAPINFO));
 }
 
 DesktopSourceVideoPin::~DesktopSourceVideoPin(void)
 {
+	if (this->m_rgbBuffer)
+		delete [] this->m_rgbBuffer;
 }
 
 STDMETHODIMP DesktopSourceVideoPin::NonDelegatingQueryInterface(REFIID riid, void ** ppv)
@@ -42,21 +45,37 @@ HRESULT DesktopSourceVideoPin::GetMediaType(int iPosition, CMediaType * pmt)
 	{
 		pvi->bmiHeader.biCompression = BI_RGB;
 		pvi->bmiHeader.biBitCount = 32;
+		pvi->bmiHeader.biPlanes = 1;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB32);
     }
 	else if (iPosition == 1)
     {
 		pvi->bmiHeader.biCompression = BI_RGB;
 		pvi->bmiHeader.biBitCount = 24;
+		pvi->bmiHeader.biPlanes = 1;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB24);
     }
+	else if (iPosition == 2)
+	{
+		pvi->bmiHeader.biCompression = MAKEFOURCC('Y','U','Y','2');
+		pvi->bmiHeader.biBitCount = 16;
+		pvi->bmiHeader.biPlanes = 1;
+		pmt->SetSubtype(&MEDIASUBTYPE_YUY2);
+	}
+	else if (iPosition == 3)
+	{
+		pvi->bmiHeader.biCompression = MAKEFOURCC('Y','V','1','2');
+		pvi->bmiHeader.biBitCount = 12;
+		pvi->bmiHeader.biPlanes = 3;
+		pmt->SetSubtype(&MEDIASUBTYPE_YV12);
+	}
 	else
 	{
 		return VFW_S_NO_MORE_ITEMS;
 	}
 	
     pvi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    pvi->bmiHeader.biPlanes = 1;
+    
 	pvi->bmiHeader.biClrImportant = 0;
 
     pmt->SetType(&MEDIATYPE_Video);
@@ -92,13 +111,14 @@ HRESULT DesktopSourceVideoPin::CheckMediaType(const CMediaType * pMediaType)
 	if((pMediaType->majortype != MEDIATYPE_Video) || (!pMediaType->IsFixedSize()) || (pMediaType->subtype == GUID_NULL) || (pMediaType->pbFormat == NULL))
 		CHECK_HR(hr = VFW_E_NO_ACCEPTABLE_TYPES);                                             
 
-	if (pMediaType->subtype != MEDIASUBTYPE_RGB24 && pMediaType->subtype != MEDIASUBTYPE_RGB32)
+	if (pMediaType->subtype != MEDIASUBTYPE_RGB24 && pMediaType->subtype != MEDIASUBTYPE_RGB32 && pMediaType->subtype != MEDIASUBTYPE_YUY2 && 
+		pMediaType->subtype != MEDIASUBTYPE_YV12)
 		CHECK_HR(hr = VFW_E_NO_ACCEPTABLE_TYPES);
 
 	CHECK_HR(hr = GetWidthHeight(pMediaType, &width, &height));
 
 	//Neakceptovat otoceny obraz - napriklad pre EVR
-    if (height < 0)
+	if (height < 0)
         CHECK_HR(hr = E_INVALIDARG);
 
 done:
@@ -121,6 +141,26 @@ HRESULT DesktopSourceVideoPin::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATO
 
     if(aProp.cbBuffer < pProperties->cbBuffer)
 		CHECK_HR(hr = E_FAIL);
+
+	//Vytvorenie RGB buffera - pouziva sa pri konverzii na YUV
+	if (this->m_rgbBuffer)
+	{
+		delete [] this->m_rgbBuffer;
+		this->m_rgbBuffer = NULL;
+		ZeroMemory(&this->m_rgbBitmapInfo, sizeof(BITMAPINFO));
+	}
+	if (m_mt.subtype != MEDIASUBTYPE_RGB24 && m_mt.subtype != MEDIASUBTYPE_RGB32)
+	{
+		CHECK_HR(hr = GetBitmapInfo(&m_mt, &this->m_rgbBitmapInfo.bmiHeader));
+		this->m_rgbBitmapInfo.bmiHeader.biPlanes = 1;
+		this->m_rgbBitmapInfo.bmiHeader.biCompression = BI_RGB;
+		this->m_rgbBitmapInfo.bmiHeader.biBitCount = 24;
+		this->m_rgbBitmapInfo.bmiHeader.biSizeImage = GetBitmapSize(&this->m_rgbBitmapInfo.bmiHeader);
+
+		this->m_rgbBuffer = new BYTE[this->m_rgbBitmapInfo.bmiHeader.biSizeImage];
+		if (!this->m_rgbBuffer)
+			CHECK_HR(hr = E_OUTOFMEMORY);
+	}
 
 done:
     return hr;
@@ -297,8 +337,13 @@ HRESULT DesktopSourceVideoPin::ApplyParametersToMT(CMediaType * pmt)
 
 	pvi->rcTarget.right = pvi->rcSource.right = pvi->bmiHeader.biWidth = width;
     pvi->rcTarget.bottom = pvi->rcSource.bottom = pvi->bmiHeader.biHeight = height;
-	pvi->bmiHeader.biSizeImage = GetBitmapSize(&pvi->bmiHeader);
 	pvi->AvgTimePerFrame = this->m_pFilter->m_params->m_rtFrameLength;
+	if (pmt->subtype == MEDIASUBTYPE_YUY2)
+		pvi->bmiHeader.biSizeImage = 2 * ((width * height) >> 1) + (width * height);
+	else if (pmt->subtype == MEDIASUBTYPE_YV12)
+		pvi->bmiHeader.biSizeImage = 2 * ((width * height) >> 2) + (width * height);
+	else
+		pvi->bmiHeader.biSizeImage = GetBitmapSize(&pvi->bmiHeader);
 
 	pmt->SetSampleSize(pvi->bmiHeader.biSizeImage);
 
@@ -419,8 +464,74 @@ HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHe
     // bitmap of the screen   
     hBitmap = (HBITMAP)  SelectObject(hMemDC, hOldBitmap);
 
-    // Copy the bitmap data into the provided BYTE buffer
-    GetDIBits(hScrDC, hBitmap, 0, nHeight, pData, pHeader, DIB_RGB_COLORS);
+	// Copy the bitmap data into the provided BYTE buffer
+	if (pHeader->bmiHeader.biCompression == BI_RGB)
+	{
+		GetDIBits(hScrDC, hBitmap, 0, nHeight, pData, pHeader, DIB_RGB_COLORS);
+	}
+	else if (pHeader->bmiHeader.biCompression == MAKEFOURCC('Y','U','Y','2'))
+	{
+		GetDIBits(hScrDC, hBitmap, 0, nHeight, this->m_rgbBuffer, &this->m_rgbBitmapInfo, DIB_RGB_COLORS);
+
+		BYTE R, B, G, V;
+		BYTE * pSrcBuffer;
+		DWORD rgbLineSize = DIBWIDTHBYTES(this->m_rgbBitmapInfo.bmiHeader);
+
+		for (int i = (nHeight - 1); i >= 0; i--)
+		{
+			pSrcBuffer = this->m_rgbBuffer + (rgbLineSize * i);
+
+			for (int j = 0; j < nWidth; j++)
+			{
+				B = *pSrcBuffer; pSrcBuffer++;
+				G = *pSrcBuffer; pSrcBuffer++;
+				R = *pSrcBuffer; pSrcBuffer++;
+
+				*pData = (BYTE)((0.299 * R) + (0.587 * G) + (0.114 * B)); pData++; //Y
+
+				if (j % 2 == 0)
+				{
+					*pData = (BYTE)((-0.14317 * R) + (-0.28886 * G) + (0.436 * B) + 128); pData++; //U
+					V = (BYTE)((0.615 * R) + (-0.51499 * G) + (-0.10001 * B) + 128); //V temp
+				}
+				else
+				{
+					*pData = V; pData++; //V
+				}
+			}
+		}
+	}
+	else if (pHeader->bmiHeader.biCompression == MAKEFOURCC('Y','V','1','2'))
+	{
+		GetDIBits(hScrDC, hBitmap, 0, nHeight, this->m_rgbBuffer, &this->m_rgbBitmapInfo, DIB_RGB_COLORS);
+
+		BYTE R, B, G;
+		BYTE * pSrcBuffer;
+		BYTE * pDataY = pData;
+		BYTE * pDataV = pDataY + (nWidth * nHeight);
+		BYTE * pDataU = pDataV + ((nWidth * nHeight) >> 2);
+		DWORD rgbLineSize = DIBWIDTHBYTES(this->m_rgbBitmapInfo.bmiHeader);
+
+		for (int i = (nHeight - 1); i >= 0; i--)
+		{
+			pSrcBuffer = this->m_rgbBuffer + (rgbLineSize * i);
+
+			for (int j = 0; j < nWidth; j++)
+			{
+				B = *pSrcBuffer; pSrcBuffer++;
+				G = *pSrcBuffer; pSrcBuffer++;
+				R = *pSrcBuffer; pSrcBuffer++;
+
+				*pDataY = (BYTE)((0.299 * R) + (0.587 * G) + (0.114 * B)); pDataY++; //Y
+
+				if (i % 2 == 0 && j % 2 == 0)
+				{
+					*pDataV = (BYTE)((0.615 * R) + (-0.51499 * G) + (-0.10001 * B) + 128); pDataV++; //V
+					*pDataU = (BYTE)((-0.14317 * R) + (-0.28886 * G) + (0.436 * B) + 128); pDataU++; //U
+				}
+			}
+		}
+	}
 
     // clean up
     DeleteDC(hScrDC);

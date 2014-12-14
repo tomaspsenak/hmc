@@ -87,6 +87,9 @@
     <ClInclude Include="EncoderLogPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DesktopSourceSilenceGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Stdafx.cpp">
@@ -159,6 +162,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EncoderLogPage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DesktopSourceSilenceGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

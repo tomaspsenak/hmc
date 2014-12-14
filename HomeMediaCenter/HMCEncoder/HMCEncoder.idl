@@ -17,7 +17,9 @@ library HMCEncoderLib
 		Container_MP4,
 		Container_AVI,
 		Container_FLV,
-		Container_ASF
+		Container_FLVH264,
+		Container_ASF,
+		Container_WEBM
 	};
 
 	enum BitrateMode
@@ -62,6 +64,9 @@ library HMCEncoderLib
 
 		HRESULT SetHeight([in] UINT32 height);
 		HRESULT GetHeight([out] UINT32 * pHeight);
+
+		HRESULT SetVideoQuality([in] int videoQuality);
+		HRESULT GetVideoQuality([out] int * pVideoQuality);
 	}
 
 	[

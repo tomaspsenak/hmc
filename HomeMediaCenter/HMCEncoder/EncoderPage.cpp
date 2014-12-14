@@ -232,7 +232,9 @@ void EncoderPage::RefreshValues(void)
 	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"MP4");
 	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"AVI");
 	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"FLV");
+	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"FLV H264");
 	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"ASF");
+	ComboBox_AddString(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), L"WEBM");
 	ComboBox_SetCurSel(GetDlgItem(this->m_Dlg, IDC_COMBO_CONTAINER), this->m_oldContainer);
 
 	Button_SetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_STREAMABLE), this->m_oldStreamable);
