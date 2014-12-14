@@ -7,31 +7,11 @@ struct DLLManager
 {
 	typedef HRESULT (STDAPICALLTYPE * FN_DLLGETCLASSOBJECT)(REFCLSID clsid, REFIID iid, void ** ppv);
 
-	public:		DLLManager(void) : m_webmmux(LoadLibrary(L".\\webmmux.dll")), m_vp8encoder(LoadLibrary(L".\\vp8encoder.dll")), 
-					m_hmcencoder(LoadLibrary(L".\\HMCEncoder.dll")), m_vorbisencoder(LoadLibrary(L".\\dsfVorbisEncoder.dll")) { }
+	public:		DLLManager(void) : m_hmcencoder(LoadLibrary(L".\\HMCEncoder.dll")) { }
 
 				~DLLManager(void)
 				{
-					FreeLibrary(this->m_webmmux);
-					FreeLibrary(this->m_vp8encoder);
-					FreeLibrary(this->m_vorbisencoder);
 					FreeLibrary(this->m_hmcencoder);
-				}
-
-				HRESULT CreateWebmmux(REFCLSID clsid, IUnknown ** ppUnk)
-				{
-					if (!this->m_webmmux)
-						return E_FAIL;
-					
-					return CreateObjectFromPath(this->m_webmmux, clsid, ppUnk);
-				}
-
-				HRESULT CreateVP8Encoder(REFCLSID clsid, IUnknown ** ppUnk)
-				{
-					if (!this->m_vp8encoder)
-						return E_FAIL;
-					
-					return CreateObjectFromPath(this->m_vp8encoder, clsid, ppUnk);
 				}
 
 				HRESULT CreateHMCEncoder(REFCLSID clsid, IUnknown ** ppUnk)
@@ -40,14 +20,6 @@ struct DLLManager
 						return E_FAIL;
 					
 					return CreateObjectFromPath(this->m_hmcencoder, clsid, ppUnk);
-				}
-
-				HRESULT CreateVorbisEncoder(REFCLSID clsid, IUnknown ** ppUnk)
-				{
-					if (!this->m_vorbisencoder)
-						return E_FAIL;
-					
-					return CreateObjectFromPath(this->m_vorbisencoder, clsid, ppUnk);
 				}
 
 				static DLLManager & GetManager(void)
@@ -77,9 +49,6 @@ struct DLLManager
 					return hr;
 				}
 		
-				HMODULE m_webmmux;
-				HMODULE m_vp8encoder;
-				HMODULE m_vorbisencoder;
 				HMODULE m_hmcencoder;
 
 				static DLLManager manager;

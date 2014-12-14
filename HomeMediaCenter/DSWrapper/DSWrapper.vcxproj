@@ -233,13 +233,10 @@
     <ClInclude Include="DSPlayer.h" />
     <ClInclude Include="DSWrapper.h" />
     <ClInclude Include="Enums.h" />
-    <ClInclude Include="Extern\vp8encoderidl.h" />
-    <ClInclude Include="Extern\webmmuxidl.h" />
     <ClInclude Include="FileWriterFilter.h" />
     <ClInclude Include="Extern\IffDecoder.h" />
     <ClInclude Include="Extern\IffdshowBase.h" />
     <ClInclude Include="InputType.h" />
-    <ClInclude Include="Extern\IVorbisEncodeSettings.h" />
     <ClInclude Include="MediaFile.h" />
     <ClInclude Include="PinInfoItem.h" />
     <ClInclude Include="PreFilter.h" />
