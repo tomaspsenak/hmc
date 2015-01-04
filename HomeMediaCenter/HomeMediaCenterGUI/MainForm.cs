@@ -64,6 +64,7 @@ namespace HomeMediaCenterGUI
             this.logTabPage.Text = LanguageResource.Log;
             this.logCheckBox.Text = LanguageResource.EnableLog;
             this.logLengthLabel.Text = LanguageResource.LogLength;
+            this.copyLogMenuItem.Text = LanguageResource.Copy;
             this.statusLabel.Text = LanguageResource.Status;
             this.statusTextLabel.Text = LanguageResource.Stopped;
             this.homeTabPage.Text = LanguageResource.Home;
@@ -132,7 +133,7 @@ namespace HomeMediaCenterGUI
             catch { str2 = string.Empty; }
 
             string str3 = System.Reflection.Assembly.GetAssembly(typeof(HomeMediaCenter.MediaServerDevice)).FullName;
-            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2014\r\ntomaspsenak@gmail.com\r\n{1}\r\n----------------------------------------------\r\n{2}\r\n{3}\r\n{4}",
+            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2015\r\ntomaspsenak@gmail.com\r\n{1}\r\n----------------------------------------------\r\n{2}\r\n{3}\r\n{4}",
                 str0, LanguageResource.TranslatedBy, str1, str2, str3);
 
             try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
@@ -744,6 +745,18 @@ namespace HomeMediaCenterGUI
             {
                 MessageBox.Show(this, ex.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        private void copyLogMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.logListBox.SelectedItems.Count < 1)
+                return;
+
+            StringBuilder sb = new StringBuilder();
+            foreach (string line in this.logListBox.SelectedItems.OfType<string>())
+                sb.AppendLine(line);
+
+            Clipboard.SetText(sb.ToString());
         }
     }
 }

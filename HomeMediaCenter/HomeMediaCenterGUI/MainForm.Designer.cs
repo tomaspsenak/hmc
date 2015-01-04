@@ -52,6 +52,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.settingsTabPage = new System.Windows.Forms.TabPage();
+            this.showHiddenCheckBox = new System.Windows.Forms.CheckBox();
             this.generateThumbnailsCheckBox = new System.Windows.Forms.CheckBox();
             this.languageComboBox = new System.Windows.Forms.ComboBox();
             this.languageLabel = new System.Windows.Forms.Label();
@@ -111,7 +112,8 @@
             this.statusLabel = new System.Windows.Forms.Label();
             this.statusTextLabel = new System.Windows.Forms.Label();
             this.mainNotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.showHiddenCheckBox = new System.Windows.Forms.CheckBox();
+            this.logMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.copyLogMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.directoriesGroup.SuspendLayout();
             this.mainTabControl.SuspendLayout();
             this.homeTabPage.SuspendLayout();
@@ -125,6 +127,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.logLengthUpDown)).BeginInit();
             this.converterTabPage.SuspendLayout();
             this.aboutTabPage.SuspendLayout();
+            this.logMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // startButton
@@ -311,10 +314,10 @@
             this.wmvLabel.Size = new System.Drawing.Size(80, 13);
             this.wmvLabel.TabIndex = 5;
             // 
-            // webmLabel
+            // lavLabel
             // 
             this.lavLabel.Location = new System.Drawing.Point(180, 22);
-            this.lavLabel.Name = "webmLabel";
+            this.lavLabel.Name = "lavLabel";
             this.lavLabel.Size = new System.Drawing.Size(80, 13);
             this.lavLabel.TabIndex = 4;
             // 
@@ -376,6 +379,17 @@
             this.settingsTabPage.TabIndex = 2;
             this.settingsTabPage.Text = "Settings";
             this.settingsTabPage.UseVisualStyleBackColor = true;
+            // 
+            // showHiddenCheckBox
+            // 
+            this.showHiddenCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.showHiddenCheckBox.Location = new System.Drawing.Point(175, 199);
+            this.showHiddenCheckBox.Name = "showHiddenCheckBox";
+            this.showHiddenCheckBox.Size = new System.Drawing.Size(458, 17);
+            this.showHiddenCheckBox.TabIndex = 16;
+            this.showHiddenCheckBox.Text = "Show hidden files";
+            this.showHiddenCheckBox.UseVisualStyleBackColor = true;
             // 
             // generateThumbnailsCheckBox
             // 
@@ -915,10 +929,12 @@
             this.logListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.logListBox.ContextMenuStrip = this.logMenuStrip;
             this.logListBox.FormattingEnabled = true;
             this.logListBox.HorizontalScrollbar = true;
             this.logListBox.Location = new System.Drawing.Point(6, 30);
             this.logListBox.Name = "logListBox";
+            this.logListBox.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
             this.logListBox.Size = new System.Drawing.Size(624, 342);
             this.logListBox.TabIndex = 30;
             // 
@@ -933,6 +949,16 @@
             this.converterTabPage.TabIndex = 3;
             this.converterTabPage.Text = "Converter";
             this.converterTabPage.UseVisualStyleBackColor = true;
+            // 
+            // paramControl
+            // 
+            this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.paramControl.Location = new System.Drawing.Point(3, 3);
+            this.paramControl.MinimumSize = new System.Drawing.Size(610, 440);
+            this.paramControl.Name = "paramControl";
+            this.paramControl.Size = new System.Drawing.Size(633, 440);
+            this.paramControl.TabIndex = 10;
             // 
             // convertButton
             // 
@@ -1036,26 +1062,19 @@
             this.mainNotifyIcon.Text = "Home Media Center";
             this.mainNotifyIcon.Click += new System.EventHandler(this.mainNotifyIcon_Click);
             // 
-            // paramControl
+            // logMenuStrip
             // 
-            this.paramControl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.paramControl.Location = new System.Drawing.Point(3, 3);
-            this.paramControl.MinimumSize = new System.Drawing.Size(610, 440);
-            this.paramControl.Name = "paramControl";
-            this.paramControl.Size = new System.Drawing.Size(633, 440);
-            this.paramControl.TabIndex = 10;
+            this.logMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.copyLogMenuItem});
+            this.logMenuStrip.Name = "logMenuStrip";
+            this.logMenuStrip.Size = new System.Drawing.Size(103, 26);
             // 
-            // showHiddenCheckBox
+            // copyLogMenuItem
             // 
-            this.showHiddenCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.showHiddenCheckBox.Location = new System.Drawing.Point(175, 199);
-            this.showHiddenCheckBox.Name = "showHiddenCheckBox";
-            this.showHiddenCheckBox.Size = new System.Drawing.Size(458, 17);
-            this.showHiddenCheckBox.TabIndex = 16;
-            this.showHiddenCheckBox.Text = "Show hidden files";
-            this.showHiddenCheckBox.UseVisualStyleBackColor = true;
+            this.copyLogMenuItem.Name = "copyLogMenuItem";
+            this.copyLogMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.copyLogMenuItem.Text = "Copy";
+            this.copyLogMenuItem.Click += new System.EventHandler(this.copyLogMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1090,6 +1109,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.logLengthUpDown)).EndInit();
             this.converterTabPage.ResumeLayout(false);
             this.aboutTabPage.ResumeLayout(false);
+            this.logMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1179,6 +1199,8 @@
         private System.Windows.Forms.ComboBox languageComboBox;
         private System.Windows.Forms.Label languageLabel;
         private System.Windows.Forms.CheckBox showHiddenCheckBox;
+        private System.Windows.Forms.ContextMenuStrip logMenuStrip;
+        private System.Windows.Forms.ToolStripMenuItem copyLogMenuItem;
     }
 }
 
