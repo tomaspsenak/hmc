@@ -200,6 +200,7 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 	this->m_container = container;
 	this->m_params.m_height = 0;
 	this->m_params.m_width = 0;
+	this->m_params.m_hlsSegmentTime = 0;
 
 	return S_OK;
 }
@@ -228,6 +229,7 @@ HRESULT EncoderParameters::SetStreamable(BOOL streamable)
 		case Container_MPEG2TS:
 		case Container_MPEG2TSH264:
 		case Container_MP3:
+		case Container_MP4:
 		case Container_FLV:
 		case Container_FLVH264:
 		case Container_ASF:
@@ -589,6 +591,56 @@ HRESULT EncoderParameters::GetVideoGopSize(int * gopSize)
 	CAutoLock cObjectLock(this->m_filter->m_pLock);
 
 	*gopSize = this->m_params.m_videoGopSize;
+
+	return S_OK;
+}
+
+HRESULT EncoderParameters::SetHlsSegmenter(const char * pPlaylistUrl, const char * pFileUrl, UINT32 segmentTime, BOOL enabled)
+{
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+
+	if (this->m_filter->IsActive())
+		return VFW_E_FILTER_ACTIVE;
+
+	if (enabled)
+	{
+		CheckPointer(pPlaylistUrl, E_POINTER);
+		CheckPointer(pFileUrl, E_POINTER);
+
+		if (segmentTime < 1)
+			return E_FAIL;
+
+		size_t strLen = strlen(pPlaylistUrl);
+		if (strLen >= AVParams_MaxUrlLength)
+			return E_OUTOFMEMORY;
+
+		strLen = strlen(pFileUrl);
+		if (strLen >= AVParams_MaxUrlLength)
+			return E_OUTOFMEMORY;
+
+		HRESULT hr = SetContainer(Container_MPEG2TSH264);
+		if (hr != S_OK)
+			return hr;
+
+		strcpy_s(this->m_params.m_hlsPlaylistUrl, pPlaylistUrl);
+		strcpy_s(this->m_params.m_hlsFileUrl, pFileUrl);
+		this->m_params.m_hlsSegmentTime = segmentTime;
+	}
+	else
+	{
+		this->m_params.m_hlsSegmentTime = 0;
+	}
+
+	return S_OK;
+}
+
+HRESULT EncoderParameters::GetHlsSegmenter(BOOL * pEnabled)
+{
+	CheckPointer(pEnabled, E_POINTER);
+
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+
+	*pEnabled = (BOOL)this->m_params.m_hlsSegmentTime;
 
 	return S_OK;
 }

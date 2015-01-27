@@ -16,21 +16,20 @@
      51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#if !defined(DESKTOPSOURCEFILTER_HMCENCODER_INCLUDED)
-#define DESKTOPSOURCEFILTER_HMCENCODER_INCLUDED
+#if !defined(STATICSOURCEFILTER_HMCENCODER_INCLUDED)
+#define STATICSOURCEFILTER_HMCENCODER_INCLUDED
 
-#include "DesktopSourceVideoPin.h"
-#include "DesktopSourceAudioPin.h"
-#include "DesktopSourceParameters.h"
+#include "StaticSourceParameters.h"
+#include "StaticSourcePins.h"
 
-class DesktopSourceFilter : public CSource, public IAMFilterMiscFlags, public ISpecifyPropertyPages, public IMediaSeeking
+class StaticSourceFilter : public CSource, public IAMFilterMiscFlags, public ISpecifyPropertyPages, public IMediaSeeking
 {
-	friend class DesktopSourceVideoPin;
-	friend class DesktopSourceAudioPin;
-	friend class DesktopSourceParameters;
+	friend class StaticSourceVideoPin;
+	friend class StaticSourceAudioPin;
+	friend class StaticSourceParameters;
 
-	public:		DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr);
-				virtual ~DesktopSourceFilter(void);
+	public:		StaticSourceFilter(LPUNKNOWN pUnk, HRESULT * phr);
+				virtual ~StaticSourceFilter(void);
 
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
@@ -40,7 +39,6 @@ class DesktopSourceFilter : public CSource, public IAMFilterMiscFlags, public IS
 				//ISpecifyPropertyPages
 				STDMETHODIMP GetPages(CAUUID * pPages);
 
-				void SyncPins(DWORD index);
 				//IAMFilterMiscFlags
 				ULONG STDMETHODCALLTYPE GetMiscFlags(void);
 
@@ -63,18 +61,15 @@ class DesktopSourceFilter : public CSource, public IAMFilterMiscFlags, public IS
 				STDMETHODIMP GetRate(double * pdRate);
 				STDMETHODIMP GetPreroll(LONGLONG* pllPreroll);
 
-				//Maximalna dlzka cakania na synchronizaciu
-				static const DWORD WaitToSync = 10000;
+				//Hranicna hodnota pri synchronizacii audia s videom
+				static const REFERENCE_TIME SyncThreshold = 10 * UNITS;
 
-	private:	DesktopSourceVideoPin * m_sourceVideoPin;
-				DesktopSourceAudioPin * m_sourceAudioPin;
-				CCritSec m_syncSection;
-				HANDLE m_syncEvent[2];
-				BOOL m_signaled[2];
+	private:	StaticSourceVideoPin * m_sourceVideoPin;
+				StaticSourceAudioPin * m_sourceAudioPin;
 
 				REFERENCE_TIME m_rtStop;
 
-				DesktopSourceParameters * m_params;
+				StaticSourceParameters * m_params;
 };
 
-#endif //DESKTOPSOURCEFILTER_HMCENCODER_INCLUDED
+#endif //STATICSOURCEFILTER_HMCENCODER_INCLUDED

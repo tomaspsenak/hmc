@@ -2,6 +2,7 @@
 #include "DesktopSourceVideoPin.h"
 #include <dvdmedia.h>
 #include "DesktopSourceFilter.h"
+#include "ColorConverter.h"
 
 DesktopSourceVideoPin::DesktopSourceVideoPin(TCHAR * pObjectName, HRESULT * phr, DesktopSourceFilter * filter, LPCWSTR pName) 
 	: CSourceStream(pObjectName, phr, filter, pName), m_rtLastFrame(0), m_pFilter(filter), m_rgbBuffer(NULL)
@@ -31,67 +32,41 @@ HRESULT DesktopSourceVideoPin::GetMediaType(int iPosition, CMediaType * pmt)
 	CheckPointer(pmt, E_POINTER);
     if(iPosition < 0)
         return E_INVALIDARG;
-    
-	VIDEOINFOHEADER * pvi = NULL;
 
-	CAutoLock cAutoLock(m_pFilter->pStateLock());
+	CAutoLock cAutoLock(this->m_pLock);
 
-    pvi = (VIDEOINFOHEADER*)pmt->AllocFormatBuffer(sizeof(VIDEOINFOHEADER));
+	HRESULT hr = S_OK;
+    VIDEOINFOHEADER * pvi = (VIDEOINFOHEADER*)pmt->AllocFormatBuffer(sizeof(VIDEOINFOHEADER));
     if(NULL == pvi)
-        return E_OUTOFMEMORY;
+        CHECK_HR(hr = E_OUTOFMEMORY);
     ZeroMemory(pvi, sizeof(VIDEOINFOHEADER));
 
     if (iPosition == 0)
-	{
-		pvi->bmiHeader.biCompression = BI_RGB;
-		pvi->bmiHeader.biBitCount = 32;
-		pvi->bmiHeader.biPlanes = 1;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB32);
-    }
 	else if (iPosition == 1)
-    {
-		pvi->bmiHeader.biCompression = BI_RGB;
-		pvi->bmiHeader.biBitCount = 24;
-		pvi->bmiHeader.biPlanes = 1;
 		pmt->SetSubtype(&MEDIASUBTYPE_RGB24);
-    }
 	else if (iPosition == 2)
-	{
-		pvi->bmiHeader.biCompression = MAKEFOURCC('Y','U','Y','2');
-		pvi->bmiHeader.biBitCount = 16;
-		pvi->bmiHeader.biPlanes = 1;
 		pmt->SetSubtype(&MEDIASUBTYPE_YUY2);
-	}
 	else if (iPosition == 3)
-	{
-		pvi->bmiHeader.biCompression = MAKEFOURCC('Y','V','1','2');
-		pvi->bmiHeader.biBitCount = 12;
-		pvi->bmiHeader.biPlanes = 3;
 		pmt->SetSubtype(&MEDIASUBTYPE_YV12);
-	}
 	else
-	{
-		return VFW_S_NO_MORE_ITEMS;
-	}
-	
-    pvi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    
-	pvi->bmiHeader.biClrImportant = 0;
+		CHECK_HR(hr = VFW_S_NO_MORE_ITEMS);
 
     pmt->SetType(&MEDIATYPE_Video);
 	pmt->SetFormatType(&FORMAT_VideoInfo);
     pmt->SetTemporalCompression(FALSE);
 
-	ApplyParametersToMT(pmt);
+	CHECK_HR(hr = ApplyParametersToMT(pmt));
 
-    return S_OK;
+done:
+    return hr;
 }
 
 HRESULT DesktopSourceVideoPin::SetMediaType(const CMediaType * pMediaType)
 {
 	HRESULT hr = S_OK;
 
-    CAutoLock cAutoLock(m_pFilter->pStateLock());
+    CAutoLock cAutoLock(this->m_pLock);
 
     CHECK_HR(hr = CSourceStream::SetMediaType(pMediaType));
 
@@ -108,7 +83,9 @@ HRESULT DesktopSourceVideoPin::CheckMediaType(const CMediaType * pMediaType)
 	HRESULT hr = S_OK;
 	LONG width = 0, height = 0;
 
-	if((pMediaType->majortype != MEDIATYPE_Video) || (!pMediaType->IsFixedSize()) || (pMediaType->subtype == GUID_NULL) || (pMediaType->pbFormat == NULL))
+	CAutoLock cAutoLock(this->m_pLock);
+
+	if((pMediaType->majortype != MEDIATYPE_Video) || (!pMediaType->IsFixedSize()) || (pMediaType->pbFormat == NULL))
 		CHECK_HR(hr = VFW_E_NO_ACCEPTABLE_TYPES);                                             
 
 	if (pMediaType->subtype != MEDIASUBTYPE_RGB24 && pMediaType->subtype != MEDIASUBTYPE_RGB32 && pMediaType->subtype != MEDIASUBTYPE_YUY2 && 
@@ -133,13 +110,13 @@ HRESULT DesktopSourceVideoPin::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATO
 	HRESULT hr = S_OK;
 	ALLOCATOR_PROPERTIES aProp;
 
-    CAutoLock cAutoLock(m_pFilter->pStateLock());
+    CAutoLock cAutoLock(this->m_pLock);
 
     pProperties->cBuffers = 1;
-    pProperties->cbBuffer = m_mt.lSampleSize;
+    pProperties->cbBuffer = this->m_mt.lSampleSize;
     CHECK_SUCCEED(hr = pAlloc->SetProperties(pProperties, &aProp));
 
-    if(aProp.cbBuffer < pProperties->cbBuffer)
+    if(aProp.cbBuffer != pProperties->cbBuffer)
 		CHECK_HR(hr = E_FAIL);
 
 	//Vytvorenie RGB buffera - pouziva sa pri konverzii na YUV
@@ -171,11 +148,11 @@ HRESULT DesktopSourceVideoPin::FillBuffer(IMediaSample * pSample)
 	CheckPointer(pSample, E_POINTER);
 
 	HRESULT hr = S_OK;
+	DWORD dataCount;
 	BYTE * pBuffer;
 
-    CAutoLock cAutoLockShared(&m_cSharedState);
-
     CHECK_HR(hr = pSample->GetPointer(&pBuffer));
+	dataCount = pSample->GetSize();
 
 	//Skopirovanie plochy do buffera
 	HANDLE hDib = CopyScreenToBitmap(pBuffer, &this->m_bitmapInfo, this->m_pFilter->m_params->m_videoStretchMode,
@@ -184,7 +161,7 @@ HRESULT DesktopSourceVideoPin::FillBuffer(IMediaSample * pSample)
         DeleteObject(hDib);
 
     CHECK_HR(hr = pSample->SetSyncPoint(TRUE));
-	CHECK_HR(hr = pSample->SetActualDataLength(m_mt.lSampleSize));
+	CHECK_HR(hr = pSample->SetActualDataLength(dataCount));
 	
 done:
     return hr;
@@ -218,7 +195,7 @@ HRESULT DesktopSourceVideoPin::DoBufferProcessingLoop(void)
     OnThreadStartPlay();
 
 	//Synchronizacia audio / video
-	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(0);
+	this->m_pFilter->SyncPins(0);
 
 	lastTick = GetTickCount();
 
@@ -245,6 +222,19 @@ HRESULT DesktopSourceVideoPin::DoBufferProcessingLoop(void)
 				isNewSample = FALSE;
 			}
 
+			//Nastavenie hodnoty casu zaciatku a konca snimky
+			REFERENCE_TIME rtStart = this->m_rtLastFrame;
+			REFERENCE_TIME rtStop  = rtStart + this->m_pFilter->m_params->m_rtFrameLength;
+			pSample->SetTime(&rtStart, &rtStop);
+
+			if (this->m_pFilter->m_rtStop > 0 && rtStop >= this->m_pFilter->m_rtStop)
+			{
+				//Ak je nastaveny cas konca a prekroci sa, ukonci sa stream
+				SAFE_RELEASE(pSample);
+				DeliverEndOfStream();
+				return S_OK;
+			}
+
 			//Spomalenie snimkovania podla stanoveneho FPS v realnom case
 			DWORD tick = GetTickCount();
 			rtRealTime += ((tick - lastTick) * 10000);
@@ -252,27 +242,24 @@ HRESULT DesktopSourceVideoPin::DoBufferProcessingLoop(void)
 
 			if (this->m_rtLastFrame >= rtRealTime)
 			{
-				//Snimka musi pockat stanoveny cas - sleepTime
+				//m_rtLastFrame udava cas platnosti poslednej snimky. Hned po skonceni platnosti sa musi vydat nova snimka,
+				//inak vznika delay
 				if (!isNewSample)
 				{
 					SAFE_RELEASE(pSample);
 					continue;
 				}
 
+				//Snimka musi pockat stanoveny cas - sleepTime
 				DWORD sleepTime = (DWORD)((this->m_rtLastFrame - rtRealTime) / 10000);
 				Sleep(sleepTime);
 			}
+			this->m_rtLastFrame = rtStop;
 
 			if (isNewSample)
 				hr = FillBuffer(pSample);
 			else
 				hr = S_OK;
-
-			REFERENCE_TIME rtStart = this->m_rtLastFrame;
-			REFERENCE_TIME rtStop  = rtStart + this->m_pFilter->m_params->m_rtFrameLength;
-			this->m_rtLastFrame = rtStop;
-
-			pSample->SetTime(&rtStart, &rtStop);
 
 			if (hr == S_OK)
 			{
@@ -332,22 +319,71 @@ HRESULT DesktopSourceVideoPin::ApplyParametersToMT(CMediaType * pmt)
 
 	LONG width = (this->m_pFilter->m_params->m_width) ? this->m_pFilter->m_params->m_width : GetDeviceCaps(hDC, HORZRES);
 	LONG height = (this->m_pFilter->m_params->m_height) ? this->m_pFilter->m_params->m_height : GetDeviceCaps(hDC, VERTRES);
-
-	VIDEOINFOHEADER * pvi = (VIDEOINFOHEADER *)pmt->pbFormat;
-
-	pvi->rcTarget.right = pvi->rcSource.right = pvi->bmiHeader.biWidth = width;
-    pvi->rcTarget.bottom = pvi->rcSource.bottom = pvi->bmiHeader.biHeight = height;
-	pvi->AvgTimePerFrame = this->m_pFilter->m_params->m_rtFrameLength;
-	if (pmt->subtype == MEDIASUBTYPE_YUY2)
-		pvi->bmiHeader.biSizeImage = 2 * ((width * height) >> 1) + (width * height);
-	else if (pmt->subtype == MEDIASUBTYPE_YV12)
-		pvi->bmiHeader.biSizeImage = 2 * ((width * height) >> 2) + (width * height);
-	else
-		pvi->bmiHeader.biSizeImage = GetBitmapSize(&pvi->bmiHeader);
-
-	pmt->SetSampleSize(pvi->bmiHeader.biSizeImage);
+	RECT rect = { 0, 0, width, height };
 
 	DeleteDC(hDC);
+
+	BITMAPINFOHEADER * bmi;
+	if (pmt->formattype == FORMAT_VideoInfo)
+	{
+		VIDEOINFOHEADER * pvi = (VIDEOINFOHEADER *)pmt->pbFormat;
+		pvi->rcTarget = rect;
+		pvi->rcSource = rect;
+		pvi->AvgTimePerFrame = this->m_pFilter->m_params->m_rtFrameLength;
+		bmi = &pvi->bmiHeader;
+	}
+	else if (pmt->formattype == FORMAT_VideoInfo2)
+	{
+		VIDEOINFOHEADER2 * pvi = (VIDEOINFOHEADER2 *)pmt->pbFormat;
+		pvi->rcTarget = rect;
+		pvi->rcSource = rect;
+		pvi->AvgTimePerFrame = this->m_pFilter->m_params->m_rtFrameLength;
+		bmi = &pvi->bmiHeader;
+	}
+	else
+	{
+		return E_FAIL;
+	}
+
+	bmi->biWidth = width;
+	bmi->biHeight = height;
+	bmi->biClrImportant = 0;
+	bmi->biSize = sizeof(BITMAPINFOHEADER);
+
+	if (pmt->subtype == MEDIASUBTYPE_RGB32)
+	{
+		bmi->biCompression = BI_RGB;
+		bmi->biBitCount = 32;
+		bmi->biPlanes = 1;
+		bmi->biSizeImage = GetBitmapSize(bmi);
+	}
+	else if (pmt->subtype == MEDIASUBTYPE_RGB24)
+	{
+		bmi->biCompression = BI_RGB;
+		bmi->biBitCount = 24;
+		bmi->biPlanes = 1;
+		bmi->biSizeImage = GetBitmapSize(bmi);
+	}
+	else if (pmt->subtype == MEDIASUBTYPE_YUY2)
+	{
+		bmi->biCompression = MAKEFOURCC('Y','U','Y','2');
+		bmi->biBitCount = 16;
+		bmi->biPlanes = 1;
+		bmi->biSizeImage = 2 * ((width * height) >> 1) + (width * height);
+	}
+	else if (pmt->subtype == MEDIASUBTYPE_YV12)
+	{
+		bmi->biCompression = MAKEFOURCC('Y','V','1','2');
+		bmi->biBitCount = 12;
+		bmi->biPlanes = 3;
+		bmi->biSizeImage = 2 * ((width * height) >> 2) + (width * height);
+	}
+	else
+	{
+		return E_FAIL;
+	}
+
+	pmt->SetSampleSize(bmi->biSizeImage);
 
 	return S_OK;
 }
@@ -473,64 +509,13 @@ HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHe
 	{
 		GetDIBits(hScrDC, hBitmap, 0, nHeight, this->m_rgbBuffer, &this->m_rgbBitmapInfo, DIB_RGB_COLORS);
 
-		BYTE R, B, G, V;
-		BYTE * pSrcBuffer;
-		DWORD rgbLineSize = DIBWIDTHBYTES(this->m_rgbBitmapInfo.bmiHeader);
-
-		for (int i = (nHeight - 1); i >= 0; i--)
-		{
-			pSrcBuffer = this->m_rgbBuffer + (rgbLineSize * i);
-
-			for (int j = 0; j < nWidth; j++)
-			{
-				B = *pSrcBuffer; pSrcBuffer++;
-				G = *pSrcBuffer; pSrcBuffer++;
-				R = *pSrcBuffer; pSrcBuffer++;
-
-				*pData = (BYTE)((0.299 * R) + (0.587 * G) + (0.114 * B)); pData++; //Y
-
-				if (j % 2 == 0)
-				{
-					*pData = (BYTE)((-0.14317 * R) + (-0.28886 * G) + (0.436 * B) + 128); pData++; //U
-					V = (BYTE)((0.615 * R) + (-0.51499 * G) + (-0.10001 * B) + 128); //V temp
-				}
-				else
-				{
-					*pData = V; pData++; //V
-				}
-			}
-		}
+		RGBtoYUY2(this->m_rgbBitmapInfo.bmiHeader, this->m_rgbBuffer, pData);
 	}
 	else if (pHeader->bmiHeader.biCompression == MAKEFOURCC('Y','V','1','2'))
 	{
 		GetDIBits(hScrDC, hBitmap, 0, nHeight, this->m_rgbBuffer, &this->m_rgbBitmapInfo, DIB_RGB_COLORS);
 
-		BYTE R, B, G;
-		BYTE * pSrcBuffer;
-		BYTE * pDataY = pData;
-		BYTE * pDataV = pDataY + (nWidth * nHeight);
-		BYTE * pDataU = pDataV + ((nWidth * nHeight) >> 2);
-		DWORD rgbLineSize = DIBWIDTHBYTES(this->m_rgbBitmapInfo.bmiHeader);
-
-		for (int i = (nHeight - 1); i >= 0; i--)
-		{
-			pSrcBuffer = this->m_rgbBuffer + (rgbLineSize * i);
-
-			for (int j = 0; j < nWidth; j++)
-			{
-				B = *pSrcBuffer; pSrcBuffer++;
-				G = *pSrcBuffer; pSrcBuffer++;
-				R = *pSrcBuffer; pSrcBuffer++;
-
-				*pDataY = (BYTE)((0.299 * R) + (0.587 * G) + (0.114 * B)); pDataY++; //Y
-
-				if (i % 2 == 0 && j % 2 == 0)
-				{
-					*pDataV = (BYTE)((0.615 * R) + (-0.51499 * G) + (-0.10001 * B) + 128); pDataV++; //V
-					*pDataU = (BYTE)((-0.14317 * R) + (-0.28886 * G) + (0.436 * B) + 128); pDataU++; //U
-				}
-			}
-		}
+		RGBtoYV12(this->m_rgbBitmapInfo.bmiHeader, this->m_rgbBuffer, pData);
 	}
 
     // clean up

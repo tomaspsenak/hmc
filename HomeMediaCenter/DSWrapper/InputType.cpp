@@ -8,6 +8,13 @@ namespace DSWrapper
 {
 	InputDictionaryHelper inputDictionaryHelper;
 
+	InputType ^ InputType::Static(UINT32 fps, array<System::Byte> ^ bitmapData)
+	{
+		if (fps == 0)
+			throw gcnew DSException(L"Static source - frame rate must be specified", 0);
+		return gcnew StaticInput(fps, bitmapData);
+	}
+
 	InputType ^ InputType::Desktop(UINT32 fps)
 	{
 		if (fps == 0)
@@ -19,6 +26,45 @@ namespace DSWrapper
 	{
 		return gcnew WebcamInput(videoName, audioName);
 	}
+
+	//********************************************
+	//*************** StaticInput ****************
+	//********************************************
+
+	HRESULT StaticInput::GetInputFilter(IBaseFilter ** inputFilter)
+	{
+		HRESULT hr = S_OK;
+		IUnknown * unk = NULL;
+		IBaseFilter * filter = NULL;
+		IHMCStaticSource * params = NULL;
+
+		CHECK_HR(hr = DLLManager::GetManager().CreateHMCEncoder(CLSID_HMCStaticSource, &unk));
+		CHECK_HR(hr = unk->QueryInterface(IID_IBaseFilter, (void **)&filter));
+		CHECK_HR(hr = filter->QueryInterface(IID_IHMCStaticSource, (void **)&params));
+
+		CHECK_HR(hr = params->SetFrameRate(this->m_fps));
+
+		if (this->m_bitmapData != nullptr)
+		{
+			pin_ptr<BYTE> pData = &this->m_bitmapData[0];
+			CHECK_HR(hr = params->SetBitmapData(pData, this->m_bitmapData->Length));
+		}
+
+		*inputFilter = filter;
+		filter = NULL;
+
+	done:
+
+		SAFE_RELEASE(filter);
+		SAFE_RELEASE(unk);
+		SAFE_RELEASE(params);
+
+		return hr;
+	}
+
+	//********************************************
+	//************** DesktopInput ****************
+	//********************************************
 
 	HRESULT DesktopInput::GetInputFilter(IBaseFilter ** inputFilter)
 	{

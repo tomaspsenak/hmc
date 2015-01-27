@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-     Copyright (C) 2014 Tomáš Pšenák
+     Copyright (C) 2015 Tomáš Pšenák
      This program is free software; you can redistribute it and/or modify 
      it under the terms of the GNU General Public License version 2 as 
      published by the Free Software Foundation.
@@ -28,6 +28,8 @@ class FrameRateInputPin : public CTransInPlaceInputPin
 	public:		FrameRateInputPin(LPCTSTR pObjectName, FrameRateFilter * pFilter, HRESULT * phr, LPCWSTR pName);
 				virtual ~FrameRateInputPin(void);
 
+				STDMETHODIMP NotifyAllocator(IMemAllocator * pAllocator, BOOL bReadOnly);
+
 				HRESULT CheckMediaType(const CMediaType * pmt);
 
 	private:	FrameRateFilter * m_pFilter;
@@ -41,7 +43,7 @@ class FrameRateOutputPin : public CTransInPlaceOutputPin
 				STDMETHODIMP EnumMediaTypes(IEnumMediaTypes ** ppEnum);
 };
 
-class FrameRateFilter : public CTransInPlaceFilter, public ISpecifyPropertyPages
+class FrameRateFilter : public CTransInPlaceFilter, public ISpecifyPropertyPages, public CAMThread
 {
 	friend class FrameRateInputPin;
 	friend class FrameRateOutputPin;
@@ -63,18 +65,28 @@ class FrameRateFilter : public CTransInPlaceFilter, public ISpecifyPropertyPages
 				HRESULT Transform(IMediaSample * pSample);
 
 				//CTransformFilter
+				HRESULT StartStreaming(void);
 				HRESULT StopStreaming(void);
+				HRESULT EndOfStream(void);
 				HRESULT CheckInputType(const CMediaType * mtIn);
 				HRESULT GetMediaType(int iPosition, CMediaType * pMediaType);
 				HRESULT CompleteConnect(PIN_DIRECTION direction, IPin * pReceivePin);
 				HRESULT Receive(IMediaSample * pSample);
 
+				//CAMThread
+				DWORD ThreadProc(void);
+
 	private:	HRESULT ReconnectPinSync(CBasePin * pin, CBasePin * mediaTypePin, REFERENCE_TIME avgTimePerFrame);
+				HRESULT SendSample(IMediaSample * pSample);
 		
 				UINT32 m_fpsModSum;
 				REFERENCE_TIME m_rtOriginFrameLength;
 				REFERENCE_TIME m_rtLastFrame;
 				FrameRateParameters * m_params;
+
+				IMediaSample * m_threadSample;
+
+				enum Command { CMD_STOP, CMD_RECEIVE, CMD_EOS };
 };
 
 #endif //FRAMERATEFILTER_HMCENCODER_INCLUDED

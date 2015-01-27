@@ -57,7 +57,7 @@ library HMCEncoderLib
 		HRESULT GetVideoBitrate([out] BOOL * pIsConstant, [out] int * pVideoBitrate, [out] int * pVideoBitrateMax, [out] int * pVideoBitrateMin, [out] int * pVideoQuality);
 
 		HRESULT SetVideoInterlace([in] BOOL interlaced);
-		HRESULT GetVideoInterlace([out] BOOL * interlaced);
+		HRESULT GetVideoInterlace([out] BOOL * pInterlaced);
 
 		HRESULT SetWidth([in] UINT32 width);
 		HRESULT GetWidth([out] UINT32 * pWidth);
@@ -67,6 +67,9 @@ library HMCEncoderLib
 
 		HRESULT SetVideoQuality([in] int videoQuality);
 		HRESULT GetVideoQuality([out] int * pVideoQuality);
+
+		HRESULT SetHlsSegmenter([in] const small * pPlaylistUrl, [in] const small * pFileUrl, [in] UINT32 segmentTime, [in] BOOL enabled);
+		HRESULT GetHlsSegmenter([out] BOOL * pEnabled);
 	}
 
 	[
@@ -203,6 +206,36 @@ library HMCEncoderLib
 	   helpstring("Home Media Center Frame Writer Page Class")
 	]
 	coclass HMCFrameWriterPage
+	{
+	   [default] interface ISpecifyPropertyPages;
+	}
+
+	[
+	   object,
+	   uuid(AF3D70C0-1675-4FCB-9225-68620D67D1ED),
+	   helpstring("Home Media Center Static Source Interface")
+	]
+	interface IHMCStaticSource : IUnknown
+	{
+		HRESULT SetFrameRate([in] UINT32 fps);
+		HRESULT GetFrameRate([out] UINT32 * pFps);
+		HRESULT SetBitmapData([in] BYTE * pData, [in] UINT32 dataCount);
+	}
+
+	[
+	   uuid(AF3D70C0-1675-4FCB-9215-68620D67D1ED),
+	   helpstring("Home Media Center Static Source Class")
+	]
+	coclass HMCStaticSource
+	{
+	   [default] interface IHMCStaticSource;
+	}
+
+	[
+	   uuid(AF3D70C0-1675-4FCB-9235-68620D67D1ED),
+	   helpstring("Home Media Center Static Source Page Class")
+	]
+	coclass HMCStaticSourcePage
 	{
 	   [default] interface ISpecifyPropertyPages;
 	}

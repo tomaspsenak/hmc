@@ -181,6 +181,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ColorConverter.h" />
     <ClInclude Include="DesktopSourceSilenceGenerator.h" />
     <ClInclude Include="EncoderAsyncInputPin.h" />
     <ClInclude Include="EncoderAudioInputPin.h" />
@@ -203,11 +204,16 @@
     <ClInclude Include="EncoderParameters.h" />
     <ClInclude Include="EncoderPassThru.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="StaticSourceFilter.h" />
+    <ClInclude Include="StaticSourcePage.h" />
+    <ClInclude Include="StaticSourceParameters.h" />
+    <ClInclude Include="StaticSourcePins.h" />
     <ClInclude Include="Stdafx.h" />
     <ClInclude Include="EncoderStreamOutputPin.h" />
     <ClInclude Include="EncoderVideoInputPin.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ColorConverter.cpp" />
     <ClCompile Include="DesktopSourceSilenceGenerator.cpp" />
     <ClCompile Include="EncoderAsyncInputPin.cpp" />
     <ClCompile Include="EncoderAudioInputPin.cpp" />
@@ -230,6 +236,10 @@
     <ClCompile Include="EncoderFilter.cpp" />
     <ClCompile Include="EncoderParameters.cpp" />
     <ClCompile Include="EncoderPassThru.cpp" />
+    <ClCompile Include="StaticSourceFilter.cpp" />
+    <ClCompile Include="StaticSourcePage.cpp" />
+    <ClCompile Include="StaticSourceParameters.cpp" />
+    <ClCompile Include="StaticSourcePins.cpp" />
     <ClCompile Include="Stdafx.cpp" />
     <ClCompile Include="EncoderStreamOutputPin.cpp" />
     <ClCompile Include="EncoderVideoInputPin.cpp" />

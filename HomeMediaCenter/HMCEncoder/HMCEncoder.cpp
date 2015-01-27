@@ -9,6 +9,8 @@
 #include "FrameWriterPage.h"
 #include "EncoderLogPage.h"
 #include "DesktopSourceSilenceGenerator.h"
+#include "StaticSourceFilter.h"
+#include "StaticSourcePage.h"
 
 STDAPI DllRegisterServer()
 {
@@ -91,6 +93,17 @@ const AMOVIESETUP_FILTER frameWriterFilter =
     &CLSID_HMCFrameWriter, L"HMCFrameWriterFilter", MERIT_DO_NOT_USE, 1, frameWriterPins
 };
 
+const AMOVIESETUP_PIN staticSourcePins[] =
+{
+    { L"Video Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL },
+	{ L"Audio Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL }
+};
+
+const AMOVIESETUP_FILTER staticSourceFilter =
+{
+    &CLSID_HMCStaticSource, L"HMCStaticSourceFilter", MERIT_DO_NOT_USE, 2, staticSourcePins
+};
+
 CFactoryTemplate g_Templates[] =
 {
     { L"HMCEncoderFilter", &CLSID_HMCEncoder, EncoderFilter::CreateInstance, NULL, &encoderFilter },
@@ -101,7 +114,9 @@ CFactoryTemplate g_Templates[] =
 	{ L"HMCDesktopSourceFilter", &CLSID_HMCDesktopSource, DesktopSourceFilter::CreateInstance, NULL, &desktopSourceFilter },
 	{ L"HMCDesktopSourceFilterPage", &CLSID_HMCDesktopSourcePage, DesktopSourcePage::CreateInstance },
 	{ L"HMCFrameWriterFilter", &CLSID_HMCFrameWriter, FrameWriterFilter::CreateInstance, NULL, &frameWriterFilter },
-	{ L"HMCFrameWriterFilterPage", &CLSID_HMCFrameWriterPage, FrameWriterPage::CreateInstance }
+	{ L"HMCFrameWriterFilterPage", &CLSID_HMCFrameWriterPage, FrameWriterPage::CreateInstance },
+	{ L"HMCStaticSourceFilter", &CLSID_HMCStaticSource, StaticSourceFilter::CreateInstance, NULL, &staticSourceFilter },
+	{ L"HMCStaticSourceFilterPage", &CLSID_HMCStaticSourcePage, StaticSourcePage::CreateInstance }
 };
 
 int g_cTemplates = sizeof(g_Templates) / sizeof(g_Templates[0]);

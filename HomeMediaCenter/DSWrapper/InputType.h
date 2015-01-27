@@ -11,13 +11,25 @@ namespace DSWrapper
 
 	public ref class InputType abstract
 	{
-		public:		static InputType ^ Desktop(UINT32 fps);
+		public:		static InputType ^ Static(UINT32 fps, array<System::Byte> ^ bitmapData);
+			
+					static InputType ^ Desktop(UINT32 fps);
 
 					static InputType ^ Webcam(System::String ^ videoName, System::String ^ audioName);
 
 		internal:	InputType(void) { }
 
 					virtual HRESULT GetInputFilter(IBaseFilter ** inputFilter) = 0;
+	};
+
+	private ref class StaticInput : InputType
+	{
+		internal:	StaticInput(UINT32 fps, array<System::Byte> ^ bitmapData) : InputType(), m_fps(fps), m_bitmapData(bitmapData) { }
+
+					virtual HRESULT GetInputFilter(IBaseFilter ** inputFilter) override;
+
+		private:	UINT32 m_fps;
+					array<System::Byte> ^ m_bitmapData;
 	};
 
 	private ref class DesktopInput : InputType

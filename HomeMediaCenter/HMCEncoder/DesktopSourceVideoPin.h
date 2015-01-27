@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-     Copyright (C) 2014 Tomáš Pšenák
+     Copyright (C) 2015 Tomáš Pšenák
      This program is free software; you can redistribute it and/or modify 
      it under the terms of the GNU General Public License version 2 as 
      published by the Free Software Foundation.
@@ -24,7 +24,7 @@ class DesktopSourceFilter;
 class DesktopSourceVideoPin : public CSourceStream
 {
 	public:		DesktopSourceVideoPin(TCHAR * pObjectName, HRESULT * phr, DesktopSourceFilter * filter, LPCWSTR pName);
-				~DesktopSourceVideoPin(void);
+				virtual ~DesktopSourceVideoPin(void);
 
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
@@ -50,7 +50,6 @@ class DesktopSourceVideoPin : public CSourceStream
 				
 				HBITMAP CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio);
 		
-				CCritSec m_cSharedState;
 				REFERENCE_TIME m_rtLastFrame;
 				DesktopSourceFilter * m_pFilter;
 				BITMAPINFO m_bitmapInfo;

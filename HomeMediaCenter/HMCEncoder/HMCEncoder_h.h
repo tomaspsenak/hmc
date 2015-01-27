@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Fri Nov 14 21:05:09 2014
+/* at Sun Jan 11 16:28:39 2015
  */
 /* Compiler settings for HMCEncoder.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
@@ -173,6 +173,36 @@ typedef struct HMCFrameWriterPage HMCFrameWriterPage;
 #endif 	/* __HMCFrameWriterPage_FWD_DEFINED__ */
 
 
+#ifndef __IHMCStaticSource_FWD_DEFINED__
+#define __IHMCStaticSource_FWD_DEFINED__
+typedef interface IHMCStaticSource IHMCStaticSource;
+#endif 	/* __IHMCStaticSource_FWD_DEFINED__ */
+
+
+#ifndef __HMCStaticSource_FWD_DEFINED__
+#define __HMCStaticSource_FWD_DEFINED__
+
+#ifdef __cplusplus
+typedef class HMCStaticSource HMCStaticSource;
+#else
+typedef struct HMCStaticSource HMCStaticSource;
+#endif /* __cplusplus */
+
+#endif 	/* __HMCStaticSource_FWD_DEFINED__ */
+
+
+#ifndef __HMCStaticSourcePage_FWD_DEFINED__
+#define __HMCStaticSourcePage_FWD_DEFINED__
+
+#ifdef __cplusplus
+typedef class HMCStaticSourcePage HMCStaticSourcePage;
+#else
+typedef struct HMCStaticSourcePage HMCStaticSourcePage;
+#endif /* __cplusplus */
+
+#endif 	/* __HMCStaticSourcePage_FWD_DEFINED__ */
+
+
 /* header files for imported files */
 #include "oaidl.h"
 #include "ocidl.h"
@@ -279,7 +309,7 @@ EXTERN_C const IID IID_IHMCEncoder;
             /* [in] */ BOOL interlaced) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE GetVideoInterlace( 
-            /* [out] */ BOOL *interlaced) = 0;
+            /* [out] */ BOOL *pInterlaced) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE SetWidth( 
             /* [in] */ UINT32 width) = 0;
@@ -298,6 +328,15 @@ EXTERN_C const IID IID_IHMCEncoder;
         
         virtual HRESULT STDMETHODCALLTYPE GetVideoQuality( 
             /* [out] */ int *pVideoQuality) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetHlsSegmenter( 
+            /* [in] */ const small *pPlaylistUrl,
+            /* [in] */ const small *pFileUrl,
+            /* [in] */ UINT32 segmentTime,
+            /* [in] */ BOOL enabled) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetHlsSegmenter( 
+            /* [out] */ BOOL *pEnabled) = 0;
         
     };
     
@@ -379,7 +418,7 @@ EXTERN_C const IID IID_IHMCEncoder;
         
         HRESULT ( STDMETHODCALLTYPE *GetVideoInterlace )( 
             IHMCEncoder * This,
-            /* [out] */ BOOL *interlaced);
+            /* [out] */ BOOL *pInterlaced);
         
         HRESULT ( STDMETHODCALLTYPE *SetWidth )( 
             IHMCEncoder * This,
@@ -404,6 +443,17 @@ EXTERN_C const IID IID_IHMCEncoder;
         HRESULT ( STDMETHODCALLTYPE *GetVideoQuality )( 
             IHMCEncoder * This,
             /* [out] */ int *pVideoQuality);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetHlsSegmenter )( 
+            IHMCEncoder * This,
+            /* [in] */ const small *pPlaylistUrl,
+            /* [in] */ const small *pFileUrl,
+            /* [in] */ UINT32 segmentTime,
+            /* [in] */ BOOL enabled);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetHlsSegmenter )( 
+            IHMCEncoder * This,
+            /* [out] */ BOOL *pEnabled);
         
         END_INTERFACE
     } IHMCEncoderVtbl;
@@ -461,8 +511,8 @@ EXTERN_C const IID IID_IHMCEncoder;
 #define IHMCEncoder_SetVideoInterlace(This,interlaced)	\
     ( (This)->lpVtbl -> SetVideoInterlace(This,interlaced) ) 
 
-#define IHMCEncoder_GetVideoInterlace(This,interlaced)	\
-    ( (This)->lpVtbl -> GetVideoInterlace(This,interlaced) ) 
+#define IHMCEncoder_GetVideoInterlace(This,pInterlaced)	\
+    ( (This)->lpVtbl -> GetVideoInterlace(This,pInterlaced) ) 
 
 #define IHMCEncoder_SetWidth(This,width)	\
     ( (This)->lpVtbl -> SetWidth(This,width) ) 
@@ -481,6 +531,12 @@ EXTERN_C const IID IID_IHMCEncoder;
 
 #define IHMCEncoder_GetVideoQuality(This,pVideoQuality)	\
     ( (This)->lpVtbl -> GetVideoQuality(This,pVideoQuality) ) 
+
+#define IHMCEncoder_SetHlsSegmenter(This,pPlaylistUrl,pFileUrl,segmentTime,enabled)	\
+    ( (This)->lpVtbl -> SetHlsSegmenter(This,pPlaylistUrl,pFileUrl,segmentTime,enabled) ) 
+
+#define IHMCEncoder_GetHlsSegmenter(This,pEnabled)	\
+    ( (This)->lpVtbl -> GetHlsSegmenter(This,pEnabled) ) 
 
 #endif /* COBJMACROS */
 
@@ -990,6 +1046,123 @@ EXTERN_C const CLSID CLSID_HMCFrameWriterPage;
 
 class DECLSPEC_UUID("E6E91083-47A0-41CE-A731-611A62111F6A")
 HMCFrameWriterPage;
+#endif
+
+#ifndef __IHMCStaticSource_INTERFACE_DEFINED__
+#define __IHMCStaticSource_INTERFACE_DEFINED__
+
+/* interface IHMCStaticSource */
+/* [helpstring][uuid][object] */ 
+
+
+EXTERN_C const IID IID_IHMCStaticSource;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("AF3D70C0-1675-4FCB-9225-68620D67D1ED")
+    IHMCStaticSource : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE SetFrameRate( 
+            /* [in] */ UINT32 fps) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetFrameRate( 
+            /* [out] */ UINT32 *pFps) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetBitmapData( 
+            /* [in] */ BYTE *pData,
+            /* [in] */ UINT32 dataCount) = 0;
+        
+    };
+    
+#else 	/* C style interface */
+
+    typedef struct IHMCStaticSourceVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            IHMCStaticSource * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            __RPC__deref_out  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            IHMCStaticSource * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            IHMCStaticSource * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetFrameRate )( 
+            IHMCStaticSource * This,
+            /* [in] */ UINT32 fps);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetFrameRate )( 
+            IHMCStaticSource * This,
+            /* [out] */ UINT32 *pFps);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetBitmapData )( 
+            IHMCStaticSource * This,
+            /* [in] */ BYTE *pData,
+            /* [in] */ UINT32 dataCount);
+        
+        END_INTERFACE
+    } IHMCStaticSourceVtbl;
+
+    interface IHMCStaticSource
+    {
+        CONST_VTBL struct IHMCStaticSourceVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define IHMCStaticSource_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define IHMCStaticSource_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define IHMCStaticSource_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define IHMCStaticSource_SetFrameRate(This,fps)	\
+    ( (This)->lpVtbl -> SetFrameRate(This,fps) ) 
+
+#define IHMCStaticSource_GetFrameRate(This,pFps)	\
+    ( (This)->lpVtbl -> GetFrameRate(This,pFps) ) 
+
+#define IHMCStaticSource_SetBitmapData(This,pData,dataCount)	\
+    ( (This)->lpVtbl -> SetBitmapData(This,pData,dataCount) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __IHMCStaticSource_INTERFACE_DEFINED__ */
+
+
+EXTERN_C const CLSID CLSID_HMCStaticSource;
+
+#ifdef __cplusplus
+
+class DECLSPEC_UUID("AF3D70C0-1675-4FCB-9215-68620D67D1ED")
+HMCStaticSource;
+#endif
+
+EXTERN_C const CLSID CLSID_HMCStaticSourcePage;
+
+#ifdef __cplusplus
+
+class DECLSPEC_UUID("AF3D70C0-1675-4FCB-9235-68620D67D1ED")
+HMCStaticSourcePage;
 #endif
 #endif /* __HMCEncoderLib_LIBRARY_DEFINED__ */
 

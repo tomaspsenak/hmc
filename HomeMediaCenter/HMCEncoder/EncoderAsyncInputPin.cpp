@@ -68,8 +68,6 @@ HRESULT EncoderAsyncInputPin::Inactive(void)
     if (FAILED(hr))
 		return hr;
 
-	//Treba uzamknut thread handle inak moze vzniknut race condition
-	CAutoLock lock2(&this->m_AccessLock);
     if (ThreadExists())
 	{
 		hr = CallWorker(CMD_STOP);
@@ -97,7 +95,11 @@ STDMETHODIMP EncoderAsyncInputPin::EndFlush(void)
 
 STDMETHODIMP EncoderAsyncInputPin::EndOfStream(void)
 {
-	return CallWorker(CMD_EOS);
+	//Treba state lock aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
+	CAutoLock lock(this->m_pLock);
+	CallWorker(CMD_EOS);
+
+	return S_OK;
 }
 
 //************ IMemInputPin ************
@@ -125,7 +127,11 @@ STDMETHODIMP EncoderAsyncInputPin::Receive(IMediaSample * pSample)
 	this->m_time = timeStart;
 
 	this->m_tempSample = pSample;
-	hr = CallWorker(CMD_RECEIVE);
+	{
+		//Treba state lock aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
+		CAutoLock lock(this->m_pLock);
+		hr = CallWorker(CMD_RECEIVE);
+	}
 	this->m_tempSample = NULL;
 
 	return hr;

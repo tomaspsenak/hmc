@@ -16,7 +16,7 @@ using namespace System::Security::Permissions;
 [assembly:AssemblyConfigurationAttribute("")];
 [assembly:AssemblyCompanyAttribute("Tomáš Pšenák")];
 [assembly:AssemblyProductAttribute("DSWrapper")];
-[assembly:AssemblyCopyrightAttribute("Copyright © Tomáš Pšenák 2014")];
+[assembly:AssemblyCopyrightAttribute("Copyright © Tomáš Pšenák 2015")];
 [assembly:AssemblyTrademarkAttribute("")];
 [assembly:AssemblyCultureAttribute("")];
 

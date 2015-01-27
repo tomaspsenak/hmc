@@ -35,7 +35,7 @@ namespace DSWrapper
 		else
 		{
 			return gcnew ContainerHMC(Container_MPEG2PS, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
-				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 		}
 	}
 	
@@ -51,7 +51,7 @@ namespace DSWrapper
 		else
 		{
 			return gcnew ContainerHMC(Container_MPEG2TS, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
-				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 		}
 	}
 
@@ -60,14 +60,22 @@ namespace DSWrapper
 		UINT32 audBitrate)
 	{
 		return gcnew ContainerHMC(Container_MPEG2TSH264, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
-				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
+	}
+
+	ContainerType ^ ContainerType::HLS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, 
+		UINT32 percentQuality, UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio,
+		UINT32 audBitrate, System::String ^ playlistUrl, System::String ^ fileUrl, UINT32 segmentTime)
+	{
+		return gcnew ContainerHMC(Container_MPEG2TSH264, true, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, playlistUrl, fileUrl, segmentTime);
 	}
 	
 	ContainerType ^ ContainerType::WEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
 		return gcnew ContainerHMC(Container_WEBM, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
-				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+				intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 	}
 
 	ContainerType ^ ContainerType::WMV(UINT32 width, UINT32 height, WMVideoSubtype videoSubtype, UINT32 vidBitrate, UINT32 percentQuality, 
@@ -89,34 +97,34 @@ namespace DSWrapper
 		UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
 	{
 		return gcnew ContainerHMC(Container_AVI, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, scanType, 
-			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 	}
 
 	ContainerType ^ ContainerType::MP4(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate)
+		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
-		return gcnew ContainerHMC(Container_MP4, false, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
-			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+		return gcnew ContainerHMC(Container_MP4, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 	}
 
 	ContainerType ^ ContainerType::MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality, bool streamable)
 	{
 		return gcnew ContainerHMC(Container_MP3, streamable, 0, 0, bitrateMode, 0, percentQuality, 0, ScanType::Interlaced, false, nullptr, 
-			false, audBitrate);
+			false, audBitrate, nullptr, nullptr, 0);
 	}
 
 	ContainerType ^ ContainerType::FLV(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
 		return gcnew ContainerHMC(Container_FLV, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
-			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 	}
 
 	ContainerType ^ ContainerType::FLV_H264(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 		UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable)
 	{
 		return gcnew ContainerHMC(Container_FLVH264, streamable, width, height, bitrateMode, vidBitrate, percentQuality, fps, ScanType::Progressive, 
-			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate);
+			intSubtitles, intSubtitlesPath, keepAspectRatio, audBitrate, nullptr, nullptr, 0);
 	}
 
 	System::Boolean ContainerType::IsMPEG2Installed(void)
@@ -339,9 +347,6 @@ namespace DSWrapper
 	HRESULT ContainerType::GetWriter(System::IO::Stream ^ outputStream, IGraphBuilder * graphBuilder, IBaseFilter ** writerFilter)
 	{
 		HRESULT hr = S_OK;
-
-		if (outputStream == nullptr)
-			return E_FAIL;
 
 		FileWriterFilter * writer = NULL;
 
@@ -800,6 +805,9 @@ namespace DSWrapper
 		IBaseFilter * muxFilter = NULL;
 		IHMCEncoder * encoderProp = NULL;
 
+		char * pHlsFileUrl = NULL;
+		char * pHlsPlaylistUrl = NULL;
+
 		//Pridat referenciu - tam kde sa hodnota prepise, treba SAFE_RELEASE
 		SAFE_ADDREF(videoPin);
 		SAFE_ADDREF(audioPin);
@@ -815,8 +823,50 @@ namespace DSWrapper
 		CHECK_HR(hr = muxFilter->QueryInterface(IID_IHMCEncoder, (void**)&encoderProp));
 		muxFilter->QueryInterface(IID_IMediaSeeking, (void**)mediaSeekingMux);
 
-		CHECK_HR(hr = encoderProp->SetContainer(this->m_container));
-		CHECK_HR(hr = encoderProp->SetStreamable(this->m_streamable));
+		if (this->m_hlsSegmentTime > 0 && this->m_hlsPlaylistUrl != nullptr && this->m_hlsFileUrl != nullptr)
+		{
+			pin_ptr<const wchar_t> pPtr;
+			size_t convertedChars = 0;
+			size_t sizeInBytes;
+			errno_t err;
+			
+			pPtr = PtrToStringChars(this->m_hlsPlaylistUrl);
+			sizeInBytes = ((this->m_hlsPlaylistUrl->Length + 1) * 2);
+			pHlsPlaylistUrl = (char *)malloc(sizeInBytes);
+			if (pHlsPlaylistUrl == NULL)
+			{
+				hr = E_OUTOFMEMORY;
+				goto done;
+			}
+			err = wcstombs_s(&convertedChars, pHlsPlaylistUrl, sizeInBytes, pPtr, sizeInBytes);
+			if (err != 0)
+			{
+				hr = E_FAIL;
+				goto done;
+			}
+
+			pPtr = PtrToStringChars(this->m_hlsFileUrl);
+			sizeInBytes = ((this->m_hlsFileUrl->Length + 1) * 2);
+			pHlsFileUrl = (char *)malloc(sizeInBytes);
+			if (pHlsFileUrl == NULL)
+			{
+				hr = E_OUTOFMEMORY;
+				goto done;
+			}
+			err = wcstombs_s(&convertedChars, pHlsFileUrl, sizeInBytes, pPtr, sizeInBytes);
+			if (err != 0)
+			{
+				hr = E_FAIL;
+				goto done;
+			}
+
+			CHECK_HR(hr = encoderProp->SetHlsSegmenter(pHlsPlaylistUrl, pHlsFileUrl, this->m_hlsSegmentTime, TRUE));
+		}
+		else
+		{
+			CHECK_HR(hr = encoderProp->SetContainer(this->m_container));
+			CHECK_HR(hr = encoderProp->SetStreamable(this->m_streamable));
+		}
 
 		if (videoPin != NULL && this->m_container != Container_MP3)
 		{
@@ -878,6 +928,9 @@ namespace DSWrapper
 		SAFE_RELEASE(videoPin);
 		SAFE_RELEASE(audioPin);
 		SAFE_RELEASE(subtitlePin);
+
+		free(pHlsFileUrl);
+		free(pHlsPlaylistUrl);
 		
 		return hr;
 	}

@@ -15,6 +15,37 @@ FrameRateInputPin::~FrameRateInputPin(void)
 {
 }
 
+STDMETHODIMP FrameRateInputPin::NotifyAllocator(IMemAllocator * pAllocator, BOOL bReadOnly)
+{
+	CAutoLock lock(this->m_pLock);
+
+	if (this->m_pFilter->m_pOutput->IsConnected() && this->m_pFilter->m_pInput->IsConnected())
+	{
+		REFERENCE_TIME inFrameLength, outFrameLength;
+
+		if (this->m_mt.formattype == FORMAT_VideoInfo)
+			inFrameLength = ((VIDEOINFOHEADER *)this->m_mt.pbFormat)->AvgTimePerFrame;
+		else if (this->m_mt.formattype == FORMAT_VideoInfo2)
+			inFrameLength = ((VIDEOINFOHEADER2 *)this->m_mt.pbFormat)->AvgTimePerFrame;
+		else
+			return CTransInPlaceInputPin::NotifyAllocator(pAllocator, bReadOnly);
+
+		if (this->m_pFilter->m_pOutput->CurrentMediaType().formattype == FORMAT_VideoInfo)
+			outFrameLength = ((VIDEOINFOHEADER *)this->m_pFilter->m_pOutput->CurrentMediaType().pbFormat)->AvgTimePerFrame;
+		else if (this->m_pFilter->m_pOutput->CurrentMediaType().formattype == FORMAT_VideoInfo2)
+			outFrameLength = ((VIDEOINFOHEADER2 *)this->m_pFilter->m_pOutput->CurrentMediaType().pbFormat)->AvgTimePerFrame;
+		else
+			return CTransInPlaceInputPin::NotifyAllocator(pAllocator, bReadOnly);
+
+		//Ak je na vystupe vacsi pocet snimkov (kratsia dlzka), pouzije sa zvlast vlakno no ich posielanie
+		//Zabezpeci to nastavenie allocatora ako readonly, potom sa pouzije zvlast allocator na vstupe a vystupe
+		if (outFrameLength < inFrameLength)
+			return CTransInPlaceInputPin::NotifyAllocator(pAllocator, TRUE);
+	}
+
+	return CTransInPlaceInputPin::NotifyAllocator(pAllocator, bReadOnly);
+}
+
 HRESULT FrameRateInputPin::CheckMediaType(const CMediaType * pmt)
 {
 	HRESULT hr = this->m_pTIPFilter->CheckInputType(pmt);
@@ -99,7 +130,7 @@ STDMETHODIMP FrameRateOutputPin::EnumMediaTypes(IEnumMediaTypes ** ppEnum)
 //********************************************
 
 FrameRateFilter::FrameRateFilter(LPUNKNOWN punk, HRESULT * phr) : CTransInPlaceFilter(L"HMCFrameRateFilter", punk, CLSID_HMCFrameRate, phr), 
-	m_rtOriginFrameLength(0), m_rtLastFrame(0), m_fpsModSum(0), m_params(NULL)
+	m_rtOriginFrameLength(0), m_rtLastFrame(0), m_fpsModSum(0), m_params(NULL), m_threadSample(NULL)
 {
 	this->m_pInput = new FrameRateInputPin(L"TransInPlace input pin", this, phr, L"Input");
 	if (this->m_pInput == NULL)
@@ -187,10 +218,49 @@ HRESULT FrameRateFilter::Transform(IMediaSample * pSample)
 
 //************* CTransformFilter *************\\
 
+HRESULT FrameRateFilter::StartStreaming(void)
+{
+	//State lock (m_pLock / m_csFilter) je zamknuty
+	//Spustenie vlakna
+    if (!Create())
+        return E_FAIL;
+
+	return S_OK;
+}
+
 HRESULT FrameRateFilter::StopStreaming(void)
 {
+	//State lock (m_pLock / m_csFilter) je zamknuty
 	this->m_fpsModSum = 0;
 	this->m_rtLastFrame = 0;
+
+	if (ThreadExists())
+	{
+		HRESULT hr = CallWorker(CMD_STOP);
+		if (FAILED(hr))
+			return hr;
+
+		//Pockat na ukoncenie vlakna
+		Close();
+    }
+
+	return S_OK;
+}
+
+HRESULT FrameRateFilter::EndOfStream(void)
+{
+	//Receive lock (m_csReceive) je zamknuty
+	if (UsingDifferentAllocators())
+	{
+		//Pri roznych alokatoroch sa pouziva zvlast vlakno na posielanie sampla / udalosti
+		//Funkcia Stop zamkyna m_csFilter a m_csReceive, preto nehrozi ze CallWorker nebude reagovat
+		//Treba state lock (m_csFilter) aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
+		CallWorker(CMD_EOS);
+	}
+	else
+	{
+		return CTransInPlaceFilter::EndOfStream();
+	}
 
 	return S_OK;
 }
@@ -297,49 +367,82 @@ HRESULT FrameRateFilter::Receive(IMediaSample * pSample)
 	CheckPointer(pSample, E_POINTER);
 
     HRESULT hr = S_OK;
-	IMediaSample * pOut = NULL;
-	REFERENCE_TIME rtOldStart, rtOldStop;
-	BOOL diffAllocators = UsingDifferentAllocators();
 
-	CHECK_HR(hr = pSample->GetTime(&rtOldStart, &rtOldStop));
-
-	//Snimka sa bude opakovat, pokial nedosiahne povodnu casovu peciatku
-	while (this->m_rtLastFrame + this->m_params->m_rtFrameLength <= rtOldStop)
+	if (UsingDifferentAllocators())
 	{
-		REFERENCE_TIME rtStart = this->m_rtLastFrame;
-		REFERENCE_TIME rtStop  = rtStart + this->m_params->m_rtFrameLength;
+		//Pri roznych alokatoroch sa pouziva zvlast vlakno na posielanie sampla / udalosti
+		ASSERT(this->m_threadSample == NULL);
 
-		//Do uvahy sa bere aj desatinna cast - ak presiahne 1 a viac
-		this->m_fpsModSum += this->m_params->m_fpsMod;
-		rtStop += (this->m_fpsModSum / this->m_params->m_fps);
-		this->m_fpsModSum %= this->m_params->m_fps;
+		this->m_threadSample = Copy(pSample);
+		if (this->m_threadSample == NULL)
+			CHECK_HR(hr = E_OUTOFMEMORY);
 
-		if (diffAllocators)
 		{
-			pOut = Copy(pSample);
-			if (pOut == NULL)
-				CHECK_HR(hr = E_UNEXPECTED);
-		}
-		else
-		{
-			pOut = pSample;
+			//Treba state lock aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
+			CAutoLock lock(this->m_pLock);
+			hr = CallWorker(CMD_RECEIVE);
 		}
 
-		CHECK_HR(hr = pOut->SetTime(&rtStart, &rtStop));
-		this->m_rtLastFrame = rtStop;
-
-		CHECK_HR(hr = this->m_pOutput->Deliver(pOut));
-
-		if (diffAllocators)
-			SAFE_RELEASE(pOut);
+		SAFE_RELEASE(this->m_threadSample);
+	}
+	else
+	{
+		//Priamo odosli sample
+		hr = SendSample(pSample);
 	}
 
 done:
 
-	if (diffAllocators)
-			SAFE_RELEASE(pOut);
-
 	return hr;
+}
+
+//************ CAMThread ************\\
+
+DWORD FrameRateFilter::ThreadProc(void)
+{
+	Command cmd;
+
+    do 
+	{
+		cmd = (Command)GetRequest();
+
+		switch (cmd)
+		{
+			case CMD_RECEIVE:
+			{
+				IMediaSample * pOut = this->m_threadSample;
+				SAFE_ADDREF(pOut);
+
+				Reply(S_OK);
+
+				//Ak sa pri spracovani sampla vyskytne chyba, je vyvolana udalost s chybovym hlasenim
+				if (FAILED(SendSample(pOut)))
+					this->NotifyEvent(EC_ERRORABORT, E_FAIL, 0);
+
+				SAFE_RELEASE(pOut);
+
+				break;
+			}
+			case CMD_EOS:
+			{
+				Reply(S_OK);
+				
+				//Zamkni state lock (m_pLock / m_csFilter) aby sa nerozpojil pin pocas EndOfStream
+				CAutoLock lock(this->m_pLock);
+				CTransInPlaceFilter::EndOfStream();
+
+				break;
+			}
+			case CMD_STOP:
+				Reply(S_OK);
+				break;
+			default:
+				Reply(E_NOTIMPL);
+				break;
+		}
+    } while (cmd != CMD_STOP);
+
+	return 0;
 }
 
 //************ FrameRateFilter *************\\
@@ -385,5 +488,34 @@ HRESULT FrameRateFilter::ReconnectPinSync(CBasePin * pin, CBasePin * mediaTypePi
 done:
 
 	//FreeMediaType(newMt) netreba volat - vola sa v destruktore CMediaType
+	return hr;
+}
+
+HRESULT FrameRateFilter::SendSample(IMediaSample * pSample)
+{
+	HRESULT hr = S_OK;
+	REFERENCE_TIME rtOldStart, rtOldStop;
+	
+	CHECK_HR(hr = pSample->GetTime(&rtOldStart, &rtOldStop));
+
+	//Snimka sa bude opakovat, pokial nedosiahne povodnu casovu peciatku
+	while (this->m_rtLastFrame + this->m_params->m_rtFrameLength <= rtOldStop)
+	{
+		REFERENCE_TIME rtStart = this->m_rtLastFrame;
+		REFERENCE_TIME rtStop  = rtStart + this->m_params->m_rtFrameLength;
+
+		//Do uvahy sa bere aj desatinna cast - ak presiahne 1 a viac
+		this->m_fpsModSum += this->m_params->m_fpsMod;
+		rtStop += (this->m_fpsModSum / this->m_params->m_fps);
+		this->m_fpsModSum %= this->m_params->m_fps;
+
+		CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
+		this->m_rtLastFrame = rtStop;
+
+		CHECK_HR(hr = this->m_pOutput->Deliver(pSample));
+	}
+
+done:
+
 	return hr;
 }
