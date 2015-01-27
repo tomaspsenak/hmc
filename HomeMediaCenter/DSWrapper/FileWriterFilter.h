@@ -25,15 +25,14 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 				ULONG STDMETHODCALLTYPE GetMiscFlags(void);
 
 	private:	CCritSec m_critSection;
-				FileWriterPin * m_writerPin;
-				GUID m_inputSubtype;
+				CBasePin * m_writerPin;
 				CPosPassThru * m_passThru;
 };
 
 private class FileWriterPin : public CBaseInputPin, public IStream
 {
 	public:		FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, 
-					LPCWSTR pName, System::IO::Stream^ outputStream);
+					LPCWSTR pName, System::IO::Stream^ outputStream, GUID inputSubtype);
 				virtual ~FileWriterPin(void);
 
 				DECLARE_IUNKNOWN
@@ -65,8 +64,29 @@ private class FileWriterPin : public CBaseInputPin, public IStream
 				STDMETHODIMP Clone(IStream ** ppstm);
 
 	private:	gcroot<System::IO::Stream^> m_outputStream;
+				GUID m_inputSubtype;
 				LONGLONG m_position;
 				CCritSec m_readWriteSect;
+};
+
+private class NullWriterPin : public CBaseInputPin
+{
+	public:		NullWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, 
+					LPCWSTR pName);
+				virtual ~NullWriterPin(void);
+
+				DECLARE_IUNKNOWN
+				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
+				
+				//CBasePin
+				HRESULT CheckMediaType(const CMediaType * pmt);
+
+				//IPin
+				STDMETHODIMP EndOfStream(void);
+
+				//IMemInputPin
+				STDMETHODIMP Receive(IMediaSample * pSample);
+				STDMETHODIMP GetAllocator(IMemAllocator ** ppAllocator);
 };
 
 #endif //FILEWRITERFILTER_DSWRAPPER_INCLUDED

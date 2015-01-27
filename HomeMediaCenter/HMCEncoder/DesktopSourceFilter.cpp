@@ -2,7 +2,8 @@
 #include "DesktopSourceFilter.h"
 
 DesktopSourceFilter::DesktopSourceFilter(LPUNKNOWN pUnk, HRESULT * phr) 
-	: CSource(L"HMCDesktopSourceFilter", pUnk, CLSID_HMCDesktopSource), m_sourceVideoPin(NULL), m_sourceAudioPin(NULL), m_params(NULL)
+	: CSource(L"HMCDesktopSourceFilter", pUnk, CLSID_HMCDesktopSource), m_sourceVideoPin(NULL), m_sourceAudioPin(NULL), m_params(NULL),
+	m_rtStop(0)
 {
 	this->m_signaled[0] = FALSE;
 	this->m_signaled[1] = FALSE;
@@ -72,6 +73,10 @@ STDMETHODIMP DesktopSourceFilter::NonDelegatingQueryInterface(REFIID riid, void 
 	{
 		return GetInterface((ISpecifyPropertyPages*) this, ppv);
 	}
+	else if (riid == IID_IMediaSeeking)
+	{
+		return GetInterface((IMediaSeeking*) this, ppv);
+	}
 
 	return CSource::NonDelegatingQueryInterface(riid, ppv);
 }
@@ -100,6 +105,117 @@ STDMETHODIMP DesktopSourceFilter::GetPages(CAUUID * pPages)
 ULONG STDMETHODCALLTYPE DesktopSourceFilter::GetMiscFlags(void)
 {
 	return AM_FILTER_MISC_FLAGS_IS_SOURCE;
+}
+
+//************* IMediaSeeking **************\\
+
+STDMETHODIMP DesktopSourceFilter::GetCapabilities(DWORD * pCapabilities)
+{
+	CheckPointer(pCapabilities, E_POINTER);
+	*pCapabilities = 0;
+	return S_OK;
+}
+
+STDMETHODIMP DesktopSourceFilter::CheckCapabilities(DWORD * pCapabilities)
+{
+	CheckPointer(pCapabilities, E_POINTER);
+	if(*pCapabilities == 0)
+		return S_OK;
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::IsFormatSupported(const GUID * pFormat)
+{
+	CheckPointer(pFormat, E_POINTER);
+	return (*pFormat == TIME_FORMAT_MEDIA_TIME) ? S_OK : S_FALSE;
+}
+
+STDMETHODIMP DesktopSourceFilter::QueryPreferredFormat(GUID * pFormat)
+{
+	return GetTimeFormat(pFormat);
+}
+
+STDMETHODIMP DesktopSourceFilter::GetTimeFormat(GUID * pFormat)
+{
+	CheckPointer(pFormat, E_POINTER);
+	*pFormat = TIME_FORMAT_MEDIA_TIME;
+	return S_OK;
+}
+
+STDMETHODIMP DesktopSourceFilter::IsUsingTimeFormat(const GUID * pFormat)
+{
+	return IsFormatSupported(pFormat);
+}
+
+STDMETHODIMP DesktopSourceFilter::SetTimeFormat(const GUID * pFormat)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetDuration(LONGLONG * pDuration)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetStopPosition(LONGLONG * pStop)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetCurrentPosition(LONGLONG * pCurrent)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::ConvertTimeFormat(LONGLONG * pTarget, const GUID * pTargetFormat, LONGLONG Source, const GUID * pSourceFormat)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::SetPositions(LONGLONG * pCurrent, DWORD dwCurrentFlags, LONGLONG * pStop, DWORD dwStopFlags)
+{
+	if (pCurrent && (dwCurrentFlags & AM_SEEKING_PositioningBitsMask) != AM_SEEKING_NoPositioning)
+	{
+		if (*pCurrent != 0)
+			return E_INVALIDARG;
+	}
+
+	if (pStop && (dwStopFlags & AM_SEEKING_PositioningBitsMask) != AM_SEEKING_NoPositioning)
+	{
+		switch (dwStopFlags & AM_SEEKING_PositioningBitsMask)
+		{
+			case AM_SEEKING_AbsolutePositioning: this->m_rtStop = *pStop; break;
+			case AM_SEEKING_RelativePositioning: this->m_rtStop += *pStop; break;
+			case AM_SEEKING_IncrementalPositioning: return E_INVALIDARG;
+		}
+	}
+
+	return S_OK;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetPositions(LONGLONG * pCurrent, LONGLONG * pStop)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetAvailable(LONGLONG * pEarliest, LONGLONG * pLatest)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::SetRate(double dRate)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetRate(double * pdRate)
+{
+	return E_NOTIMPL;
+}
+
+STDMETHODIMP DesktopSourceFilter::GetPreroll(LONGLONG* pllPreroll)
+{
+	return E_NOTIMPL;
 }
 
 //********** DesktopSourceFilter ***********\\

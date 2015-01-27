@@ -2,9 +2,13 @@
 #include "FileWriterFilter.h"
 
 FileWriterFilter::FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype)  
-	:  CBaseFilter(L"FileWriterFilter", pUnk, &m_critSection, CLSID_NULL, phr), m_inputSubtype(inputSubtype), m_passThru(NULL)
+	:  CBaseFilter(L"FileWriterFilter", pUnk, &m_critSection, CLSID_NULL, phr), m_passThru(NULL)
 {
-	this->m_writerPin = new FileWriterPin(L"FileWriterPin", this, &m_critSection, phr, L"Input", outputStream);
+	if (outputStream == nullptr)
+		this->m_writerPin = new NullWriterPin(L"NullWriterPin", this, &m_critSection, phr, L"Input");
+	else
+		this->m_writerPin = new FileWriterPin(L"FileWriterPin", this, &m_critSection, phr, L"Input", outputStream, inputSubtype);
+
 	if (this->m_writerPin == NULL)
 	{
 		*phr = E_OUTOFMEMORY;
@@ -73,8 +77,9 @@ ULONG STDMETHODCALLTYPE FileWriterFilter::GetMiscFlags(void)
 //********************************************
 
 
-FileWriterPin::FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, LPCWSTR pName, System::IO::Stream^ outputStream) :
-	m_outputStream(outputStream), CBaseInputPin(pObjectName, pFilter, pLock, phr, pName)//, CAMThread(phr), m_buffer(nullptr)
+FileWriterPin::FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, LPCWSTR pName, 
+	System::IO::Stream^ outputStream, GUID inputSubtype) : m_outputStream(outputStream), m_inputSubtype(inputSubtype),
+	CBaseInputPin(pObjectName, pFilter, pLock, phr, pName)
 {
 	try
 	{
@@ -104,9 +109,7 @@ STDMETHODIMP FileWriterPin::NonDelegatingQueryInterface(REFIID riid, void ** ppv
 
 HRESULT FileWriterPin::CheckMediaType(const CMediaType * pmt)
 {
-	GUID subtype = ((FileWriterFilter *)m_pFilter)->m_inputSubtype;
-
-	if (pmt->majortype == MEDIATYPE_Stream && pmt->subtype == subtype) 
+	if (pmt->majortype == MEDIATYPE_Stream && pmt->subtype == this->m_inputSubtype) 
 		return S_OK;
 
 	return S_FALSE;
@@ -320,4 +323,54 @@ STDMETHODIMP FileWriterPin::Stat(STATSTG * pstatstg, DWORD grfStatFlag)
 STDMETHODIMP FileWriterPin::Clone(IStream ** ppstm)
 {
 	return E_NOTIMPL;
+}
+
+
+//********************************************
+//************** NullWriterPin ***************
+//********************************************
+
+
+NullWriterPin::NullWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, LPCWSTR pName) :
+	CBaseInputPin(pObjectName, pFilter, pLock, phr, pName)
+{
+}
+
+NullWriterPin::~NullWriterPin(void)
+{
+}
+
+STDMETHODIMP NullWriterPin::NonDelegatingQueryInterface(REFIID riid, void ** ppv)
+{
+	return CBaseInputPin::NonDelegatingQueryInterface(riid, ppv);
+}
+
+//************* CBasePin *************\\
+
+HRESULT NullWriterPin::CheckMediaType(const CMediaType * pmt)
+{
+	return S_OK;
+}
+
+//*************** IPin ***************\\
+
+STDMETHODIMP NullWriterPin::EndOfStream(void)
+{
+	//Kazdy stream musi notifikovat o okonceni
+	this->m_pFilter->NotifyEvent(EC_COMPLETE, S_OK, NULL);
+
+	return S_OK;
+}
+
+//************ IMemInputPin ************
+
+STDMETHODIMP NullWriterPin::GetAllocator(IMemAllocator ** ppAllocator)
+{
+	//Vstupny filter nemusi poskytovat allocator - povodny nepracoval s WebM
+	return VFW_E_NO_ALLOCATOR;
+}
+
+STDMETHODIMP NullWriterPin::Receive(IMediaSample * pSample)
+{
+	return S_OK;
 }

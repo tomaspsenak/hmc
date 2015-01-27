@@ -19,6 +19,8 @@
 #if !defined(AVENCODER_HMCENCODER_INCLUDED)
 #define AVENCODER_HMCENCODER_INCLUDED
 
+#define AVParams_MaxUrlLength 256
+
 struct AVEncoderParameters
 {
 	char m_containerStr[11];
@@ -45,6 +47,10 @@ struct AVEncoderParameters
 	BOOL m_videoInterlaced;
 	UINT32 m_width;
 	UINT32 m_height;
+
+	char m_hlsPlaylistUrl[AVParams_MaxUrlLength];
+	char m_hlsFileUrl[AVParams_MaxUrlLength];
+	UINT32 m_hlsSegmentTime;
 };
 
 class AVEncoder

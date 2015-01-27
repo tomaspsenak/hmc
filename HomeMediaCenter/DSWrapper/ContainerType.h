@@ -22,6 +22,10 @@ namespace DSWrapper
 						UINT32 percentQuality, UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath,
 						bool keepAspectRatio, UINT32 audBitrate);
 
+					static ContainerType ^ HLS(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, 
+						UINT32 percentQuality, UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath,
+						bool keepAspectRatio, UINT32 audBitrate, System::String ^ playlistUrl, System::String ^ fileUrl, UINT32 segmentTime);
+
 					static ContainerType ^ WEBM(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
 						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable);
 
@@ -32,7 +36,7 @@ namespace DSWrapper
 						UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
 
 					static ContainerType ^ MP4(UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate);
+						UINT32 fps, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate, bool streamable);
 
 					static ContainerType ^ MP3(BitrateMode bitrateMode, UINT32 audBitrate, UINT32 percentQuality, bool streamable);
 
@@ -118,10 +122,12 @@ namespace DSWrapper
 
 	private ref class ContainerHMC : ContainerType
 	{
-		internal:	ContainerHMC(enum Container container, bool streamable, UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, UINT32 percentQuality, 
-						UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, UINT32 audBitrate) : ContainerType(width, 
-						height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), m_audBitrate(audBitrate), m_container(container), 
-						m_streamable(streamable), m_scanType(scanType) { }
+		internal:	ContainerHMC(enum Container container, bool streamable, UINT32 width, UINT32 height, BitrateMode bitrateMode, UINT32 vidBitrate, 
+						UINT32 percentQuality, UINT32 fps, ScanType scanType, bool intSubtitles, System::String ^ intSubtitlesPath, bool keepAspectRatio, 
+						UINT32 audBitrate, System::String ^ hlsPlaylistUrl, System::String ^ hlsFileUrl, UINT32 hlsSegmentTime) :
+					ContainerType(width, height, bitrateMode, vidBitrate, percentQuality, fps, intSubtitles, intSubtitlesPath, keepAspectRatio), 
+						m_audBitrate(audBitrate), m_container(container), m_streamable(streamable), m_scanType(scanType), 
+						m_hlsPlaylistUrl(hlsPlaylistUrl), m_hlsFileUrl(hlsFileUrl), m_hlsSegmentTime(hlsSegmentTime) { }
 
 					virtual HRESULT ConfigureContainer(IGraphBuilder * graphBuilder, IPin * videoPin, IPin * audioPin, IPin * subtitlePin, 
 						IPin * writerPin, IMediaSeeking ** mediaSeekingMux) override;
@@ -132,6 +138,10 @@ namespace DSWrapper
 					UINT32 m_audBitrate;
 					ScanType m_scanType;
 					enum Container m_container;
+
+					System::String ^ m_hlsPlaylistUrl;
+					System::String ^ m_hlsFileUrl;
+					UINT32 m_hlsSegmentTime;
 	};
 
 	private ref class ContainerJPEG : ContainerType

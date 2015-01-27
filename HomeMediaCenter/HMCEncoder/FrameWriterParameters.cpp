@@ -64,6 +64,8 @@ HRESULT FrameWriterParameters::SetFormat(enum ImageFormat format)
 	this->m_params.m_videoGopSize = 15;
 	this->m_params.m_videoBufferSize = 224 * 1024 * 8;
 
+	this->m_params.m_hlsSegmentTime = 0;
+
 	return S_OK;
 }
 

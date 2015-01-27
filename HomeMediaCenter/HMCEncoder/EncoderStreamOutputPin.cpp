@@ -17,13 +17,12 @@ EncoderStreamOutputPin::~EncoderStreamOutputPin(void)
 
 STDMETHODIMP EncoderStreamOutputPin::EndOfStream(void)
 {
-	CAutoLock cAutoLock(this->m_pLock);
+	//Vola EncoderVideoInputPin::EndOfStreamAsync a EncoderAudioInputPin::EndOfStreamAsync
+	//State lock (m_pLock) zamknuty
 
 	this->m_pFilter->m_encoder->Stop(TRUE);
 
 	DeliverEndOfStream();
-
-	this->m_pFilter->NotifyEvent(EC_COMPLETE, S_OK, NULL);
 
 	return S_OK;
 }

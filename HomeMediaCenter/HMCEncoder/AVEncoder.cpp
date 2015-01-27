@@ -26,6 +26,7 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	CAutoLock cAutoLock1(&this->m_audioLock);
 	CAutoLock cAutoLock2(&this->m_videoLock);
 	CAutoLock cAutoLock3(&this->m_mainLock);
+	AVDictionary * options = NULL;
 	HRESULT hr = S_OK;
 
 	//Kontext musi byt null, inak uz je vytvoreny
@@ -35,7 +36,7 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	}
 
 	//Inicializacia kontextu podla nazvu kontajnera
-	if (avformat_alloc_output_context2(&this->m_formatContext, NULL, params->m_containerStr, NULL) < 0)
+	if (avformat_alloc_output_context2(&this->m_formatContext, NULL, (params->m_hlsSegmentTime) ? "ssegment" : params->m_containerStr, NULL) < 0)
 	{
 		hr = E_FAIL;
 		goto done;
@@ -63,29 +64,52 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 		}
 	}
 
-	unsigned char * buffer = (unsigned char *)av_malloc(buffer_size);
-	if (!buffer)
+	if (params->m_hlsSegmentTime)
 	{
-		hr = E_OUTOFMEMORY;
-		goto done;
+		//Nastav vystupny HLS segmenter
+		char optParams[256];
+
+		_snprintf_s(optParams, _TRUNCATE, "%d", params->m_hlsSegmentTime);
+		av_dict_set(&options, "segment_time", optParams, 0);
+
+		av_dict_set(&options, "segment_list", params->m_hlsPlaylistUrl, 0);
+		av_dict_set(&options, "segment_list_type", "csv", 0);
+
+		av_dict_set(&options, "segment_format", params->m_containerStr, 0);
+		strcpy_s(this->m_formatContext->filename, params->m_hlsFileUrl);
+	}
+	else
+	{
+		//Nastav vystupny context - prislusne funkcie na zapis, citanie, seek
+		unsigned char * buffer = (unsigned char *)av_malloc(buffer_size);
+		if (!buffer)
+		{
+			hr = E_OUTOFMEMORY;
+			goto done;
+		}
+
+		this->m_formatContext->pb = avio_alloc_context(buffer, buffer_size, 1, opaque, 
+			read_packet, write_packet, params->m_streamable ? NULL : seek);
+		if (!this->m_formatContext->pb)
+		{
+			hr = E_FAIL;
+			goto done;
+		}
+
+		this->m_formatContext->pb->seekable = !params->m_streamable;
 	}
 
-	this->m_formatContext->pb = avio_alloc_context(buffer, buffer_size, 1, opaque, 
-		read_packet, write_packet, params->m_streamable ? NULL : seek);
-	if (!this->m_formatContext->pb)
-	{
-		hr = E_FAIL;
-		goto done;
-	}
+	//Pri streamovani mp4 nezapisovat moov
+	if (strcmp(params->m_containerStr, "mp4") == 0 && params->m_streamable)
+		av_dict_set(&options, "movflags", "frag_keyframe+empty_moov", 0);
 
 	this->m_formatContext->packet_size = 3072;
 	this->m_formatContext->max_delay = (int)(0.7 * AV_TIME_BASE);
-	this->m_formatContext->pb->seekable = !params->m_streamable;
 	this->m_formatContext->flags |= AVFMT_NOFILE;
 	this->m_formatContext->max_interleave_delta = INT64_MAX;
 
 	//Zapise hlavicku suboru ak ju kontajner obsahuje
-	if (avformat_write_header(this->m_formatContext, NULL) < 0)
+	if (avformat_write_header(this->m_formatContext, &options) < 0)
 	{
 		hr = E_FAIL;
 		goto done;
@@ -94,6 +118,8 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	this->m_isStopped = FALSE;
 
 done:
+
+	av_dict_free(&options);
 
 	if (FAILED(hr))
 		FreeContext();
@@ -425,8 +451,8 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 			av_dict_set(&options, "preset", "slower", 0);
 	}
 
-	//Nastavenie poctu vlakien, problem s VP8 good a best quality
-	if (codecID != AV_CODEC_ID_VP8)
+	//Nastavenie poctu vlakien, problem s VP8 good a best quality, problem s JPEG
+	if (codecID != AV_CODEC_ID_VP8 && codecID != AV_CODEC_ID_MJPEG)
 	{
 		_snprintf_s(optParams, _TRUNCATE, "%d", min(av_cpu_count(), 8));
 		av_dict_set(&options, "threads", optParams, 0);

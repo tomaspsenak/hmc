@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-     Copyright (C) 2014 Tomáš Pšenák
+     Copyright (C) 2015 Tomáš Pšenák
      This program is free software; you can redistribute it and/or modify 
      it under the terms of the GNU General Public License version 2 as 
      published by the Free Software Foundation.
@@ -27,7 +27,7 @@ class DesktopSourceFilter;
 class DesktopSourceAudioPin  : public CSourceStream
 {
 	public:		DesktopSourceAudioPin(TCHAR * pObjectName, HRESULT * phr, DesktopSourceFilter * filter, LPCWSTR pName);
-				~DesktopSourceAudioPin(void);
+				virtual ~DesktopSourceAudioPin(void);
 
 				DECLARE_IUNKNOWN
 				STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void ** ppv);
@@ -52,7 +52,6 @@ class DesktopSourceAudioPin  : public CSourceStream
 				IMMDevice * m_device;
 				IAudioClient * m_audioClient;
 				IAudioCaptureClient * m_captureClient;
-				CCritSec m_cSharedState;
 				WORD m_blockAlign;
 				BYTE * m_buffer;
 				DWORD m_cBufferData;

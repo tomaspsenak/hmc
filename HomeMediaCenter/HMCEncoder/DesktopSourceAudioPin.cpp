@@ -69,7 +69,7 @@ HRESULT DesktopSourceAudioPin::GetMediaType(int iPosition, CMediaType * pmt)
 	HRESULT hr = S_OK;
 	WAVEFORMATEX * waveFormat = NULL, * waveTemp = NULL;
 
-	CAutoLock cAutoLock(m_pFilter->pStateLock());
+	CAutoLock cAutoLock(this->m_pLock);
 
 	if (this->m_audioClient == NULL || iPosition > 0)
 		CHECK_HR(hr = VFW_S_NO_MORE_ITEMS);
@@ -107,8 +107,13 @@ HRESULT DesktopSourceAudioPin::CheckMediaType(const CMediaType * pMediaType)
 {
 	CheckPointer(pMediaType, E_POINTER);
 
-	if((*pMediaType->Type() != MEDIATYPE_Audio) || (!pMediaType->IsFixedSize()) || (pMediaType->Subtype() == NULL) || (pMediaType->Format() == NULL))
-		return VFW_E_NO_ACCEPTABLE_TYPES; 
+	CAutoLock cAutoLock(this->m_pLock);
+
+	if((pMediaType->majortype != MEDIATYPE_Audio) || (!pMediaType->IsFixedSize()) || (pMediaType->formattype != FORMAT_WaveFormatEx))
+		return VFW_E_NO_ACCEPTABLE_TYPES;
+
+	if (pMediaType->subtype != MEDIASUBTYPE_PCM)
+		return VFW_E_NO_ACCEPTABLE_TYPES;
 
 	return S_OK;
 }
@@ -122,7 +127,7 @@ HRESULT DesktopSourceAudioPin::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATO
 	ALLOCATOR_PROPERTIES aProp;
 	WAVEFORMATEX * waveFormat = NULL;
 
-    CAutoLock cAutoLock(m_pFilter->pStateLock());
+    CAutoLock cAutoLock(this->m_pLock);
 
 	if(this->m_audioClient == NULL)
 		CHECK_HR(hr = E_FAIL);
@@ -133,7 +138,7 @@ HRESULT DesktopSourceAudioPin::DecideBufferSize(IMemAllocator * pAlloc, ALLOCATO
     pProperties->cbBuffer = (long)(waveFormat->nAvgBytesPerSec / (REFTIMES_PER_SEC / this->m_rtFrameLength));
     CHECK_SUCCEED(hr = pAlloc->SetProperties(pProperties, &aProp));
 
-    if(aProp.cbBuffer < pProperties->cbBuffer)
+    if(aProp.cbBuffer != pProperties->cbBuffer)
 		CHECK_HR(hr = E_FAIL);
 
 	//Nastavenie zbytkoveho buffera
@@ -155,7 +160,7 @@ HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 	WAVEFORMATEX * waveFormat = NULL;
 	IAudioCaptureClient * captureClient = NULL;
 
-	CAutoLock cAutoLockShared(&m_cSharedState);
+	//Netreba CAutoLock, StateLock je zamknuty pocas funkcie Active
 
 	if (this->m_captureClient != NULL)
 		CHECK_HR(hr = E_FAIL);
@@ -188,12 +193,10 @@ HRESULT DesktopSourceAudioPin::OnThreadCreate(void)
 	CHECK_SUCCEED(hr = this->m_audioClient->GetService(__uuidof(IAudioCaptureClient), (void**)&captureClient)); 
 
 	//Synchronizacia casovej peciatky s audio / video
-	((DesktopSourceFilter*)this->m_pFilter)->SyncPins(1);
+	this->m_pFilter->SyncPins(1);
 
 	//Spusti nahravanie
 	CHECK_SUCCEED(hr = this->m_audioClient->Start());
-
-	CHECK_HR(hr =  CSourceStream::OnThreadCreate());
 
 	this->m_rtLastFrame = 0;
 	this->m_captureClient = captureClient;
@@ -215,8 +218,20 @@ HRESULT DesktopSourceAudioPin::FillBuffer(IMediaSample * pSample)
 	DWORD sampleDataCount, actualDataCount, flags;
 	BYTE * sampleData, * inData;
 
-	CAutoLock cAutoLockShared(&m_cSharedState);
+	//Nastavenie hodnoty casu zaciatku a konca sampla
+	REFERENCE_TIME rtStart = this->m_rtLastFrame;
+    REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
+	CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
+
+	if (this->m_pFilter->m_rtStop > 0 && rtStop >= this->m_pFilter->m_rtStop)
+	{
+		//Ak je nastaveny cas konca a prekroci sa, ukonci sa stream
+		hr = S_FALSE;
+		goto done;
+	}
+	this->m_rtLastFrame = rtStop;
     
+	//Ziskanie buffera a jeho velkosti
 	CHECK_HR(hr = pSample->GetPointer(&sampleData));
     actualDataCount = sampleDataCount = pSample->GetSize();
 
@@ -269,11 +284,6 @@ HRESULT DesktopSourceAudioPin::FillBuffer(IMediaSample * pSample)
 		CHECK_SUCCEED(hr = this->m_captureClient->ReleaseBuffer(numFramesAvailable));
     }
 
-	REFERENCE_TIME rtStart = this->m_rtLastFrame;
-    REFERENCE_TIME rtStop  = rtStart + this->m_rtFrameLength;
-	this->m_rtLastFrame = rtStop;
-
-    CHECK_HR(hr = pSample->SetTime(&rtStart, &rtStop));
 	CHECK_HR(hr = pSample->SetSyncPoint(TRUE));
 	CHECK_HR(hr = pSample->SetActualDataLength(sampleDataCount));
 
@@ -283,8 +293,7 @@ done:
 
 HRESULT DesktopSourceAudioPin::OnThreadDestroy(void)
 {
-	CAutoLock cAutoLockShared(&m_cSharedState);
-
+	//Netreba CAutoLock, StateLock je zamknuty pocas funkcie Inactive
 	if (this->m_captureClient != NULL)
 	{
 		this->m_audioClient->Stop();
@@ -294,5 +303,5 @@ HRESULT DesktopSourceAudioPin::OnThreadDestroy(void)
 
 	DesktopSourceSilenceGenerator::Get()->Stop();
 
-	return CSourceStream::OnThreadDestroy();
+	return S_OK;
 }

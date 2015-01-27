@@ -54,6 +54,8 @@ class EncoderParameters : public CUnknown, public IHMCEncoder
 				STDMETHODIMP GetVideoBFrames(BOOL * bFrames);
 				STDMETHODIMP SetVideoGopSize(int gopSize);
 				STDMETHODIMP GetVideoGopSize(int * gopSize);
+				STDMETHODIMP SetHlsSegmenter(const char * pPlaylistUrl, const char * pFileUrl, UINT32 segmentTime, BOOL enabled);
+				STDMETHODIMP GetHlsSegmenter(BOOL * pEnabled);
 
 	private:	AVEncoderParameters m_params;
 				EncoderFilter * m_filter;
