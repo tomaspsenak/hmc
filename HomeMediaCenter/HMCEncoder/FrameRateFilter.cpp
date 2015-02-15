@@ -220,7 +220,7 @@ HRESULT FrameRateFilter::Transform(IMediaSample * pSample)
 
 HRESULT FrameRateFilter::StartStreaming(void)
 {
-	//State lock (m_pLock / m_csFilter) je zamknuty
+	//State lock (m_pLock / m_csFilter) a receive lock (m_csReceive) je zamknuty
 	//Spustenie vlakna
     if (!Create())
         return E_FAIL;
@@ -230,7 +230,7 @@ HRESULT FrameRateFilter::StartStreaming(void)
 
 HRESULT FrameRateFilter::StopStreaming(void)
 {
-	//State lock (m_pLock / m_csFilter) je zamknuty
+	//State lock (m_pLock / m_csFilter) a receive lock (m_csReceive) je zamknuty
 	this->m_fpsModSum = 0;
 	this->m_rtLastFrame = 0;
 
@@ -358,6 +358,10 @@ HRESULT FrameRateFilter::CompleteConnect(PIN_DIRECTION direction, IPin * pReceiv
 
 HRESULT FrameRateFilter::Receive(IMediaSample * pSample)
 {
+	//Receive lock (m_csReceive) je zamknuty
+	//Nezamykat state lock (m_pLock / m_csFilter) lebo moze nastat deadlock
+	//Spravne poradie zamykania je state lock az potom receive lock
+
 	//Spracovava sa iba media stream
     AM_SAMPLE2_PROPERTIES * const pProps = this->m_pInput->SampleProps();
     if (pProps->dwStreamId != AM_STREAM_MEDIA)
@@ -377,11 +381,8 @@ HRESULT FrameRateFilter::Receive(IMediaSample * pSample)
 		if (this->m_threadSample == NULL)
 			CHECK_HR(hr = E_OUTOFMEMORY);
 
-		{
-			//Treba state lock aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
-			CAutoLock lock(this->m_pLock);
-			hr = CallWorker(CMD_RECEIVE);
-		}
+		//Treba receive lock (uz zamknuty) aby sa neukoncovalo vlakno (ale stale ThreadExists) a CallWorker by uz nedostal odpoved
+		hr = CallWorker(CMD_RECEIVE);
 
 		SAFE_RELEASE(this->m_threadSample);
 	}
@@ -400,6 +401,7 @@ done:
 
 DWORD FrameRateFilter::ThreadProc(void)
 {
+	HRESULT receiveHR = S_OK;
 	Command cmd;
 
     do 
@@ -413,11 +415,11 @@ DWORD FrameRateFilter::ThreadProc(void)
 				IMediaSample * pOut = this->m_threadSample;
 				SAFE_ADDREF(pOut);
 
-				Reply(S_OK);
+				Reply(receiveHR);
 
-				//Ak sa pri spracovani sampla vyskytne chyba, je vyvolana udalost s chybovym hlasenim
+				//Ak sa pri spracovani sampla vyskytne chyba, dalsia odpoved uz bude vracat chybu
 				if (FAILED(SendSample(pOut)))
-					this->NotifyEvent(EC_ERRORABORT, E_FAIL, 0);
+					receiveHR = E_FAIL;
 
 				SAFE_RELEASE(pOut);
 

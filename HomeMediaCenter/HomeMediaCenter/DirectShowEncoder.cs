@@ -10,7 +10,7 @@ namespace HomeMediaCenter
 {
     public class DirectShowEncoder : EncoderBuilder
     {
-        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, MPEG2_TS_H264, WEBM, WEBM_TS, WMV2, WMV3, AVI, MP4, MP3, MP3_TS, FLV, FLV_TS, FLV_H264, FLV_H264_TS }
+        private enum DSCodec { MPEG2_PS, MPEG2LAYER1_PS, MPEG2_TS, MPEG2LAYER1_TS, MPEG2_TS_H264, WEBM, WEBM_TS, WMV2, WMV3, AVI, MP4, MP4_TS, MP3, MP3_TS, FLV, FLV_TS, FLV_H264, FLV_H264_TS, HLS }
 
         private DSEncoder encoder;
         private DSCodec codec;
@@ -77,6 +77,7 @@ namespace HomeMediaCenter
                 case DSCodec.MP3: return "audio/mpeg";
                 case DSCodec.MP3_TS: goto case DSCodec.MP3;
                 case DSCodec.MP4: return "video/mp4";
+                case DSCodec.MP4_TS: goto case DSCodec.MP4;
                 case DSCodec.AVI: return "video/avi";
                 case DSCodec.FLV: return "video/x-flv";
                 case DSCodec.FLV_TS: goto case DSCodec.FLV;
@@ -116,18 +117,30 @@ namespace HomeMediaCenter
             {
                 this.encoder = enc;
 
-                if (parameters["source"].ToLower() == "desktop")
+                string source = parameters["source"];
+                if (string.Equals(source, "desktop", StringComparison.OrdinalIgnoreCase))
                 {
                     //Zdroj je plocha PC
                     if (parameters.ContainsKey("desktopfps"))
                         enc.SetInput(InputType.Desktop(uint.Parse(parameters["desktopfps"])));
                     else
                         enc.SetInput(InputType.Desktop(10));
+                    
                 }
-                else if (parameters["source"].ToLower().StartsWith("webcam"))
+                else if (string.Equals(source, "static", StringComparison.OrdinalIgnoreCase))
+                {
+                    //Zdrojom je staticky obraz
+                    using (MemoryStream ms = new MemoryStream())
+                    using (System.Drawing.Bitmap bitmap = HelperClass.GetTextBitmap(LanguageResource.Loading + "...", 720, 576, 25))
+                    {
+                        bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                        enc.SetInput(InputType.Static(10, ms.ToArray()));
+                    }
+                }
+                else if (source.StartsWith("webcam", StringComparison.OrdinalIgnoreCase))
                 {
                     //Zdroj je webkamera
-                    string[] webcamParam = parameters["source"].Split(new char[] { '_' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    string[] webcamParam = source.Split(new char[] { '_' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     if (webcamParam.Length == 1)
                         enc.SetInput(InputType.Webcam(WebcamInput.GetVideoInputNames().FirstOrDefault(), WebcamInput.GetAudioInputNames().FirstOrDefault()));
                     else
@@ -145,7 +158,7 @@ namespace HomeMediaCenter
                     if (parameters.ContainsKey("prefDsDemux"))
                         prefDsDemux = parameters["prefDsDemux"].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(a => Guid.Parse(a));
 
-                    enc.SetInput(parameters["source"], reqSeeking, prefDsDemux);
+                    enc.SetInput(source, reqSeeking, prefDsDemux);
                 }
 
                 uint setVideo = this.video.HasValue ? this.video.Value : 1;
@@ -193,7 +206,7 @@ namespace HomeMediaCenter
                     {
                         //Ak uzivatel nevyziadal titulky - nezapnu sa ani ked ide stream
                         string lang = ((PinSubtitleItem)item).LangName;
-                        if (string.Compare(lang, subPath, true) == 0 || actSubtitle.ToString() == subPath)
+                        if (string.Equals(lang, subPath, StringComparison.OrdinalIgnoreCase) || actSubtitle.ToString() == subPath)
                         {
                             //Ak parameter zodpoveda nazvu jazyka alebo indexu nastavi sa IsSelected
                             //subPath sa nastavi na null - aby ho enkoder nepovazoval ze cestu k titulkom
@@ -275,6 +288,16 @@ namespace HomeMediaCenter
                     case DSCodec.MPEG2_TS_H264: container = ContainerType.MPEG2_TS_H264(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps,
                         subtitles, subPath, keepAspect, audBitrate * 1000);
                         break;
+                    case DSCodec.HLS:
+                        if (!parameters.ContainsKey("hlsPlaylistUrl") || !parameters.ContainsKey("hlsFileUrl") || !parameters.ContainsKey("hlsSegmentTime"))
+                            throw new HttpException(400, "Missing 'hlsPlaylistUrl', 'hlsFileUrl' or 'hlsSegmentTime' parameter");
+
+                        container = ContainerType.HLS(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath, keepAspect,
+                            audBitrate * 1000, parameters["hlsPlaylistUrl"], parameters["hlsFileUrl"], uint.Parse(parameters["hlsSegmentTime"]));
+                        outBufferSize = 0;
+                        //HLS nepouzivat ako vystup stream
+                        output = null;
+                        break;
                     case DSCodec.WEBM: container = ContainerType.WEBM(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, 
                         subPath, keepAspect, audBitrate * 1000, false);
                         outBufferSize = 0;
@@ -293,8 +316,11 @@ namespace HomeMediaCenter
                         outBufferSize = 0;
                         break;
                     case DSCodec.MP4: container = ContainerType.MP4(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath, 
-                        keepAspect, audBitrate * 1000);
+                        keepAspect, audBitrate * 1000, false);
                         outBufferSize = 0;
+                        break;
+                    case DSCodec.MP4_TS: container = ContainerType.MP4(width, height, BitrateMode.CBR, vidBitrate * 1000, quality, fps, subtitles, subPath,
+                        keepAspect, audBitrate * 1000, true);
                         break;
                     case DSCodec.MP3: container = ContainerType.MP3(BitrateMode.CBR, audBitrate * 1000, quality, false);
                         outBufferSize = 0;
@@ -339,6 +365,8 @@ namespace HomeMediaCenter
                     enc.SetOutput(output, container, startTime, endTime);
 
                     enc.StartEncode();
+
+                    bufferedOutput.Stop();
                 }
             }
         }

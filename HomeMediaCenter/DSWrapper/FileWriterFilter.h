@@ -11,7 +11,7 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 {
 	friend class FileWriterPin;
 
-	public:		FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype);
+	public:		FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype, DWORD inactivityTimeout);
 				virtual ~FileWriterFilter(void);
 
 				DECLARE_IUNKNOWN
@@ -32,7 +32,7 @@ private class FileWriterFilter : public CBaseFilter, public IAMFilterMiscFlags
 private class FileWriterPin : public CBaseInputPin, public IStream
 {
 	public:		FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, 
-					LPCWSTR pName, System::IO::Stream^ outputStream, GUID inputSubtype);
+					LPCWSTR pName, System::IO::Stream^ outputStream, GUID inputSubtype, DWORD inactivityTimeout);
 				virtual ~FileWriterPin(void);
 
 				DECLARE_IUNKNOWN
@@ -40,6 +40,8 @@ private class FileWriterPin : public CBaseInputPin, public IStream
 				
 				//CBasePin
 				HRESULT CheckMediaType(const CMediaType * pmt);
+				HRESULT Active(void);
+				HRESULT Inactive(void);
 
 				//IPin
 				STDMETHODIMP BeginFlush(void);
@@ -63,10 +65,26 @@ private class FileWriterPin : public CBaseInputPin, public IStream
 				STDMETHODIMP Stat(STATSTG * pstatstg, DWORD grfStatFlag);
 				STDMETHODIMP Clone(IStream ** ppstm);
 
-	private:	gcroot<System::IO::Stream^> m_outputStream;
+				ref class TimerCallbackClass
+				{
+					bool m_started;
+					FileWriterPin * m_pin;
+					System::Timers::Timer ^ m_timer;
+
+					public:	TimerCallbackClass(FileWriterPin * pin);
+							~TimerCallbackClass();
+							void Start(void);
+							void Stop(void);
+							void Callback(System::Object ^ source, System::Timers::ElapsedEventArgs ^ e);
+ 				};
+
+	private:	gcroot<TimerCallbackClass^> m_actTimerCallback;
+				gcroot<System::IO::Stream^> m_outputStream;
 				GUID m_inputSubtype;
 				LONGLONG m_position;
 				CCritSec m_readWriteSect;
+				DWORD m_lastRequest;
+				DWORD m_inactivityTimeout;
 };
 
 private class NullWriterPin : public CBaseInputPin

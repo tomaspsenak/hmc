@@ -352,7 +352,8 @@ namespace DSWrapper
 
 		//Vytvorenie writer-a s nastavenim pozadovaneho subtype pre writer
 		//Napr.: rozne pre MPEG2_TS a MPEG2_PS
-		writer = new FileWriterFilter(NULL, &hr, outputStream, GetSubtype());
+		//inactivityTimeout v milisekundach
+		writer = new FileWriterFilter(NULL, &hr, outputStream, GetSubtype(), 900000);
 
 		if (writer == NULL)
 			hr = E_OUTOFMEMORY;

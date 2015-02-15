@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Drawing;
 
 namespace HomeMediaCenter
 {
@@ -38,6 +39,26 @@ namespace HomeMediaCenter
             }
 
             return false;
+        }
+
+        public static Bitmap GetTextBitmap(string text, int width, int height, float fontSize)
+        {
+            Bitmap bitmap = new Bitmap(width, height);
+
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.White);
+
+                RectangleF rectf = new RectangleF(0, 0, width, height);
+
+                StringFormat sf = new StringFormat();
+                sf.LineAlignment = StringAlignment.Center;
+                sf.Alignment = StringAlignment.Center;
+
+                graphics.DrawString(text, new Font(FontFamily.GenericSansSerif, fontSize), Brushes.Black, rectf, sf);
+            }
+
+            return bitmap;
         }
     }
 }

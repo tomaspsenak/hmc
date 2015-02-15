@@ -188,6 +188,7 @@ namespace HomeMediaCenter
                 case 206: return "Partial Content";
                 case 400: return "Bad Request";
                 case 402: return "Payment Required";
+                case 403: return "Forbidden";
                 case 404: return "Not Found";
                 case 406: return "Not Acceptable";
                 case 500: return "Internal Server Error";

@@ -150,6 +150,19 @@ namespace HomeMediaCenter
             }
         }
 
+        public string GetFileName()
+        {
+            int index = this.url.LastIndexOf('/');
+            if (index < 0)
+                return string.Empty;
+
+            index++;
+            if (index >= this.url.Length)
+                return string.Empty;
+
+            return this.url.Substring(index);
+        }
+
         public int GetLength()
         {
             return int.Parse(this.headers["Content-Length"]);
