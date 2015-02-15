@@ -107,6 +107,8 @@
     <Compile Include="ExceptionEventArgs.cs" />
     <Compile Include="HelperClass.cs" />
     <Compile Include="GDIEncoder.cs" />
+    <Compile Include="HlsItem.cs" />
+    <Compile Include="HlsManager.cs" />
     <Compile Include="HttpException.cs" />
     <Compile Include="HttpMime.cs" />
     <Compile Include="HttpMimeDictionary.cs" />

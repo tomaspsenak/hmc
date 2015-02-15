@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tomáš Pšenák")]
 [assembly: AssemblyProduct("HomeMediaCenter")]
-[assembly: AssemblyCopyright("Copyright © Tomáš Pšenák 2013")]
+[assembly: AssemblyCopyright("Copyright © Tomáš Pšenák 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

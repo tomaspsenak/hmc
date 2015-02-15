@@ -22,6 +22,8 @@ namespace HomeMediaCenter
         private readonly string databasePath;
         private readonly string thumbnailsPath;
 
+        private readonly HlsManager hlsManager;
+
         public MediaServerDevice(string dataDirectory)
         {
             this.dataDirectory = dataDirectory;
@@ -96,6 +98,8 @@ namespace HomeMediaCenter
             this.server.HttpServer.AddRoute("HEAD", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("GET", "/Web/flowplayer.controls.swf", new HttpRouteDelegate(GetWebShockwave));
             this.server.HttpServer.AddRoute("POST", "/Web/devices.xml", new HttpRouteDelegate(GetWebDevices));
+
+            this.hlsManager = new HlsManager(this);
         }
 
         public string DataDirectory
@@ -222,6 +226,8 @@ namespace HomeMediaCenter
 
                     this.server.LoadSettings(xmlReader);
 
+                    this.hlsManager.LoadSettings(xmlReader);
+
                     this.itemManager.LoadSettings(xmlReader, this.databasePath);
                 }
             }
@@ -271,6 +277,8 @@ namespace HomeMediaCenter
 
                 this.server.SaveSettings(xmlWriter);
 
+                this.hlsManager.SaveSettings(xmlWriter);
+
                 this.itemManager.SaveSettings(xmlWriter);
 
                 xmlWriter.WriteEndElement();
@@ -278,6 +286,20 @@ namespace HomeMediaCenter
             }
 
             this.settingsChanged = false;
+        }
+
+        public string GetPrefDsDemux()
+        {
+            if (this.prefDsDemux.Count > 0)
+            {
+                //Zapisu sa hodnoty guid preferovaneho demultiplexora pre DirectShow oddelene znakom |
+                string prefDsDemuxStr = string.Empty;
+                foreach (Guid guid in this.prefDsDemux)
+                    prefDsDemuxStr += guid + "|";
+                return prefDsDemuxStr;
+            }
+
+            return null;
         }
 
         protected override void OnStart()
@@ -288,6 +310,7 @@ namespace HomeMediaCenter
                 Directory.CreateDirectory(this.thumbnailsPath);
 
             this.itemManager.Start();
+            this.hlsManager.Start();
 
             base.OnStart();
         }
@@ -296,6 +319,7 @@ namespace HomeMediaCenter
         {
             base.OnStop();
 
+            this.hlsManager.Stop();
             this.itemManager.Stop();
         }
 
@@ -496,14 +520,9 @@ namespace HomeMediaCenter
                 }
             }
 
-            if (this.prefDsDemux.Count > 0)
-            {
-                //Zapisu sa hodnoty guid preferovaneho demultiplexora pre DirectShow oddelene znakom |
-                string prefDsDemuxStr = string.Empty;
-                foreach (Guid guid in this.prefDsDemux)
-                    prefDsDemuxStr += guid + "|";
+            string prefDsDemuxStr = GetPrefDsDemux();
+            if (prefDsDemuxStr != null)
                 request.UrlParams["prefDsDemux"] = prefDsDemuxStr;
-            }
             
             EncoderBuilder builder = EncoderBuilder.GetEncoder(request.UrlParams);
 
@@ -536,6 +555,7 @@ namespace HomeMediaCenter
 
                 xmlWriter.WriteStartElement("head");
                 xmlWriter.WriteElementString("title", "Home Media Center");
+                xmlWriter.WriteRaw(@"<link rel=""apple-touch-icon"" href=""/web/images/htmllogo.png?codec=png&width=114&height=114"" />");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/htmlstyle.css"" />");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery.lightbox-0.5.css"" />");
                 xmlWriter.WriteRaw(@"<link rel=""stylesheet"" type=""text/css"" href=""/web/jquery-ui-1.11.1.custom.min.css"" />");

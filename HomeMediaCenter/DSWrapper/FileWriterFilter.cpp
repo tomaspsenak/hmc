@@ -1,13 +1,13 @@
 #include "StdAfx.h"
 #include "FileWriterFilter.h"
 
-FileWriterFilter::FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype)  
+FileWriterFilter::FileWriterFilter(LPUNKNOWN pUnk, HRESULT * phr, System::IO::Stream^ outputStream, GUID inputSubtype, DWORD inactivityTimeout)  
 	:  CBaseFilter(L"FileWriterFilter", pUnk, &m_critSection, CLSID_NULL, phr), m_passThru(NULL)
 {
 	if (outputStream == nullptr)
 		this->m_writerPin = new NullWriterPin(L"NullWriterPin", this, &m_critSection, phr, L"Input");
 	else
-		this->m_writerPin = new FileWriterPin(L"FileWriterPin", this, &m_critSection, phr, L"Input", outputStream, inputSubtype);
+		this->m_writerPin = new FileWriterPin(L"FileWriterPin", this, &m_critSection, phr, L"Input", outputStream, inputSubtype, inactivityTimeout);
 
 	if (this->m_writerPin == NULL)
 	{
@@ -78,9 +78,20 @@ ULONG STDMETHODCALLTYPE FileWriterFilter::GetMiscFlags(void)
 
 
 FileWriterPin::FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSec * pLock, HRESULT * phr, LPCWSTR pName, 
-	System::IO::Stream^ outputStream, GUID inputSubtype) : m_outputStream(outputStream), m_inputSubtype(inputSubtype),
-	CBaseInputPin(pObjectName, pFilter, pLock, phr, pName)
+	System::IO::Stream^ outputStream, GUID inputSubtype, DWORD inactivityTimeout) : CBaseInputPin(pObjectName, pFilter, pLock, phr, pName),
+	m_outputStream(outputStream), m_inputSubtype(inputSubtype), m_inactivityTimeout(inactivityTimeout), m_actTimerCallback(nullptr)
 {
+	try
+	{
+		this->m_actTimerCallback = gcnew TimerCallbackClass(this);
+	}
+	catch (System::Exception^)
+	{
+		*phr = E_FAIL;
+		return;
+	}
+	
+
 	try
 	{
 		//Zisti aktualnu poziciu v streame - napr. file stream
@@ -95,6 +106,8 @@ FileWriterPin::FileWriterPin(TCHAR * pObjectName, CBaseFilter * pFilter, CCritSe
 
 FileWriterPin::~FileWriterPin(void)
 {
+	if (this->m_actTimerCallback.operator->() != nullptr)
+		delete this->m_actTimerCallback;
 }
 
 STDMETHODIMP FileWriterPin::NonDelegatingQueryInterface(REFIID riid, void ** ppv)
@@ -115,6 +128,21 @@ HRESULT FileWriterPin::CheckMediaType(const CMediaType * pmt)
 	return S_FALSE;
 }
 
+HRESULT FileWriterPin::Active(void)
+{
+	this->m_lastRequest = GetTickCount();
+	this->m_actTimerCallback->Start();
+
+	return CBaseInputPin::Active();
+}
+
+HRESULT FileWriterPin::Inactive(void)
+{
+	this->m_actTimerCallback->Stop();
+
+	return CBaseInputPin::Inactive();
+}
+
 //*************** IPin ***************\\
 
 STDMETHODIMP FileWriterPin::BeginFlush(void)
@@ -132,6 +160,7 @@ STDMETHODIMP FileWriterPin::EndOfStream(void)
 	try 
 	{
 		CAutoLock readWriteLock(&this->m_readWriteSect);
+		this->m_lastRequest = GetTickCount();
 		this->m_outputStream->Flush(); 
 	}
 	catch (System::Exception^) { }
@@ -187,6 +216,7 @@ STDMETHODIMP FileWriterPin::Read(void * pv, ULONG cb, ULONG * pcbRead)
 	{
 		//Synchronizovanie citania a zapisu - po skonceni platnosti sa odomkne
 		CAutoLock readWriteLock(&this->m_readWriteSect);
+		this->m_lastRequest = GetTickCount();
 
 		array<System::Byte>^ buffer = gcnew array<System::Byte>(cb);
 		ULONG readed = this->m_outputStream->Read(buffer, 0, cb);
@@ -212,6 +242,7 @@ STDMETHODIMP FileWriterPin::Write(void const * pv, ULONG cb, ULONG * pcbWritten)
 	try
 	{
 		CAutoLock readWriteLock(&this->m_readWriteSect);
+		this->m_lastRequest = GetTickCount();
 
 		array<System::Byte>^ buffer = gcnew array<System::Byte>(cb);
 		System::Runtime::InteropServices::Marshal::Copy(System::IntPtr((void *)pv), buffer, 0, cb);
@@ -236,6 +267,7 @@ STDMETHODIMP FileWriterPin::Seek(LARGE_INTEGER dlibMove, DWORD dwOrigin, ULARGE_
 	try
 	{
 		CAutoLock readWriteLock(&this->m_readWriteSect);
+		this->m_lastRequest = GetTickCount();
 
 		switch (dwOrigin)
 		{
@@ -278,6 +310,7 @@ STDMETHODIMP FileWriterPin::SetSize(ULARGE_INTEGER libNewSize)
 	try
 	{
 		CAutoLock readWriteLock(&this->m_readWriteSect);
+		this->m_lastRequest = GetTickCount();
 
 		this->m_outputStream->SetLength(size);
 	}
@@ -323,6 +356,75 @@ STDMETHODIMP FileWriterPin::Stat(STATSTG * pstatstg, DWORD grfStatFlag)
 STDMETHODIMP FileWriterPin::Clone(IStream ** ppstm)
 {
 	return E_NOTIMPL;
+}
+
+//********* TimerCallbackClass **********\\
+
+FileWriterPin::TimerCallbackClass::TimerCallbackClass(FileWriterPin * pin) : m_pin(pin), m_started(false), m_timer(gcnew System::Timers::Timer())
+{
+	this->m_timer->Elapsed += gcnew System::Timers::ElapsedEventHandler(this, &FileWriterPin::TimerCallbackClass::Callback);
+	this->m_timer->AutoReset = false;
+}
+
+FileWriterPin::TimerCallbackClass::~TimerCallbackClass()
+{
+	delete this->m_timer;
+}
+
+void FileWriterPin::TimerCallbackClass::Start(void)
+{
+	System::Threading::Monitor::Enter(this);
+	try
+	{
+		this->m_started = true;
+		this->m_timer->Interval = this->m_pin->m_inactivityTimeout;
+		this->m_timer->Start();
+	}
+	finally
+	{
+		System::Threading::Monitor::Exit(this);
+	}
+}
+
+void FileWriterPin::TimerCallbackClass::Stop(void)
+{
+	System::Threading::Monitor::Enter(this);
+	try
+	{
+		this->m_started = false;
+		this->m_timer->Stop();
+	}
+	finally
+	{
+		System::Threading::Monitor::Exit(this);
+	}
+}
+
+void FileWriterPin::TimerCallbackClass::Callback(System::Object ^ source, System::Timers::ElapsedEventArgs ^ e)
+{
+	System::Threading::Monitor::Enter(this);
+	try
+	{
+		//Kontroluj started lebo m_pin uz moze byt dealokovany
+		if (!this->m_started)
+			return;
+
+		//Interval necinnosti, ak sa prekroci, je vyhlasena chyba
+		DWORD interval = GetTickCount() - this->m_pin->m_lastRequest;
+		if (interval >= this->m_pin->m_inactivityTimeout)
+		{
+			this->m_pin->m_pFilter->NotifyEvent(EC_ERRORABORT, E_FAIL, 0);
+		}
+		else
+		{
+			this->m_timer->Interval = this->m_pin->m_inactivityTimeout - interval;
+			this->m_timer->Start();
+		}
+	}
+	finally
+	{
+		System::Threading::Monitor::Exit(this);
+	}
 }
 
 

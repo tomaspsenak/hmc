@@ -159,6 +159,9 @@
   <data name="Item" xml:space="preserve">
     <value>Položka</value>
   </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Nahrávam</value>
+  </data>
   <data name="Low" xml:space="preserve">
     <value>Nízka</value>
   </data>

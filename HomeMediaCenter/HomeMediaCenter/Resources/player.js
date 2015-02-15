@@ -179,8 +179,8 @@ $(function () {
                 videoElement.msRequestFullscreen();
             else if (videoElement.mozRequestFullScreen)
                 videoElement.mozRequestFullScreen();
-            else if (videoElement.webkitRequestFullScreen)
-                videoElement.webkitRequestFullScreen();
+            else if (videoElement.webkitSupportsFullscreen)
+                videoElement.webkitEnterFullscreen();
         }
     });
 

@@ -333,31 +333,44 @@ namespace HomeMediaCenter
             }
             else
             {
-                codec = "webm";
+                codec = "html5";
 
-                string sourceUrl = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}&obufsize=1024{3}", id, width, height, encodeParams);
+                string sourceUrlQuality;
                 switch (quality)
                 {
-                    case "low": sourceUrl += "&vidbitrate=200&audbitrate=64&quality=1"; break;
-                    case "high": sourceUrl += "&vidbitrate=800&audbitrate=128&quality=51"; break;
+                    case "low": sourceUrlQuality = "&vidbitrate=200&audbitrate=64&quality=1&fps=25"; break;
+                    case "high": sourceUrlQuality = "&vidbitrate=1000&audbitrate=128&quality=30&fps=25"; break;
                     default /*"medium"*/: 
                         quality = "medium";
-                        sourceUrl += "&vidbitrate=400&audbitrate=64&quality=1";
+                        sourceUrlQuality = "&vidbitrate=400&audbitrate=64&quality=1&fps=25";
                         break;
                 }
+                string sourceUrl1 = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}&obufsize=1024{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
+                string sourceUrl2 = string.Format("/encode/web?id={0}&codec=mp4_ts&width={1}&height={2}&obufsize=1024{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
+                string sourceUrlHls = string.Format("/hls/playlist.m3u8?id={0}&width={1}&height={2}{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
 
-                xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" />");
+                xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" controls=""controls"" />");
 
                 xmlWriter.WriteStartElement("source");
-                xmlWriter.WriteAttributeString("src", sourceUrl);
+                xmlWriter.WriteAttributeString("src", sourceUrlHls);
+                xmlWriter.WriteAttributeString("type", "application/x-mpegurl");
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteStartElement("source");
+                xmlWriter.WriteAttributeString("src", sourceUrl1);
                 xmlWriter.WriteAttributeString("type", "video/webm; codecs=\"vp8.0, vorbis\"");
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteStartElement("source");
+                xmlWriter.WriteAttributeString("src", sourceUrl2);
+                xmlWriter.WriteAttributeString("type", "video/mp4");
                 xmlWriter.WriteEndElement();
 
                 xmlWriter.WriteStartElement("span");
                 xmlWriter.WriteAttributeString("id", "streamVideoSpan");
 
                 xmlWriter.WriteStartElement("a");
-                xmlWriter.WriteAttributeString("href", sourceUrl);
+                xmlWriter.WriteAttributeString("href", sourceUrl1);
                 xmlWriter.WriteAttributeString("id", "videoLink");
                 xmlWriter.WriteAttributeString("class", "videoLink");
                 xmlWriter.WriteValue(LanguageResource.Play);
@@ -387,12 +400,12 @@ namespace HomeMediaCenter
             xmlWriter.WriteRaw(@"<div id=""streamToolbar"" class=""ui-widget-header ui-corner-all"">");
             xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""playButton"">{0}</button>", LanguageResource.Play));
             xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""pauseButton"">{0}</button>", LanguageResource.Pause));
-            if (codec == "webm")
+            if (codec == "html5")
                 xmlWriter.WriteRaw(string.Format(@"<button type=""button"" id=""fullScreenButton"">{0}</button>", LanguageResource.Fullscreen));
 
             xmlWriter.WriteRaw(@"<span id=""codecRadios"">");
-            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""webmRadio"" name=""codec"" value=""webm"" {0} /><label for=""webmRadio"">WebM</label>",
-                codec == "webm" ? "checked=\"checked\"" : string.Empty));
+            xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""html5Radio"" name=""codec"" value=""html5"" {0} /><label for=""html5Radio"">Html5</label>",
+                codec == "html5" ? "checked=\"checked\"" : string.Empty));
             xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""wmvRadio"" name=""codec"" value=""wmv"" {0} /><label for=""wmvRadio"">Wmv</label>",
                 codec == "wmv" ? "checked=\"checked\"" : string.Empty));
             xmlWriter.WriteRaw(string.Format(@"<input type=""radio"" id=""flvRadio"" name=""codec"" value=""flv"" {0} /><label for=""flvRadio"">Flash</label>",

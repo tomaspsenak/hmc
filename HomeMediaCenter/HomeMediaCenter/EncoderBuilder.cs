@@ -144,5 +144,10 @@ namespace HomeMediaCenter
 
             return this.paramString.StartsWith("&") ? this.paramString : "&" + this.paramString;
         }
+
+        public Dictionary<string, string> GetParamCopy()
+        {
+            return new Dictionary<string, string>(this.parameters);
+        }
     }
 }
