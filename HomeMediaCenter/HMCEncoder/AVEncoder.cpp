@@ -46,7 +46,7 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	if (videoMT)
 	{
 		if (!(this->m_videoStream = AddVideo(params, videoMT, 
-			(params->m_videoCodec == CODEC_ID_NONE) ? this->m_formatContext->oformat->video_codec : params->m_videoCodec)))
+			(params->m_videoCodec == AV_CODEC_ID_NONE) ? this->m_formatContext->oformat->video_codec : params->m_videoCodec)))
 		{
 			hr = E_FAIL;
 			goto done;
@@ -57,7 +57,7 @@ HRESULT AVEncoder::Start(AVEncoderParameters * params, AM_MEDIA_TYPE * audioMT, 
 	if (audioMT)
 	{
 		if (!(this->m_audioStream = AddAudio(params, audioMT, 
-			(params->m_audioCodec == CODEC_ID_NONE) ? this->m_formatContext->oformat->audio_codec : params->m_audioCodec)))
+			(params->m_audioCodec == AV_CODEC_ID_NONE) ? this->m_formatContext->oformat->audio_codec : params->m_audioCodec)))
 		{
 			hr = E_FAIL;
 			goto done;
@@ -395,7 +395,7 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 	}
 	else
 	{
-		if (c->codec_id == CODEC_ID_MPEG2VIDEO)
+		if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO)
 		{
 			c->rc_buffer_size = params->m_videoBufferSize;
 			c->rc_max_rate = c->rc_min_rate = params->m_videoBitrate;
@@ -410,7 +410,7 @@ AVStream * AVEncoder::AddVideo(AVEncoderParameters * params, AM_MEDIA_TYPE * vid
 		c->flags |= CODEC_FLAG_INTERLACED_ME; //CODEC_FLAG_INTERLACED_DCT
 	}
 
-	if (c->codec_id == CODEC_ID_MPEG2VIDEO)
+	if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO)
 	{
 		if (c->time_base.num != 1 || (c->time_base.den != 25 || c->time_base.den != 30  || c->time_base.den != 50 || c->time_base.den != 60))
 		{

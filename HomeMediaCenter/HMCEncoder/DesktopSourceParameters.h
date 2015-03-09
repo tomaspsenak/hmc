@@ -48,12 +48,16 @@ class DesktopSourceParameters : public CUnknown, public IHMCDesktopSource
 				STDMETHODIMP SetAspectRatio(BOOL keepAspectRatio);
 				STDMETHODIMP GetAspectRatio(BOOL * pKeepAspectRatio);
 
+				STDMETHODIMP SetCaptureWindow(BOOL captureActiveWindow);
+				STDMETHODIMP GetCaptureWindow(BOOL * pCaptureActiveWindow);
+
 	private:	UINT32 m_fps;
 				UINT32 m_width;
 				UINT32 m_height;
 				BYTE m_videoQuality;
 				BOOL m_captureCursor;
 				BOOL m_keepAspectRatio;
+				BOOL m_captureActiveWindow;
 
 				int m_videoStretchMode;
 				REFERENCE_TIME m_rtFrameLength;

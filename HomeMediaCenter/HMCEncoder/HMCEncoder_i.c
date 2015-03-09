@@ -6,7 +6,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Sun Jan 11 16:28:39 2015
+/* at Sun Mar 01 18:52:40 2015
  */
 /* Compiler settings for HMCEncoder.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 

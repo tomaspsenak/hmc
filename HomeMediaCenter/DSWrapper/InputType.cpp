@@ -15,11 +15,11 @@ namespace DSWrapper
 		return gcnew StaticInput(fps, bitmapData);
 	}
 
-	InputType ^ InputType::Desktop(UINT32 fps)
+	InputType ^ InputType::Desktop(UINT32 fps, bool captureWindow)
 	{
 		if (fps == 0)
 			throw gcnew DSException(L"Desktop - frame rate must be specified", 0);
-		return gcnew DesktopInput(fps);
+		return gcnew DesktopInput(fps, captureWindow);
 	}
 
 	InputType ^ InputType::Webcam(System::String ^ videoName, System::String ^ audioName)
@@ -78,6 +78,7 @@ namespace DSWrapper
 		CHECK_HR(hr = filter->QueryInterface(IID_IHMCDesktopSource, (void **)&params));
 
 		CHECK_HR(hr = params->SetFrameRate(this->m_fps));
+		CHECK_HR(hr = params->SetCaptureWindow(this->m_captureWindow));
 
 		*inputFilter = filter;
 		filter = NULL;

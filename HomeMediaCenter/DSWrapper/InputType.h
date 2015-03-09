@@ -13,7 +13,7 @@ namespace DSWrapper
 	{
 		public:		static InputType ^ Static(UINT32 fps, array<System::Byte> ^ bitmapData);
 			
-					static InputType ^ Desktop(UINT32 fps);
+					static InputType ^ Desktop(UINT32 fps, bool captureWindow);
 
 					static InputType ^ Webcam(System::String ^ videoName, System::String ^ audioName);
 
@@ -34,11 +34,12 @@ namespace DSWrapper
 
 	private ref class DesktopInput : InputType
 	{
-		internal:	DesktopInput(UINT32 fps) : InputType(), m_fps(fps) { }
+		internal:	DesktopInput(UINT32 fps, bool captureWindow) : InputType(), m_fps(fps), m_captureWindow(captureWindow) { }
 
 					virtual HRESULT GetInputFilter(IBaseFilter ** inputFilter) override;
 
 		private:	UINT32 m_fps;
+					bool m_captureWindow;
 	};
 
 	public ref class WebcamInput : InputType
