@@ -48,7 +48,8 @@ class DesktopSourceVideoPin : public CSourceStream
 	private:	static HRESULT GetWidthHeight(const AM_MEDIA_TYPE * type, LONG * width, LONG * height); 
 				static HRESULT GetBitmapInfo(const AM_MEDIA_TYPE * type, BITMAPINFOHEADER * bitmapInfo);
 				
-				HBITMAP CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio);
+				HBITMAP CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, 
+					BOOL keepAspectRatio, BOOL activeWindow);
 		
 				REFERENCE_TIME m_rtLastFrame;
 				DesktopSourceFilter * m_pFilter;

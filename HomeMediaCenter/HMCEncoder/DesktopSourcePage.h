@@ -45,6 +45,7 @@ class DesktopSourcePage : public CBasePropertyPage
 				UINT32 m_oldHeight;
 				BOOL m_oldKeepAspectRatio;
 				BOOL m_oldCaptureCursor;
+				BOOL m_oldCaptureWindow;
 				BYTE m_oldVideoQualityPosition;
 			
 				IHMCDesktopSource * m_desktopSourceParams;

@@ -23,7 +23,7 @@ HRESULT FrameWriterParameters::SetFormat(enum ImageFormat format)
 	{
 		case ImageFormat_BMP:
 			strcpy_s(this->m_params.m_containerStr, "image2pipe");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_videoCodec = AV_CODEC_ID_BMP;
 
 			this->m_params.m_videoBitrate = 0;
@@ -31,7 +31,7 @@ HRESULT FrameWriterParameters::SetFormat(enum ImageFormat format)
 			break;
 		case ImageFormat_JPEG:
 			strcpy_s(this->m_params.m_containerStr, "image2pipe");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_videoCodec = AV_CODEC_ID_MJPEG;
 
 			this->m_params.m_videoBitrate = 4000 * 1000;
@@ -39,7 +39,7 @@ HRESULT FrameWriterParameters::SetFormat(enum ImageFormat format)
 			break;
 		case ImageFormat_PNG:
 			strcpy_s(this->m_params.m_containerStr, "image2pipe");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_videoCodec = AV_CODEC_ID_PNG;
 
 			this->m_params.m_videoBitrate = 0;

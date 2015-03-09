@@ -4,7 +4,7 @@
 
 DesktopSourceParameters::DesktopSourceParameters(DesktopSourceFilter * filter) : CUnknown(L"DesktopSourceParameters", filter->GetOwner()), 
 	m_fps(10), m_rtFrameLength(UNITS / 10), m_filter(filter), m_width(0), m_height(0), m_videoQuality(100), m_videoStretchMode(HALFTONE),
-	m_captureCursor(TRUE), m_keepAspectRatio(FALSE)
+	m_captureCursor(TRUE), m_keepAspectRatio(FALSE), m_captureActiveWindow(FALSE)
 {
 }
 
@@ -180,6 +180,29 @@ STDMETHODIMP DesktopSourceParameters::GetAspectRatio(BOOL * pKeepAspectRatio)
 	CAutoLock cObjectLock(this->m_filter->m_pLock);
 
 	*pKeepAspectRatio = this->m_keepAspectRatio;
+
+	return S_OK;
+}
+
+STDMETHODIMP DesktopSourceParameters::SetCaptureWindow(BOOL captureActiveWindow)
+{
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+	
+	if (this->m_filter->IsActive())
+		return VFW_E_FILTER_ACTIVE;
+
+	this->m_captureActiveWindow = captureActiveWindow;
+
+	return S_OK;
+}
+
+STDMETHODIMP DesktopSourceParameters::GetCaptureWindow(BOOL * pCaptureActiveWindow)
+{
+	CheckPointer(pCaptureActiveWindow, E_POINTER);
+
+	CAutoLock cObjectLock(this->m_filter->m_pLock);
+
+	*pCaptureActiveWindow = this->m_captureActiveWindow;
 
 	return S_OK;
 }

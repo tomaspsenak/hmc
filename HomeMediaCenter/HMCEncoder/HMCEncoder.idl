@@ -152,6 +152,9 @@ library HMCEncoderLib
 
 		HRESULT SetAspectRatio([in] BOOL keepAspectRatio);
 		HRESULT GetAspectRatio([out] BOOL * pKeepAspectRatio);
+
+		HRESULT SetCaptureWindow([in] BOOL captureActiveWindow);
+		HRESULT GetCaptureWindow([out] BOOL * pCaptureActiveWindow);
 	}
 
 	[

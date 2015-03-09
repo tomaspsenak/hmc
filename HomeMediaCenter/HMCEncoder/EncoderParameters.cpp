@@ -22,8 +22,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 	{
 		case Container_MPEG2PS:
 			strcpy_s(this->m_params.m_containerStr, "vob");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = true;
 			this->m_params.m_videoInterlaced = true;
 			this->m_params.m_videoBFrames = false;
@@ -76,8 +76,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			break;
 		case Container_MP3:
 			strcpy_s(this->m_params.m_containerStr, "mp3");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = false;
 
 			SetAudioCBR(128 * 1000);
@@ -87,8 +87,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			break;
 		case Container_MP4:
 			strcpy_s(this->m_params.m_containerStr, "mp4");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = false;
 			this->m_params.m_videoInterlaced = false;
 			this->m_params.m_videoBFrames = false;
@@ -105,8 +105,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			break;
 		case Container_AVI:
 			strcpy_s(this->m_params.m_containerStr, "avi");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = false;
 			this->m_params.m_videoInterlaced = false;
 			this->m_params.m_videoBFrames = false;
@@ -123,8 +123,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			break;
 		case Container_FLV:
 			strcpy_s(this->m_params.m_containerStr, "flv");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = true;
 			this->m_params.m_videoInterlaced = false;
 			this->m_params.m_videoBFrames = false;
@@ -177,8 +177,8 @@ HRESULT EncoderParameters::SetContainer(enum Container container)
 			break;
 		case Container_WEBM:
 			strcpy_s(this->m_params.m_containerStr, "webm");
-			this->m_params.m_audioCodec = CODEC_ID_NONE;
-			this->m_params.m_videoCodec = CODEC_ID_NONE;
+			this->m_params.m_audioCodec = AV_CODEC_ID_NONE;
+			this->m_params.m_videoCodec = AV_CODEC_ID_NONE;
 			this->m_params.m_streamable = true;
 			this->m_params.m_videoInterlaced = false;
 			this->m_params.m_videoBFrames = false;

@@ -118,14 +118,13 @@ namespace HomeMediaCenter
                 this.encoder = enc;
 
                 string source = parameters["source"];
-                if (string.Equals(source, "desktop", StringComparison.OrdinalIgnoreCase))
+                if (source.StartsWith("desktop", StringComparison.OrdinalIgnoreCase))
                 {
                     //Zdroj je plocha PC
-                    if (parameters.ContainsKey("desktopfps"))
-                        enc.SetInput(InputType.Desktop(uint.Parse(parameters["desktopfps"])));
-                    else
-                        enc.SetInput(InputType.Desktop(10));
-                    
+                    uint desktopFps = parameters.ContainsKey("desktopfps") ? uint.Parse(parameters["desktopfps"]) : 10;
+                    bool captureWin = string.Equals(source, "desktop_window", StringComparison.OrdinalIgnoreCase);
+
+                    enc.SetInput(InputType.Desktop(desktopFps, captureWin));
                 }
                 else if (string.Equals(source, "static", StringComparison.OrdinalIgnoreCase))
                 {

@@ -27,20 +27,23 @@ namespace HomeMediaCenter
             {
                 //Rozdielova obnova webcams
                 IEnumerable<string> webcams = manager.EnableWebcamStreaming ? DSWrapper.WebcamInput.GetVideoInputNames() : Enumerable.Empty<string>();
-                List<Item> toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title != "Desktop").Except(
+                List<Item> toRemove = this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Path.StartsWith("desktop") == false).Except(
                         webcams, new TitleItemEqualityComparer()).Cast<Item>().ToList();
-                string[] toAdd = webcams.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title != "Desktop").Select(
+                string[] toAdd = webcams.Except(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Path.StartsWith("desktop") == false).Select(
                     a => a.Title)).ToArray();
 
                 //Overenie ci existuje desktop container ak je zapnuty
                 if (manager.EnableDesktopStreaming)
                 {
-                    if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStream) && a.Title == "Desktop"))
+                    if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStream) && a.Path == "desktop"))
                         new ItemContainerStream("Desktop", "desktop", this);
+
+                    if (!this.Items.Any(a => a.GetType() == typeof(ItemContainerStream) && a.Path == "desktop_window"))
+                        new ItemContainerStream("Desktop window", "desktop_window", this);
                 }
                 else
                 {
-                    toRemove.AddRange(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Title == "Desktop"));
+                    toRemove.AddRange(this.Items.Where(a => a.GetType() == typeof(ItemContainerStream) && a.Path.StartsWith("desktop")));
                 }
 
                 RemoveRange(context, manager, toRemove.ToArray());

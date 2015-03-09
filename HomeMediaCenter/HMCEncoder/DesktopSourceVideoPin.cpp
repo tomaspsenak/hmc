@@ -156,7 +156,8 @@ HRESULT DesktopSourceVideoPin::FillBuffer(IMediaSample * pSample)
 
 	//Skopirovanie plochy do buffera
 	HANDLE hDib = CopyScreenToBitmap(pBuffer, &this->m_bitmapInfo, this->m_pFilter->m_params->m_videoStretchMode,
-		this->m_pFilter->m_params->m_captureCursor, this->m_pFilter->m_params->m_keepAspectRatio);
+		this->m_pFilter->m_params->m_captureCursor, this->m_pFilter->m_params->m_keepAspectRatio,
+		this->m_pFilter->m_params->m_captureActiveWindow);
 	if (hDib)
         DeleteObject(hDib);
 
@@ -422,12 +423,13 @@ HRESULT DesktopSourceVideoPin::GetBitmapInfo(const AM_MEDIA_TYPE * type, BITMAPI
 	return S_OK;
 }
 
-HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio)
+HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHeader, int stretchMode, BOOL captureCursor, BOOL keepAspectRatio, BOOL activeWindow)
 {
     HDC         hScrDC, hMemDC;         // screen DC and memory DC
     HBITMAP     hBitmap, hOldBitmap;    // handles to deice-dependent bitmaps
     int         nWidth, nHeight;        // DIB width and height
     int         xScrn, yScrn;           // screen resolution
+	RECT		rcForWin;				// Foreground window position
 	CURSORINFO	pci;
 	
 	pci.cbSize = sizeof(CURSORINFO);
@@ -437,9 +439,21 @@ HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHe
     hScrDC = CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
     hMemDC = CreateCompatibleDC(hScrDC);
 
-    // get screen resolution
-    xScrn = GetDeviceCaps(hScrDC, HORZRES);
-    yScrn = GetDeviceCaps(hScrDC, VERTRES);
+	if (activeWindow)
+	{
+		GetWindowRect(GetForegroundWindow(), &rcForWin);
+
+		xScrn = rcForWin.right - rcForWin.left;
+		yScrn = rcForWin.bottom - rcForWin.top;
+	}
+	else
+	{
+		ZeroMemory(&rcForWin, sizeof(RECT));
+
+		// get screen resolution
+		xScrn = GetDeviceCaps(hScrDC, HORZRES);
+		yScrn = GetDeviceCaps(hScrDC, VERTRES);
+	}
 
 	nWidth  = pHeader->bmiHeader.biWidth;
 	nHeight = pHeader->bmiHeader.biHeight;
@@ -453,12 +467,12 @@ HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHe
 	if (xScrn == nWidth && yScrn == nHeight)
 	{
 		// bitblt screen DC to memory DC
-		BitBlt(hMemDC, 0, 0, nWidth, nHeight, hScrDC, 0, 0, SRCCOPY);
+		BitBlt(hMemDC, 0, 0, nWidth, nHeight, hScrDC, rcForWin.left, rcForWin.top, SRCCOPY);
 
 		// write cursor to output bitmap
 		if (captureCursor && GetCursorInfo(&pci))
 		{
-			DrawIconEx(hMemDC, pci.ptScreenPos.x, pci.ptScreenPos.y, pci.hCursor, 0, 0, 0, NULL, DI_NORMAL);
+			DrawIconEx(hMemDC, pci.ptScreenPos.x - rcForWin.left, pci.ptScreenPos.y - rcForWin.top, pci.hCursor, 0, 0, 0, NULL, DI_NORMAL);
 		}
 	}
 	else
@@ -485,13 +499,14 @@ HBITMAP DesktopSourceVideoPin::CopyScreenToBitmap(BYTE * pData, BITMAPINFO * pHe
             newHeight = nHeight;
 		}
 
-		StretchBlt(hMemDC, posX, posY, newWidth, newHeight, hScrDC, 0, 0, xScrn, yScrn, SRCCOPY);
+		StretchBlt(hMemDC, posX, posY, newWidth, newHeight, hScrDC, rcForWin.left, rcForWin.top, xScrn, yScrn, SRCCOPY);
 
 		// write cursor to output bitmap
 		if (captureCursor && GetCursorInfo(&pci))
 		{
 			double ratioX = (double)newWidth / xScrn, ratioY = (double)newHeight / yScrn;
-			DrawIconEx(hMemDC, (int)(ratioX * pci.ptScreenPos.x) + posX, (int)(ratioY * pci.ptScreenPos.y) + posY, pci.hCursor, 
+			DrawIconEx(hMemDC, (int)(ratioX * (pci.ptScreenPos.x - rcForWin.left)) + posX, 
+				(int)(ratioY * (pci.ptScreenPos.y - rcForWin.top)) + posY, pci.hCursor, 
 				(int)(GetSystemMetrics(SM_CXCURSOR) * ratioX), (int)(GetSystemMetrics(SM_CYCURSOR) * ratioY), 0, NULL, DI_NORMAL);
 		}
 	}

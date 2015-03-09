@@ -4,7 +4,8 @@
 
 DesktopSourcePage::DesktopSourcePage(LPUNKNOWN punk, HRESULT * phr) :
 	CBasePropertyPage(L"HMCDesktopSourcePage", punk, IDD_DESKTOPSOURCE_PAGE, IDS_DESKTOPSOURCE_PAGE), m_desktopSourceParams(NULL),
-	m_oldFps(0), m_oldWidth(0), m_oldHeight(0), m_oldKeepAspectRatio(FALSE), m_oldCaptureCursor(FALSE), m_oldVideoQualityPosition(0)
+	m_oldFps(0), m_oldWidth(0), m_oldHeight(0), m_oldKeepAspectRatio(FALSE), m_oldCaptureCursor(FALSE), m_oldVideoQualityPosition(0),
+	m_oldCaptureWindow(FALSE)
 {
 }
 
@@ -68,6 +69,8 @@ HRESULT DesktopSourcePage::OnApplyChanges(void)
 
 		this->m_desktopSourceParams->SetCaptureCursor(Button_GetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTURECURSOR)));
 
+		this->m_desktopSourceParams->SetCaptureWindow(Button_GetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTUREWINDOW)));
+
 		this->m_desktopSourceParams->SetVideoQuality(GetSliderPercentage(IDC_SLIDER_QUALITY));
 
 		RefreshValues();
@@ -106,6 +109,11 @@ INT_PTR DesktopSourcePage::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam,
 
 			case IDC_CHECK_CAPTURECURSOR:
 				if (this->m_oldCaptureCursor != Button_GetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTURECURSOR)))
+					SetDirty();
+				break;
+
+			case IDC_CHECK_CAPTUREWINDOW:
+				if (this->m_oldCaptureWindow != Button_GetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTUREWINDOW)))
 					SetDirty();
 				break;
 		}
@@ -154,6 +162,7 @@ void DesktopSourcePage::RefreshValues(void)
 		this->m_desktopSourceParams->GetHeight(&this->m_oldHeight);
 		this->m_desktopSourceParams->GetAspectRatio(&this->m_oldKeepAspectRatio);
 		this->m_desktopSourceParams->GetCaptureCursor(&this->m_oldCaptureCursor);
+		this->m_desktopSourceParams->GetCaptureWindow(&this->m_oldCaptureWindow);
 		this->m_desktopSourceParams->GetVideoQuality(&oldVideoQuality);
 	}
 
@@ -169,6 +178,8 @@ void DesktopSourcePage::RefreshValues(void)
 	Button_SetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_KEEPASPECT), this->m_oldKeepAspectRatio);
 
 	Button_SetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTURECURSOR), this->m_oldCaptureCursor);
+
+	Button_SetCheck(GetDlgItem(this->m_Dlg, IDC_CHECK_CAPTUREWINDOW), this->m_oldCaptureWindow);
 
 	SendDlgItemMessage(this->m_Dlg, IDC_SLIDER_QUALITY, TBM_SETRANGE, TRUE, MAKELPARAM(0, 2));
 	this->m_oldVideoQualityPosition = SetSliderPosition(IDC_SLIDER_QUALITY, oldVideoQuality);

@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0555 */
-/* at Sun Jan 11 16:28:39 2015
+/* at Sun Mar 01 18:52:40 2015
  */
 /* Compiler settings for HMCEncoder.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
@@ -729,6 +729,12 @@ EXTERN_C const IID IID_IHMCDesktopSource;
         virtual HRESULT STDMETHODCALLTYPE GetAspectRatio( 
             /* [out] */ BOOL *pKeepAspectRatio) = 0;
         
+        virtual HRESULT STDMETHODCALLTYPE SetCaptureWindow( 
+            /* [in] */ BOOL captureActiveWindow) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE GetCaptureWindow( 
+            /* [out] */ BOOL *pCaptureActiveWindow) = 0;
+        
     };
     
 #else 	/* C style interface */
@@ -797,6 +803,14 @@ EXTERN_C const IID IID_IHMCDesktopSource;
             IHMCDesktopSource * This,
             /* [out] */ BOOL *pKeepAspectRatio);
         
+        HRESULT ( STDMETHODCALLTYPE *SetCaptureWindow )( 
+            IHMCDesktopSource * This,
+            /* [in] */ BOOL captureActiveWindow);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetCaptureWindow )( 
+            IHMCDesktopSource * This,
+            /* [out] */ BOOL *pCaptureActiveWindow);
+        
         END_INTERFACE
     } IHMCDesktopSourceVtbl;
 
@@ -855,6 +869,12 @@ EXTERN_C const IID IID_IHMCDesktopSource;
 
 #define IHMCDesktopSource_GetAspectRatio(This,pKeepAspectRatio)	\
     ( (This)->lpVtbl -> GetAspectRatio(This,pKeepAspectRatio) ) 
+
+#define IHMCDesktopSource_SetCaptureWindow(This,captureActiveWindow)	\
+    ( (This)->lpVtbl -> SetCaptureWindow(This,captureActiveWindow) ) 
+
+#define IHMCDesktopSource_GetCaptureWindow(This,pCaptureActiveWindow)	\
+    ( (This)->lpVtbl -> GetCaptureWindow(This,pCaptureActiveWindow) ) 
 
 #endif /* COBJMACROS */
 
