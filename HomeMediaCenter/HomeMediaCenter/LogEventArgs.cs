@@ -10,6 +10,7 @@ namespace HomeMediaCenter
     public class LogEventArgs : EventArgs
     {
         private string message;
+        private int requestCount;
         private LogEventType type;
 
         public LogEventArgs(string message)
@@ -20,13 +21,24 @@ namespace HomeMediaCenter
 
         public LogEventArgs(int requestCount)
         {
-            this.message = requestCount.ToString();
+            this.requestCount = requestCount;
             this.type = LogEventType.RequestCount;
         }
 
         public string Message
         {
-            get { return this.message; }
+            get
+            {
+                if (this.type == LogEventType.RequestCount)
+                    return this.requestCount.ToString();
+                else
+                    return this.message;
+            }
+        }
+
+        public int RequestCount
+        {
+            get { return this.requestCount; }
         }
 
         public LogEventType Type

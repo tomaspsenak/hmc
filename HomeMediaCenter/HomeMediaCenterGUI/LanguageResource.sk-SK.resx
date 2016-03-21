@@ -354,4 +354,34 @@
   <data name="Copy" xml:space="preserve">
     <value>Kopírovať</value>
   </data>
+  <data name="AccessIsDenied" xml:space="preserve">
+    <value>Prístup do adresára je odmietnutý. Skontrolujte vaše oprávnenia</value>
+  </data>
+  <data name="Console" xml:space="preserve">
+    <value>Konzola</value>
+  </data>
+  <data name="ConnectingToService" xml:space="preserve">
+    <value>Pripájanie na službu</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>Štartujem aplikáciu</value>
+  </data>
+  <data name="StartingService" xml:space="preserve">
+    <value>Spúšťanie služby</value>
+  </data>
+  <data name="UnableToSaveConfigFile" xml:space="preserve">
+    <value>Nie je možné uložiť konfiguračný súbor</value>
+  </data>
+  <data name="ConnectionToServiceLost" xml:space="preserve">
+    <value>Spojenie so službou prerušené</value>
+  </data>
+  <data name="TryToRestartApp" xml:space="preserve">
+    <value>Prosím, skúste reštartovať aplikáciu</value>
+  </data>
+  <data name="UnableToConnectService" xml:space="preserve">
+    <value>Nie je možné sa pripojiť k službe</value>
+  </data>
+  <data name="ApplicationWillBeClosed" xml:space="preserve">
+    <value>Aplikácia bude uzavretá</value>
+  </data>
 </root>

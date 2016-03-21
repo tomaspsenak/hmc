@@ -96,9 +96,11 @@ $(function () {
         }
     });
 
+    var currentTimeOffset = 0;
     $("#streamVideo").bind("timeupdate", function () {
-        var currenttime = new Number($("#streamVideo").prop("currentTime"));
-        SetNewPosition(currenttime);
+        var currentTime = new Number($("#streamVideo").prop("currentTime")) + currentTimeOffset;
+        if (currentTime >= 0)
+            SetNewPosition(currentTime);
     });
 
     $("#playButton").button({ icons: { primary: "ui-icon-play" }, text: false });
@@ -194,6 +196,17 @@ $(function () {
 
         $("#streamVideo").get(0).addEventListener("playing", function () {
             $("#streamVideo").get(0).controls = false;
+
+            var source = $("#streamVideo").get(0).currentSrc;
+            var sourceParams = source.split("&");
+            var i = 0;
+            while (i < sourceParams.length) {
+                var sParameterName = sourceParams[i].split('=');
+                if (sParameterName[0].toLowerCase() == "hlssegmenttime") {
+                    currentTimeOffset = - (new Number(sParameterName[1]));
+                }
+                i++;
+            }
         });
     }
     else if ($("#silverlightControlHost").get(0)) {

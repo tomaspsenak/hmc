@@ -535,7 +535,8 @@ namespace HomeMediaCenterGUI
 
         private void copyMenuItem_Click(object sender, EventArgs e)
         {
-            Clipboard.SetText(this.infoTextBox.SelectedText);
+            if (this.infoTextBox.SelectedText != null && this.infoTextBox.SelectedText != string.Empty)
+                Clipboard.SetText(this.infoTextBox.SelectedText);
         }
     }
 }

@@ -18,5 +18,10 @@ namespace HomeMediaCenter
         {
             get { return this.exception; }
         }
+
+        public string Message
+        {
+            get { return (this.exception == null) ? null : this.exception.Message; }
+        }
     }
 }

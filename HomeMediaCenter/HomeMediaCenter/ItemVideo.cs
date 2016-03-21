@@ -194,9 +194,9 @@ namespace HomeMediaCenter
                 System.IO.Path.GetExtension(this.Parent.Path));
         }
 
-        public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)
+        public override void GetWebPlayer(XmlWriter xmlWriter, ItemManager manager, Dictionary<string, string> urlParams)
         {
-            WriteHTMLPlayer(xmlWriter, this.Id.ToString(), this.GetDuration(), urlParams, this.Path);
+            WriteHTMLPlayer(xmlWriter, manager, this.Id.ToString(), this.GetDuration(), urlParams, this.Path);
         }
 
         public static void WriteHTML(XmlWriter xmlWriter, string id, string title, string duration, string resolution, bool hasThumbanil, string noStreamExtension)
@@ -240,7 +240,7 @@ namespace HomeMediaCenter
             xmlWriter.WriteEndElement();
         }
 
-        public static void WriteHTMLPlayer(XmlWriter xmlWriter, string id, TimeSpan? duration, Dictionary<string, string> urlParams, string encodeParams)
+        public static void WriteHTMLPlayer(XmlWriter xmlWriter, ItemManager manager, string id, TimeSpan? duration, Dictionary<string, string> urlParams, string encodeParams)
         {
             string codec = null;
             if (urlParams.ContainsKey("codec"))
@@ -347,7 +347,8 @@ namespace HomeMediaCenter
                 }
                 string sourceUrl1 = string.Format("/encode/web?id={0}&codec=webm_ts&width={1}&height={2}&obufsize=1024{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
                 string sourceUrl2 = string.Format("/encode/web?id={0}&codec=mp4_ts&width={1}&height={2}&obufsize=1024{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
-                string sourceUrlHls = string.Format("/hls/playlist.m3u8?id={0}&width={1}&height={2}{3}{4}", id, width, height, sourceUrlQuality, encodeParams);
+                string sourceUrlHls = string.Format("/hls/playlist.m3u8?id={0}&width={1}&height={2}&hlsSegmentTime={3}{4}{5}", 
+                    id, width, height, manager.UpnpDevice.HlsManager.DefaultSegmentTime, sourceUrlQuality, encodeParams);
 
                 xmlWriter.WriteRaw(@"<video id=""streamVideo"" autoplay=""autoplay"" controls=""controls"" />");
 

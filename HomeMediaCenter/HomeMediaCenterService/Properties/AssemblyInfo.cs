@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HomeMediaCenter")]
+[assembly: AssemblyTitle("HomeMediaCenterService")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Tomáš Pšenák")]
-[assembly: AssemblyProduct("HomeMediaCenter")]
+[assembly: AssemblyProduct("HomeMediaCenterService")]
 [assembly: AssemblyCopyright("Copyright © Tomáš Pšenák 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("81bc5fa8-2ba3-4449-b7f2-360067440316")]
+[assembly: Guid("cf03fea9-c30b-4b6c-b3bd-498c81c21524")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.9.*")]
-//[assembly: AssemblyFileVersion("1.0.*")]
+[assembly: AssemblyVersion("2.9.0.0")]
+//[assembly: AssemblyFileVersion("1.0.0.0")]

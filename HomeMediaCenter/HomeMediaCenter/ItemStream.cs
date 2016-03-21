@@ -164,12 +164,12 @@ namespace HomeMediaCenter
                 ItemVideo.WriteHTML(xmlWriter, this.Id.ToString(), this.Title, "0:00:00", this.Resolution, false, null);
         }
 
-        public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)
+        public override void GetWebPlayer(XmlWriter xmlWriter, ItemManager manager, Dictionary<string, string> urlParams)
         {
             if (this.Audio)
                 ItemAudio.WriteHTMLPlayer(xmlWriter, this.Id.ToString(), GetDuration(), urlParams);
             else
-                ItemVideo.WriteHTMLPlayer(xmlWriter, this.Id.ToString(), GetDuration(), urlParams, null);
+                ItemVideo.WriteHTMLPlayer(xmlWriter, manager, this.Id.ToString(), GetDuration(), urlParams, null);
         }
 
         public static string GetTitle(string title, string resolution, string bitrate, bool audio)

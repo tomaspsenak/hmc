@@ -8,7 +8,7 @@ using System.Net;
 
 namespace HomeMediaCenter
 {
-    public class UpnpServer
+    public class UpnpServer : Interfaces.IUpnpServer
     {
         private UpnpDevice rootDevice;
         private SsdpServer ssdpServer;

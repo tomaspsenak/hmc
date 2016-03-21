@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace HomeMediaCenter
 {
-    public class MediaServerDevice : UpnpDevice
+    public class MediaServerDevice : UpnpDevice, Interfaces.IMediaServerDevice
     {
         private bool minimizeToTray;
         private bool tryToForwardPort;
@@ -102,6 +102,11 @@ namespace HomeMediaCenter
             this.hlsManager = new HlsManager(this);
         }
 
+        public bool IsWinService
+        {
+            get { return false; }
+        }
+
         public string DataDirectory
         {
             get { return this.dataDirectory; }
@@ -112,9 +117,19 @@ namespace HomeMediaCenter
             get { return this.thumbnailsPath; }
         }
 
-        public ItemManager ItemManager
+        internal ItemManager ItemManager
         {
             get { return this.itemManager; }
+        }
+
+        public Interfaces.IItemManager IItemManager
+        {
+            get { return this.itemManager; }
+        }
+
+        public HlsManager HlsManager
+        {
+            get { return this.hlsManager; }
         }
 
         public bool MinimizeToTray
@@ -149,6 +164,11 @@ namespace HomeMediaCenter
                 this.generateThumbnails = value;
                 SettingsChanged();
             }
+        }
+
+        public void LogEventSubscribe(bool subscribe)
+        {
+            throw new NotImplementedException();
         }
 
         public void LoadSettings()
@@ -249,43 +269,49 @@ namespace HomeMediaCenter
             }
         }
 
-        public void SaveSettings()
+        public bool SaveSettings()
         {
             if (!this.settingsChanged)
-                return;
+                return true;
 
-            using (FileStream file = new FileStream(this.settingsPath, FileMode.Create, FileAccess.Write))
-            using (XmlWriter xmlWriter = XmlWriter.Create(file, new XmlWriterSettings() { Indent = true }))
+            try
             {
-                xmlWriter.WriteStartDocument();
-                xmlWriter.WriteStartElement("HomeMediaCenter");
-                xmlWriter.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instance");
-                xmlWriter.WriteAttributeString("xmlns", "xsd", null, "http://www.w3.org/2001/XMLSchema");
-                xmlWriter.WriteAttributeString("ModelNumber", this.modelNumber);
+                using (FileStream file = new FileStream(this.settingsPath, FileMode.Create, FileAccess.Write))
+                using (XmlWriter xmlWriter = XmlWriter.Create(file, new XmlWriterSettings() { Indent = true }))
+                {
+                    xmlWriter.WriteStartDocument();
+                    xmlWriter.WriteStartElement("HomeMediaCenter");
+                    xmlWriter.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instance");
+                    xmlWriter.WriteAttributeString("xmlns", "xsd", null, "http://www.w3.org/2001/XMLSchema");
+                    xmlWriter.WriteAttributeString("ModelNumber", this.modelNumber);
 
-                xmlWriter.WriteElementString("Udn", this.udn.ToString());
-                xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
-                xmlWriter.WriteElementString("MinimizeToTray", this.minimizeToTray.ToString());
-                xmlWriter.WriteElementString("TryToForwardPort", this.tryToForwardPort.ToString());
-                xmlWriter.WriteElementString("GenerateThumbnails", this.generateThumbnails.ToString());
-                xmlWriter.WriteElementString("CultureName", this.cultureInfo == null ? null : this.cultureInfo.Name);
+                    xmlWriter.WriteElementString("Udn", this.udn.ToString());
+                    xmlWriter.WriteElementString("FriendlyName", this.friendlyName);
+                    xmlWriter.WriteElementString("MinimizeToTray", this.minimizeToTray.ToString());
+                    xmlWriter.WriteElementString("TryToForwardPort", this.tryToForwardPort.ToString());
+                    xmlWriter.WriteElementString("GenerateThumbnails", this.generateThumbnails.ToString());
+                    xmlWriter.WriteElementString("CultureName", this.cultureInfo == null ? null : this.cultureInfo.Name);
 
-                xmlWriter.WriteStartElement("PreferredDsDemux");
-                foreach (Guid guid in this.prefDsDemux)
-                    xmlWriter.WriteElementString("guid", guid.ToString());
-                xmlWriter.WriteEndElement();
+                    xmlWriter.WriteStartElement("PreferredDsDemux");
+                    foreach (Guid guid in this.prefDsDemux)
+                        xmlWriter.WriteElementString("guid", guid.ToString());
+                    xmlWriter.WriteEndElement();
 
-                this.server.SaveSettings(xmlWriter);
+                    this.server.SaveSettings(xmlWriter);
 
-                this.hlsManager.SaveSettings(xmlWriter);
+                    this.hlsManager.SaveSettings(xmlWriter);
 
-                this.itemManager.SaveSettings(xmlWriter);
+                    this.itemManager.SaveSettings(xmlWriter);
 
-                xmlWriter.WriteEndElement();
-                xmlWriter.WriteEndDocument();
+                    xmlWriter.WriteEndElement();
+                    xmlWriter.WriteEndDocument();
+                }
             }
+            catch { return false; }
 
             this.settingsChanged = false;
+
+            return true;
         }
 
         public string GetPrefDsDemux()
@@ -308,6 +334,20 @@ namespace HomeMediaCenter
 
             if (this.generateThumbnails && !Directory.Exists(this.thumbnailsPath))
                 Directory.CreateDirectory(this.thumbnailsPath);
+
+            try
+            {
+                //Osetrenie chyby ffdshow pod inym uctom, napr. Network Service
+                string ffdshowPath = "HKEY_CURRENT_USER\\Software\\GNU\\ffdshow" + (Environment.Is64BitProcess ? "64" : string.Empty);
+
+                if ((int?)Microsoft.Win32.Registry.GetValue(ffdshowPath, "isWhitelist", 1) != 0)
+                    Microsoft.Win32.Registry.SetValue(ffdshowPath, "isWhitelist", 0);
+                if ((int?)Microsoft.Win32.Registry.GetValue(ffdshowPath + "_raw", "isWhitelist", 1) != 0)
+                    Microsoft.Win32.Registry.SetValue(ffdshowPath + "_raw", "isWhitelist", 0);
+                if ((int?)Microsoft.Win32.Registry.GetValue(ffdshowPath + "_audio", "isWhitelist", 1) != 0)
+                    Microsoft.Win32.Registry.SetValue(ffdshowPath + "_audio", "isWhitelist", 0);
+            }
+            catch { }
 
             this.itemManager.Start();
             this.hlsManager.Start();

@@ -267,6 +267,7 @@ namespace DSWrapper
 	void DSEncoder::StartEncode(DWORD msTimeout)
 	{
 		HRESULT hr = S_OK;
+		DWORD phase = 0;
 
 		//Obmedzenie maximalneho casu enkodovania - ak je msTimeout nenulove
 		DWORD encStartTick = GetTickCount();
@@ -300,6 +301,7 @@ namespace DSWrapper
 		CHECK_HR(hr = this->m_containerType->GetWriter(this->m_outputStream, this->m_graphBuilder, &writerFilter));
 		writerPin = GetFirstPin(writerFilter, PINDIR_INPUT);
 
+		phase++;
 		//Nastavi spojenie decoder -> coder -> muxer -> writer
 		CHECK_HR(hr = this->m_containerType->ConfigureContainer(this->m_graphBuilder, videoPin, audioPin, subtitlePin, writerPin, &mediaSeekingMux));
 		if (mediaSeekingMux == NULL)
@@ -337,7 +339,9 @@ namespace DSWrapper
 		if (endTime <= 0)
 			mediaSeeking->GetDuration(&endTime);
 
+		phase++;
 		CHECK_SUCCEED(hr = mediaControl->Run());
+		phase++;
 
 		this->m_continueEncode = TRUE;
 		while (this->m_continueEncode)
@@ -409,6 +413,12 @@ namespace DSWrapper
 				throw gcnew DSException(L"No combination of intermediate filters could be found to make the connection", hr);
 			if (hr == RPC_E_TIMEOUT)
 				throw gcnew DSException(L"This operation returned because the time-out period expired", hr);
+			if (phase == 0)
+				throw gcnew DSException(L"Exception while initializing filter graph", hr);
+			if (phase == 1)
+				throw gcnew DSException(L"Exception while configuring filter graph", hr);
+			if (phase == 2)
+				throw gcnew DSException(L"Failed to run filter graph", hr);
 			throw gcnew DSException(L"Unable to recode entire input", hr);
 		}
 	}

@@ -250,7 +250,7 @@ namespace HomeMediaCenter
                 this.Album, this.Genre, this.HasThumbnail.HasValue && this.HasThumbnail.Value, System.IO.Path.GetExtension(this.Path));
         }
 
-        public override void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams)
+        public override void GetWebPlayer(XmlWriter xmlWriter, ItemManager manager, Dictionary<string, string> urlParams)
         {
             WriteHTMLPlayer(xmlWriter, this.Id.ToString(), this.GetDuration(), urlParams);
         }

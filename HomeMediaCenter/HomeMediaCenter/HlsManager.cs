@@ -37,6 +37,11 @@ namespace HomeMediaCenter
             get { return this.maxPlaylistItems; }
         }
 
+        public uint DefaultSegmentTime
+        {
+            get { return this.defaultSegmentTime; }
+        }
+
         public void Start()
         {
             if (this.collectorThread == null)
