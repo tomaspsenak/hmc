@@ -77,7 +77,12 @@ namespace HomeMediaCenter
             }
         }
 
-        public UpnpServer Server
+        internal UpnpServer Server
+        {
+            get { return this.server; }
+        }
+
+        public Interfaces.IUpnpServer IServer
         {
             get { return this.server; }
         }
@@ -92,7 +97,7 @@ namespace HomeMediaCenter
             get { return this.stopping; }
         }
 
-        public CultureInfo CultureInfo
+        internal CultureInfo CultureInfo
         {
             get { return this.cultureInfo; }
             set
@@ -101,6 +106,19 @@ namespace HomeMediaCenter
 
                 this.cultureInfo = value;
                 SettingsChanged();
+            }
+        }
+
+        public string CultureInfoName
+        {
+            get
+            {
+                CultureInfo ci = this.cultureInfo;
+                return (ci == null) ? null : ci.Name;
+            }
+            set
+            {
+                CultureInfo = (value == null) ? null : new System.Globalization.CultureInfo(value);
             }
         }
 

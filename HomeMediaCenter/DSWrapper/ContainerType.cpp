@@ -199,17 +199,36 @@ namespace DSWrapper
 			else if (this->m_intSubtitles || this->m_width > 0 || this->m_height > 0)
 			{
 				//CLSID_FFDSHOW nepodporuje typy ako RGB32,.. - vtedy treba pouzit CLSID_FFDSHOWRaw
-				CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOW, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+				if (CoCreateInstance(CLSID_FFDSHOW, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder) != S_OK)
+				{
+					//Chyba pri vytvoreni filtra moze byt sposobena chybajucim klucom isWhitelist
+					SAFE_RELEASE(ffVideoDecoder);
+					try
+					{
+						#ifdef _M_X64
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64", "isWhitelist", safe_cast<System::Object^>(0));
+						#else
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow", "isWhitelist", safe_cast<System::Object^>(0));
+						#endif
+					}
+					catch (System::Exception ^) {  }
+
+					CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOW, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+				}
 				CHECK_SUCCEED(hr = graphBuilder->AddFilter(ffVideoDecoder, NULL));
 
 				if (this->m_intSubtitles)
 				{
 					//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
-					#ifdef _M_X64
-						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64\\default", "isSubtitles", 1);
-					#else
-						Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow\\default", "isSubtitles", 1);
-					#endif
+					try
+					{
+						#ifdef _M_X64
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64\\default", "isSubtitles", 1);
+						#else
+							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow\\default", "isSubtitles", 1);
+						#endif
+					}
+					catch (System::Exception ^) { }
 				}
 
 				tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);
@@ -225,17 +244,37 @@ namespace DSWrapper
 					SAFE_RELEASE(ffVideoDecoder);
 					SAFE_RELEASE(tempPin);
 
-					CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOWRaw, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+					if (CoCreateInstance(CLSID_FFDSHOWRaw, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder) != S_OK)
+					{
+						//Chyba pri vytvoreni filtra moze byt sposobena chybajucim klucom isWhitelist
+						SAFE_RELEASE(ffVideoDecoder);
+
+						try
+						{
+							#ifdef _M_X64
+								Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw", "isWhitelist", safe_cast<System::Object^>(0));
+							#else
+								Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw", "isWhitelist", safe_cast<System::Object^>(0));
+							#endif
+						}
+						catch (System::Exception ^) {  }
+
+						CHECK_HR(hr = CoCreateInstance(CLSID_FFDSHOWRaw, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (void**)&ffVideoDecoder));
+					}
 					CHECK_SUCCEED(hr = graphBuilder->AddFilter(ffVideoDecoder, NULL));
 
 					if (this->m_intSubtitles)
 					{
-						//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
-						#ifdef _M_X64
-							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw\\default", "isSubtitles", 1);
-						#else
-							Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "isSubtitles", 1);
-						#endif
+						try
+						{
+							//Problem s novsim ffdshow - titulkovy pin funguje iba ked su titulky zapnute
+							#ifdef _M_X64
+								Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow64_raw\\default", "isSubtitles", 1);
+							#else
+								Microsoft::Win32::Registry::SetValue(L"HKEY_CURRENT_USER\\Software\\GNU\\ffdshow_raw\\default", "isSubtitles", 1);
+							#endif
+						}
+						catch (System::Exception ^) { }
 					}
 
 					tempPin = DSEncoder::GetFirstPin(ffVideoDecoder, PINDIR_INPUT);

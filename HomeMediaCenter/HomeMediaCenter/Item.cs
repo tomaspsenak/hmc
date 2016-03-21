@@ -118,7 +118,7 @@ namespace HomeMediaCenter
 
         public virtual void BrowseWebDirectChildren(XmlWriter xmlWriter, MediaSettings settings, string idParams) { }
 
-        public virtual void GetWebPlayer(XmlWriter xmlWriter, Dictionary<string, string> urlParams) { }
+        public virtual void GetWebPlayer(XmlWriter xmlWriter, ItemManager manager, Dictionary<string, string> urlParams) { }
 
         public abstract bool IsType(MediaType type);
 

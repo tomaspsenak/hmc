@@ -357,4 +357,34 @@
   <data name="Copy" xml:space="preserve">
     <value>Copy</value>
   </data>
+  <data name="AccessIsDenied" xml:space="preserve">
+    <value>Access to the directory is denied. Please check your permissions</value>
+  </data>
+  <data name="Console" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="ConnectingToService" xml:space="preserve">
+    <value>Connecting to service</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>Starting application</value>
+  </data>
+  <data name="StartingService" xml:space="preserve">
+    <value>Starting service</value>
+  </data>
+  <data name="UnableToSaveConfigFile" xml:space="preserve">
+    <value>Unable to save configuration file</value>
+  </data>
+  <data name="ConnectionToServiceLost" xml:space="preserve">
+    <value>Connection to service lost</value>
+  </data>
+  <data name="TryToRestartApp" xml:space="preserve">
+    <value>Please try to restart application</value>
+  </data>
+  <data name="UnableToConnectService" xml:space="preserve">
+    <value>Unable to connect to service</value>
+  </data>
+  <data name="ApplicationWillBeClosed" xml:space="preserve">
+    <value>The application will be closed</value>
+  </data>
 </root>

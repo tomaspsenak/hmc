@@ -7,16 +7,16 @@ using System.Collections.ObjectModel;
 
 namespace HomeMediaCenter
 {
-    public class MediaSettings
+    public class MediaSettings : Interfaces.IMediaSettings
     {
-        public class MediaSettingsBase
+        public class MediaSettingBase
         {
             protected readonly string prefix;
             protected readonly MediaServerDevice device;
 
             private ReadOnlyCollection<EncoderBuilder> encode;
 
-            public MediaSettingsBase(MediaServerDevice device, string prefix, params EncoderBuilder[] encode)
+            public MediaSettingBase(MediaServerDevice device, string prefix, params EncoderBuilder[] encode)
             {
                 this.prefix = prefix;
                 this.device = device;
@@ -27,13 +27,26 @@ namespace HomeMediaCenter
             public ReadOnlyCollection<EncoderBuilder> Encode
             {
                 get { return this.encode; }
-                set
-                {
-                    this.device.CheckStopped();
+            }
 
-                    this.encode = value;
-                    this.device.SettingsChanged();
-                }
+            public string[] GetEncodeStrings()
+            {
+                return this.encode.Select(a => a.GetParamString()).ToArray();
+            }
+
+            public void SetEncodeStrings(string[] encode)
+            {
+                if (encode == null)
+                    return;
+
+                this.device.CheckStopped();
+
+                this.encode = encode.Select(delegate(string a) {
+                    try { return EncoderBuilder.GetEncoder(a); }
+                    catch { return null; }
+                }).Where(a => (a != null)).ToList().AsReadOnly();
+
+                this.device.SettingsChanged();
             }
 
             public void SaveSettings(XmlWriter xmlWriter)
@@ -62,7 +75,7 @@ namespace HomeMediaCenter
             protected virtual void LoadSpecificSettings(XmlDocument xmlReader) { }
         }
 
-        public class MediaSettingsIMG : MediaSettingsBase
+        public class MediaSettingsIMG : MediaSettingBase
         {
             private bool nativeFile;
             private string fileFeature;
@@ -175,7 +188,7 @@ namespace HomeMediaCenter
         private readonly MediaSettingsAV audio;
         private readonly MediaSettingsIMG image;
         private readonly MediaSettingsAV video;
-        private readonly MediaSettingsBase stream;
+        private readonly MediaSettingBase stream;
 
         public MediaSettings(MediaServerDevice upnpDevice)
         {
@@ -199,7 +212,7 @@ namespace HomeMediaCenter
                 "DLNA.ORG_OP=00;DLNA.ORG_CI=1;DLNA.ORG_FLAGS=01500000000000000000000000000000",
                 EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25&obufsize=2048"));
 
-            this.stream = new MediaSettingsBase(upnpDevice, "StreamSettings",
+            this.stream = new MediaSettingBase(upnpDevice, "StreamSettings",
                 EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=3000&audbitrate=128&width=720&height=576&fps=25&obufsize=2048"),
                 EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=5000&audbitrate=128&width=1280&height=768&fps=25&audio=0&obufsize=2048"),
                 EncoderBuilder.GetEncoder("&codec=mpeg2_ps&vidbitrate=8000&audbitrate=128&width=1920&height=1080&fps=25&audio=0&obufsize=2048"),
@@ -221,7 +234,7 @@ namespace HomeMediaCenter
             get { return this.video; }
         }
 
-        public MediaSettingsBase Stream
+        public MediaSettingBase Stream
         {
             get { return this.stream; }
         }
@@ -240,6 +253,52 @@ namespace HomeMediaCenter
             this.image.LoadSettings(xmlReader);
             this.video.LoadSettings(xmlReader);
             this.stream.LoadSettings(xmlReader);
+        }
+
+        public string[] GetEncodeStrings(Interfaces.EncodeType type)
+        {
+            switch (type)
+            {
+                case Interfaces.EncodeType.Audio: return this.audio.GetEncodeStrings();
+                case Interfaces.EncodeType.Image: return this.image.GetEncodeStrings();
+                case Interfaces.EncodeType.Video: return this.video.GetEncodeStrings();
+                case Interfaces.EncodeType.Stream: return this.stream.GetEncodeStrings();
+                default: return null;
+            }
+        }
+
+        public void SetEncodeStrings(Interfaces.EncodeType type, string[] encode)
+        {
+            switch (type)
+            {
+                case Interfaces.EncodeType.Audio: this.audio.SetEncodeStrings(encode); return;
+                case Interfaces.EncodeType.Image: this.image.SetEncodeStrings(encode); return;
+                case Interfaces.EncodeType.Video: this.video.SetEncodeStrings(encode); return;
+                case Interfaces.EncodeType.Stream: this.stream.SetEncodeStrings(encode); return;
+                default: return;
+            }
+        }
+
+        public bool GetNativeFile(Interfaces.EncodeType type)
+        {
+            switch (type)
+            {
+                case Interfaces.EncodeType.Audio: return this.audio.NativeFile;
+                case Interfaces.EncodeType.Image: return this.image.NativeFile;
+                case Interfaces.EncodeType.Video: return this.video.NativeFile;
+                default: return false;
+            }
+        }
+
+        public void SetNativeFile(Interfaces.EncodeType type, bool value)
+        {
+            switch (type)
+            {
+                case Interfaces.EncodeType.Audio: this.audio.NativeFile = value; return;
+                case Interfaces.EncodeType.Image: this.image.NativeFile = value; return;
+                case Interfaces.EncodeType.Video: this.video.NativeFile = value; return;
+                default: return;
+            }
         }
     }
 }

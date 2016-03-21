@@ -15,6 +15,7 @@ namespace HomeMediaCenter
         private Thread[] listenerThreads;
         private Timer[] notifyTimers;
         private MySocket[] sockets;
+        private Timer delayedNetworkChangeTimer;
 
         private readonly Random rn = new Random();
         private readonly int maxAge = 1800;
@@ -39,6 +40,8 @@ namespace HomeMediaCenter
             {
                 if (this.listenerThreads == null)
                 {
+                    this.delayedNetworkChangeTimer = new Timer(new TimerCallback(OnDelayedNetworkChangTimeout), null, Timeout.Infinite, Timeout.Infinite);
+
                     this.sockets = GetSockets().ToArray();
 
                     this.listenerThreads = new Thread[this.sockets.Length];
@@ -66,6 +69,7 @@ namespace HomeMediaCenter
             {
                 if (this.listenerThreads != null)
                 {
+                    this.delayedNetworkChangeTimer.Dispose();
                     foreach (Timer timer in this.notifyTimers)
                         timer.Dispose();
 
@@ -79,6 +83,7 @@ namespace HomeMediaCenter
                     this.sockets = null;
                     this.listenerThreads = null;
                     this.notifyTimers = null;
+                    this.delayedNetworkChangeTimer = null;
                 }
             }
         }
@@ -86,6 +91,18 @@ namespace HomeMediaCenter
         private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
         {
             //Udalost sa spusta na inom vlakne
+            lock (this)
+            {
+                if (this.listenerThreads == null)
+                    return;
+
+                //Zjednot udalosti do jednej ak sa odohraju v priebehu 5000ms
+                this.delayedNetworkChangeTimer.Change(5000, Timeout.Infinite);
+            }
+        }
+
+        private void OnDelayedNetworkChangTimeout(object socketObj)
+        {
             lock (this)
             {
                 if (this.listenerThreads == null)

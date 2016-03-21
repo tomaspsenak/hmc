@@ -12,9 +12,9 @@ namespace HomeMediaCenterGUI
 {
     public partial class StreamSourcesForm : Form
     {
-        private BindingListStreamSources source;
+        private StreamSourcesBindingList source;
 
-        public StreamSourcesForm(BindingListStreamSources source)
+        public StreamSourcesForm(StreamSourcesBindingList source)
         {
             this.source = source;
 
@@ -41,7 +41,7 @@ namespace HomeMediaCenterGUI
         {
             foreach (DataGridViewRow row in this.streamsDataGrid.SelectedRows.OfType<DataGridViewRow>())
             {
-                this.source.Remove((ItemContainerStreamCustom)row.DataBoundItem);
+                this.source.Remove((StreamSourcesItem)row.DataBoundItem);
             }
         }
     }

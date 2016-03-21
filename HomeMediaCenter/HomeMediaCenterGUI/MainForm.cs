@@ -7,16 +7,19 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using HomeMediaCenter;
+using HomeMediaCenter.Interfaces;
 using System.Runtime.Remoting.Messaging;
 using System.IO;
 using System.Net;
 using Microsoft.Win32;
+using System.ServiceModel;
 
 namespace HomeMediaCenterGUI
 {
     public partial class MainForm : Form
     {
-        private readonly MediaServerDevice mediaCenter;
+        private readonly SplashScreen splashScreen;
+        private readonly IMediaServerDevice mediaCenter;
         private readonly ToolTip mainToolTip = new ToolTip();
         private readonly BackgroundWorker filtersWorker = new BackgroundWorker();
 
@@ -28,20 +31,28 @@ namespace HomeMediaCenterGUI
         private readonly string regRunName = "HomeMediaCenter";
         private readonly string[] supportedLanguages = new string[] { null, "en-US", "sk-SK", "da-DK" };
 
-        public MainForm()
+        public MainForm(SplashScreen splashScreen, bool serviceMode)
         {
+            this.splashScreen = splashScreen;
+
             this.filtersWorker.DoWork += new DoWorkEventHandler(filtersWorker_DoWork);
             this.filtersWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(filtersWorker_RunWorkerCompleted);
 
-            DirectoryInfo di = Directory.CreateDirectory(Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Home Media Center"));
-
-            this.mediaCenter = new MediaServerDevice(di.FullName);
+            if (serviceMode)
+            {
+                this.mediaCenter = new ConfigClientService();
+            }
+            else
+            {
+                DirectoryInfo di = Directory.CreateDirectory(Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Home Media Center"));
+                this.mediaCenter = new MediaServerDevice(di.FullName);
+            }
 
             this.logEventHandler = new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
             this.mediaCenter.AsyncStartEnd += new EventHandler<ExceptionEventArgs>(mediaCenter_AsyncStartEnd);
             this.mediaCenter.AsyncStopEnd += new EventHandler<ExceptionEventArgs>(mediaCenter_AsyncStopEnd);
-            this.mediaCenter.ItemManager.AsyncBuildDatabaseStart += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseStart);
-            this.mediaCenter.ItemManager.AsyncBuildDatabaseEnd += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseEnd);
+            this.mediaCenter.IItemManager.AsyncBuildDatabaseStart += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseStart);
+            this.mediaCenter.IItemManager.AsyncBuildDatabaseEnd += new EventHandler<ExceptionEventArgs>(ItemManager_AsyncBuildDatabaseEnd);
 
             InitializeComponent();
         }
@@ -115,12 +126,31 @@ namespace HomeMediaCenterGUI
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            //Zobrazenie v tray oblasti
+            if (Program.HasBackgroundArg())
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.ShowInTaskbar = false;
+                this.mainNotifyIcon.Visible = true;
+            }
+
+            //Zisti ci sa spusta pri starte
+            try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
+            catch { this.startupCheckBox.Checked = false; }
+
+            //Nacitaj nastavenia - ak neexistuju je vyhlasena chyba
+            //Pri sluzbe procedura nerobi nic
             try { this.mediaCenter.LoadSettings(); }
+            catch (CommunicationException) { } //Neskor sa spracuje tato vynimka
             catch { MessageBox.Show(this, LanguageResource.ConfigCorrupted, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 
             //InitLanguage az po LoadSettings - nastavi sa jazyk
-            this.mediaCenter.SetCurrentThreadCulture();
+            try { this.mediaCenter.SetCurrentThreadCulture(); }
+            catch (CommunicationException) { } //Neskor sa spracuje tato vynimka
+
             InitLanguage();
+
+            this.Text = "Home Media Center" + (this.mediaCenter.IsWinService ? " - " + LanguageResource.Console : string.Empty);
 
             string str0 = System.Environment.Is64BitProcess ? "x64" : "x86";
 
@@ -133,25 +163,30 @@ namespace HomeMediaCenterGUI
             catch { str2 = string.Empty; }
 
             string str3 = System.Reflection.Assembly.GetAssembly(typeof(HomeMediaCenter.MediaServerDevice)).FullName;
-            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2015\r\ntomaspsenak@gmail.com\r\n{1}\r\n----------------------------------------------\r\n{2}\r\n{3}\r\n{4}",
+            this.aboutLabel.Text = string.Format("Home Media Center {0}\r\nTomáš Pšenák © 2016\r\ntomaspsenak@gmail.com\r\n{1}\r\n----------------------------------------------\r\n{2}\r\n{3}\r\n{4}",
                 str0, LanguageResource.TranslatedBy, str1, str2, str3);
 
-            try { this.startupCheckBox.Checked = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(this.regRunName) != null; }
-            catch { this.startupCheckBox.Checked = false; }
-
-            this.dirListBox.DataSource = this.mediaCenter.ItemManager.GetDirectories();
-            this.minimizeCheckBox.Checked = this.mediaCenter.MinimizeToTray;
-
-            StartMediaCenterAsync();
-
-            if (Environment.GetCommandLineArgs().Contains("/b", StringComparer.OrdinalIgnoreCase))
+            try
             {
-                this.WindowState = FormWindowState.Minimized;
-                this.ShowInTaskbar = false;
-                this.mainNotifyIcon.Visible = true;
+                this.dirListBox.DataSource = this.mediaCenter.IItemManager.GetDirectories();
+                this.minimizeCheckBox.Checked = this.mediaCenter.MinimizeToTray;
+
+                if (this.mediaCenter.IsWinService)
+                    SetStatusText(this.mediaCenter.Started);
+                else
+                    StartMediaCenterAsync();
+            }
+            catch (CommunicationException)
+            {
+                this.splashScreen.SetStatusLabel(LanguageResource.UnableToConnectService + ". " + LanguageResource.ApplicationWillBeClosed);
+                System.Threading.Thread.Sleep(5000);
+                Close();
+                return;
             }
 
             this.filtersWorker.RunWorkerAsync();
+
+            this.splashScreen.Close(this);
         }
 
         private void filtersWorker_DoWork(object sender, DoWorkEventArgs e)
@@ -186,10 +221,15 @@ namespace HomeMediaCenterGUI
             //Skryje form - na pozadi este korektne ukonci server a ulozi nastavenia
             Hide();
 
-            this.mediaCenter.SaveSettings();
+            try
+            {
+                if (!this.mediaCenter.SaveSettings())
+                    MessageBox.Show(this, LanguageResource.UnableToSaveConfigFile, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
 
-            if (!this.mediaCenter.Started)
-                return;
+                if (this.mediaCenter.IsWinService || !this.mediaCenter.Started)
+                    return;
+            }
+            catch (CommunicationException) { return; }
 
             e.Cancel = true;
 
@@ -199,9 +239,26 @@ namespace HomeMediaCenterGUI
         private void addDirButton_Click(object sender, EventArgs e)
         {
             AddDirForm adf = new AddDirForm();
-            if (adf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            while (true)
             {
-                this.dirListBox.DataSource = this.mediaCenter.ItemManager.AddDirectory(adf.PathText, adf.TitleText);
+                if (adf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                {
+                    try
+                    {
+                        if (this.mediaCenter.IItemManager.CheckDirectoryPermission(adf.PathText))
+                        {
+                            this.dirListBox.DataSource = this.mediaCenter.IItemManager.AddDirectory(adf.PathText, adf.TitleText);
+                            return;
+                        }
+
+                        MessageBox.Show(this, LanguageResource.AccessIsDenied, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
@@ -214,9 +271,15 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            if (MessageBox.Show(this, string.Format(LanguageResource.RemoveFolderQuestion, dir), LanguageResource.Directories, 
+            if (MessageBox.Show(this, string.Format(LanguageResource.RemoveFolderQuestion, dir), LanguageResource.Directories,
                 MessageBoxButtons.YesNo) == DialogResult.Yes)
-                this.dirListBox.DataSource = this.mediaCenter.ItemManager.RemoveDirectory(dir);
+            {
+                try
+                {
+                    this.dirListBox.DataSource = this.mediaCenter.IItemManager.RemoveDirectory(dir);
+                }
+                catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
+            }
         }
 
         private void webLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -224,30 +287,43 @@ namespace HomeMediaCenterGUI
             try
             {
                 string address = "localhost";
-                System.Diagnostics.Process.Start(string.Format("http://{0}:{1}/", address, this.mediaCenter.Server.HttpPort));
+                System.Diagnostics.Process.Start(string.Format("http://{0}:{1}/", address, this.mediaCenter.IServer.HttpPort));
             }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
             catch { }
         }
 
         private void startButton_Click(object sender, EventArgs e)
         {
-            if (this.mediaCenter.Started)
-                StopMediaCenterAsync(AfterStopped.Nothing);
-            else
-                StartMediaCenterAsync();
+            try
+            {
+                if (this.mediaCenter.Started)
+                    StopMediaCenterAsync(AfterStopped.Nothing);
+                else
+                    StartMediaCenterAsync();
+            }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
         }
 
         private void buildDatabaseButton_Click(object sender, EventArgs e)
         {
-            this.mediaCenter.ItemManager.BuildDatabaseAsync();
+            try
+            {
+                this.mediaCenter.IItemManager.BuildDatabaseAsync();
+            }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
         }
 
         private void logCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            if (this.logCheckBox.Checked)
-                this.mediaCenter.LogEvent += new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
-            else
-                this.mediaCenter.LogEvent -= new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
+            try
+            {
+                if (this.logCheckBox.Checked)
+                    this.mediaCenter.LogEvent += new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
+                else
+                    this.mediaCenter.LogEvent -= new EventHandler<LogEventArgs>(mediaCenter_LogEvent);
+            }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
         }
 
         private void mediaCenter_LogEvent(object sender, LogEventArgs e)
@@ -297,16 +373,15 @@ namespace HomeMediaCenterGUI
 
             if (e.Exception != null)
             {
-                this.statusTextLabel.Text = LanguageResource.Stopped;
-                this.statusTextLabel.ForeColor = Color.Red;
+                SetStatusText(false);
 
                 MessageBox.Show(this, e.Exception.Message, LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            this.startButton.Text = LanguageResource.Stop;
+            SetStatusText(true);
 
-            this.mediaCenter.ItemManager.BuildDatabaseAsync();
+            this.mediaCenter.IItemManager.BuildDatabaseAsync();
         }
 
         private void ItemManager_AsyncBuildDatabaseStart(object sender, ExceptionEventArgs e)
@@ -329,16 +404,7 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            if (this.mediaCenter.Started)
-            {
-                this.statusTextLabel.Text = LanguageResource.Started;
-                this.statusTextLabel.ForeColor = Color.Green;
-            }
-            else
-            {
-                this.statusTextLabel.Text = LanguageResource.Stopped;
-                this.statusTextLabel.ForeColor = Color.Red;
-            }
+            SetStatusText(this.mediaCenter.Started);
 
             if (e.Exception != null)
             {
@@ -362,10 +428,7 @@ namespace HomeMediaCenterGUI
                 return;
             }
 
-            this.startButton.Text = LanguageResource.Start;
-
-            this.statusTextLabel.Text = LanguageResource.Stopped;
-            this.statusTextLabel.ForeColor = Color.Red;
+            SetStatusText(false);
 
             if (this.afterStopped == AfterStopped.Close)
             {
@@ -379,6 +442,22 @@ namespace HomeMediaCenterGUI
             else
             {
                 SetButtonEnabled(true);
+            }
+        }
+
+        private void SetStatusText(bool started)
+        {
+            if (started)
+            {
+                this.statusTextLabel.Text = LanguageResource.Started;
+                this.statusTextLabel.ForeColor = Color.Green;
+                this.startButton.Text = LanguageResource.Stop;
+            }
+            else
+            {
+                this.statusTextLabel.Text = LanguageResource.Stopped;
+                this.statusTextLabel.ForeColor = Color.Red;
+                this.startButton.Text = LanguageResource.Start;
             }
         }
 
@@ -407,45 +486,50 @@ namespace HomeMediaCenterGUI
         {
             if (this.mainTabControl.SelectedTab == this.settingsTabPage)
             {
-                string langName = (this.mediaCenter.CultureInfo == null) ? null : this.mediaCenter.CultureInfo.Name;
-                for (int i = 0; i < this.supportedLanguages.Length; i++)
+                try
                 {
-                    if (this.supportedLanguages[i] == langName)
+                    string langName = this.mediaCenter.CultureInfoName;
+                    for (int i = 0; i < this.supportedLanguages.Length; i++)
                     {
-                        this.languageComboBox.SelectedIndex = i;
-                        break;
+                        if (this.supportedLanguages[i] == langName)
+                        {
+                            this.languageComboBox.SelectedIndex = i;
+                            break;
+                        }
                     }
+
+                    this.friendlyNameText.Text = this.mediaCenter.FriendlyName;
+                    this.portText.Text = this.mediaCenter.IServer.HttpPort.ToString();
+                    this.tryToForwardPortCheckBox.Checked = this.mediaCenter.TryToForwardPort;
+
+                    this.webcamStreamingCheck.Checked = this.mediaCenter.IItemManager.EnableWebcamStreaming;
+                    this.desktopStreamingCheck.Checked = this.mediaCenter.IItemManager.EnableDesktopStreaming;
+                    this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.IItemManager.RealTimeDatabaseRefresh;
+                    this.showHiddenCheckBox.Checked = this.mediaCenter.IItemManager.ShowHiddenFiles;
+                    this.generateThumbnailsCheckBox.Checked = this.mediaCenter.GenerateThumbnails;
+
+                    IMediaSettings settings = this.mediaCenter.IItemManager.IMediaSettings;
+
+                    this.audioNativeCheck.Checked = settings.GetNativeFile(EncodeType.Audio);
+                    this.audioParamCombo.Items.Clear();
+                    this.audioParamCombo.Items.AddRange(settings.GetEncodeStrings(EncodeType.Audio));
+                    this.audioParamCombo.SelectedItem = this.audioParamCombo.Items.Cast<string>().FirstOrDefault();
+
+                    this.imageNativeCheck.Checked = settings.GetNativeFile(EncodeType.Image);
+                    this.imageParamCombo.Items.Clear();
+                    this.imageParamCombo.Items.AddRange(settings.GetEncodeStrings(EncodeType.Image));
+                    this.imageParamCombo.SelectedItem = this.imageParamCombo.Items.Cast<string>().FirstOrDefault();
+
+                    this.videoNativeCheck.Checked = settings.GetNativeFile(EncodeType.Video);
+                    this.videoParamCombo.Items.Clear();
+                    this.videoParamCombo.Items.AddRange(settings.GetEncodeStrings(EncodeType.Video));
+                    this.videoParamCombo.SelectedItem = this.videoParamCombo.Items.Cast<string>().FirstOrDefault();
+
+                    this.videoStreamParamCombo.Items.Clear();
+                    this.videoStreamParamCombo.Items.AddRange(settings.GetEncodeStrings(EncodeType.Stream));
+                    this.videoStreamParamCombo.SelectedItem = this.videoStreamParamCombo.Items.Cast<string>().FirstOrDefault();
                 }
-
-                this.friendlyNameText.Text = this.mediaCenter.FriendlyName;
-                this.portText.Text = this.mediaCenter.Server.HttpPort.ToString();
-                this.tryToForwardPortCheckBox.Checked = this.mediaCenter.TryToForwardPort;
-
-                this.webcamStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableWebcamStreaming;
-                this.desktopStreamingCheck.Checked = this.mediaCenter.ItemManager.EnableDesktopStreaming;
-                this.realTimeDatabaseRefreshCheckBox.Checked = this.mediaCenter.ItemManager.RealTimeDatabaseRefresh;
-                this.showHiddenCheckBox.Checked = this.mediaCenter.ItemManager.ShowHiddenFiles;
-                this.generateThumbnailsCheckBox.Checked = this.mediaCenter.GenerateThumbnails;
-
-                MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
-
-                this.audioNativeCheck.Checked = settings.Audio.NativeFile;
-                this.audioParamCombo.Items.Clear();
-                this.audioParamCombo.Items.AddRange(settings.Audio.Encode.Select(a => a.GetParamString()).ToArray());
-                this.audioParamCombo.SelectedItem = this.audioParamCombo.Items.Cast<string>().FirstOrDefault();
-
-                this.imageNativeCheck.Checked = settings.Image.NativeFile;
-                this.imageParamCombo.Items.Clear();
-                this.imageParamCombo.Items.AddRange(settings.Image.Encode.Select(a => a.GetParamString()).ToArray());
-                this.imageParamCombo.SelectedItem = this.imageParamCombo.Items.Cast<string>().FirstOrDefault();
-
-                this.videoNativeCheck.Checked = settings.Video.NativeFile;
-                this.videoParamCombo.Items.Clear();
-                this.videoParamCombo.Items.AddRange(settings.Video.Encode.Select(a => a.GetParamString()).ToArray());
-                this.videoParamCombo.SelectedItem = this.videoParamCombo.Items.Cast<string>().FirstOrDefault();
-                this.videoStreamParamCombo.Items.Clear();
-                this.videoStreamParamCombo.Items.AddRange(settings.Stream.Encode.Select(a => a.GetParamString()).ToArray());
-                this.videoStreamParamCombo.SelectedItem = this.videoStreamParamCombo.Items.Cast<string>().FirstOrDefault();
+                catch (CommunicationException) { }
             }
             else if (this.mainTabControl.SelectedTab == this.converterTabPage)
             {
@@ -455,42 +539,46 @@ namespace HomeMediaCenterGUI
 
         private void applySettingsButton_Click(object sender, EventArgs e)
         {
-            if (this.mediaCenter.Started)
+            try
             {
-                StopMediaCenterAsync(AfterStopped.LoadSettings);
+                if (this.mediaCenter.Started)
+                {
+                    StopMediaCenterAsync(AfterStopped.LoadSettings);
+                }
+                else
+                {
+                    ApplySettings();
+                }
             }
-            else
-            {
-                ApplySettings();
-            }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
         }
 
         private void ApplySettings()
         {
-            string language = this.supportedLanguages[this.languageComboBox.SelectedIndex];
-            this.mediaCenter.CultureInfo = (language == null) ? null : new System.Globalization.CultureInfo(language);
+            this.mediaCenter.CultureInfoName = this.supportedLanguages[this.languageComboBox.SelectedIndex];
 
             this.mediaCenter.FriendlyName = this.friendlyNameText.Text;
-            this.mediaCenter.Server.HttpPort = int.Parse(this.portText.Text);
+            this.mediaCenter.IServer.HttpPort = int.Parse(this.portText.Text);
             this.mediaCenter.TryToForwardPort = this.tryToForwardPortCheckBox.Checked;
 
-            this.mediaCenter.ItemManager.EnableWebcamStreaming = this.webcamStreamingCheck.Checked;
-            this.mediaCenter.ItemManager.EnableDesktopStreaming = this.desktopStreamingCheck.Checked;
-            this.mediaCenter.ItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
-            this.mediaCenter.ItemManager.ShowHiddenFiles = this.showHiddenCheckBox.Checked;
+            this.mediaCenter.IItemManager.EnableWebcamStreaming = this.webcamStreamingCheck.Checked;
+            this.mediaCenter.IItemManager.EnableDesktopStreaming = this.desktopStreamingCheck.Checked;
+            this.mediaCenter.IItemManager.RealTimeDatabaseRefresh = this.realTimeDatabaseRefreshCheckBox.Checked;
+            this.mediaCenter.IItemManager.ShowHiddenFiles = this.showHiddenCheckBox.Checked;
             this.mediaCenter.GenerateThumbnails = this.generateThumbnailsCheckBox.Checked;
 
-            MediaSettings settings = this.mediaCenter.ItemManager.MediaSettings;
+            IMediaSettings settings = this.mediaCenter.IItemManager.IMediaSettings;
 
-            settings.Audio.NativeFile = this.audioNativeCheck.Checked;
-            settings.Audio.Encode = this.audioParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
+            settings.SetNativeFile(EncodeType.Audio, this.audioNativeCheck.Checked);
+            settings.SetEncodeStrings(EncodeType.Audio, this.audioParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a).GetParamString()).ToArray());
 
-            settings.Image.NativeFile = this.imageNativeCheck.Checked;
-            settings.Image.Encode = this.imageParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
+            settings.SetNativeFile(EncodeType.Image, this.imageNativeCheck.Checked);
+            settings.SetEncodeStrings(EncodeType.Image, this.imageParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a).GetParamString()).ToArray());
 
-            settings.Video.NativeFile = this.videoNativeCheck.Checked;
-            settings.Video.Encode = this.videoParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
-            settings.Stream.Encode = this.videoStreamParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a)).ToList().AsReadOnly();
+            settings.SetNativeFile(EncodeType.Video, this.videoNativeCheck.Checked);
+            settings.SetEncodeStrings(EncodeType.Video, this.videoParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a).GetParamString()).ToArray());
+
+            settings.SetEncodeStrings(EncodeType.Stream, this.videoStreamParamCombo.Items.Cast<string>().Select(a => EncoderBuilder.GetEncoder(a).GetParamString()).ToArray());
         }
 
         private void audioParamRemoveButton_Click(object sender, EventArgs e)
@@ -672,6 +760,7 @@ namespace HomeMediaCenterGUI
             {
                 System.Diagnostics.Process.Start(this.mediaCenter.DataDirectory);
             }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
             catch { }
         }
 
@@ -686,11 +775,15 @@ namespace HomeMediaCenterGUI
 
         private void MainForm_Resize(object sender, EventArgs e)
         {
-            if (this.WindowState == FormWindowState.Minimized && this.mediaCenter.MinimizeToTray)
+            try
             {
-                this.ShowInTaskbar = false;
-                this.mainNotifyIcon.Visible = true;
+                if (this.WindowState == FormWindowState.Minimized && this.mediaCenter.MinimizeToTray)
+                {
+                    this.ShowInTaskbar = false;
+                    this.mainNotifyIcon.Visible = true;
+                }
             }
+            catch { }
         }
 
         private void mainNotifyIcon_Click(object sender, EventArgs e)
@@ -702,7 +795,11 @@ namespace HomeMediaCenterGUI
 
         private void minimizeCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            this.mediaCenter.MinimizeToTray = this.minimizeCheckBox.Checked;
+            try
+            {
+                this.mediaCenter.MinimizeToTray = this.minimizeCheckBox.Checked;
+            }
+            catch (CommunicationException) { ShowCommunicationExceptionMessage(); }
         }
 
         private void startupCheckBox_CheckedChanged(object sender, EventArgs e)
@@ -730,16 +827,17 @@ namespace HomeMediaCenterGUI
         {
             try
             {
-                using (BindingListStreamSources source = this.mediaCenter.ItemManager.GetStreamSources())
-                {
-                    StreamSourcesForm ssf = new StreamSourcesForm(source);
-                    if (ssf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
-                    {
-                        source.SubmitChanges();
+                StreamSourcesBindingList source = new StreamSourcesBindingList(this.mediaCenter.IItemManager);
+                StreamSourcesForm ssf = new StreamSourcesForm(source);
 
-                        this.mediaCenter.ItemManager.BuildDatabaseAsync("Stream", true);
-                    }
+                if (ssf.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                {
+                    source.SubmitChanges();
                 }
+            }
+            catch (CommunicationException)
+            {
+                ShowCommunicationExceptionMessage();
             }
             catch (Exception ex)
             {
@@ -756,7 +854,14 @@ namespace HomeMediaCenterGUI
             foreach (string line in this.logListBox.SelectedItems.OfType<string>())
                 sb.AppendLine(line);
 
-            Clipboard.SetText(sb.ToString());
+            if (sb.Length > 0)
+                Clipboard.SetText(sb.ToString());
+        }
+
+        private void ShowCommunicationExceptionMessage()
+        {
+            MessageBox.Show(this, LanguageResource.ConnectionToServiceLost + ". " + LanguageResource.TryToRestartApp,
+                LanguageResource.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }

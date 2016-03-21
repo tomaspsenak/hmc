@@ -12,7 +12,7 @@ using System.Data.Linq.Mapping;
 
 namespace HomeMediaCenter
 {
-    public class ItemManager
+    public class ItemManager : Interfaces.IItemManager
     {
         public class Dir
         {
@@ -55,14 +55,14 @@ namespace HomeMediaCenter
             get { return this.upnpDevice; }
         }
 
-        public MediaSettings MediaSettings
+        internal MediaSettings MediaSettings
         {
             get { return this.settings; }
         }
 
-        public object DbWriteLock
+        public Interfaces.IMediaSettings IMediaSettings
         {
-            get { return this.dbWriteLock; }
+            get { return this.settings; }
         }
 
         public bool RealTimeDatabaseRefresh
@@ -121,6 +121,14 @@ namespace HomeMediaCenter
                 this.showHiddenFiles = value;
                 this.upnpDevice.SettingsChanged();
             }
+        }
+
+        public bool CheckDirectoryPermission(string path)
+        {
+            try { System.IO.Directory.GetFiles(path); }
+            catch { return false; }
+
+            return true;
         }
 
         public string[] AddDirectory(string directory, string title)
@@ -272,28 +280,77 @@ namespace HomeMediaCenter
             }
         }
 
-        public BindingListStreamSources GetStreamSources()
+        public List<StreamSourcesItem> GetStreamSources()
         {
-            SqlCeConnection connection = null;
-            DataContext context = null;
-
             try
             {
-                connection = new SqlCeConnection(this.dbConnectionString);
-                context = new DataContext(connection);
-
-                return new BindingListStreamSources(context, this);
+                using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+                using (DataContext context = new DataContext(conn))
+                {
+                    return context.GetTable<Item>().OfType<ItemContainerStreamCustom>().Select(delegate(ItemContainerStreamCustom a) {
+                        return new StreamSourcesItem(a.Id, a.Title, a.Path);
+                    }).ToList();
+                }
             }
             catch
             {
-                if (context != null)
-                    context.Dispose();
-
-                if (connection != null)
-                    connection.Dispose();
-
-                return new BindingListStreamSources();
+                return new List<StreamSourcesItem>();
             }
+        }
+
+        public void SetStreamSources(StreamSourcesItem[] toAdd, StreamSourcesItem[] toUpdate, StreamSourcesItem[] toDelete)
+        {
+            if (toAdd == null) toAdd = new StreamSourcesItem[0];
+            if (toUpdate == null) toUpdate = new StreamSourcesItem[0];
+            if (toDelete == null) toDelete = new StreamSourcesItem[0];
+
+            using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
+            using (DataContext context = new DataContext(conn))
+            {
+                lock (this.dbWriteLock)
+                {
+                    ItemContainerStreamRoot root = context.GetTable<Item>().OfType<ItemContainerStreamRoot>().Single();
+
+                    //Pridavanie zaznamov a odstranit nevyplnene polozky
+                    context.GetTable<Item>().InsertAllOnSubmit(
+                        toAdd.Where(a => !string.IsNullOrWhiteSpace(a.Title) && !string.IsNullOrWhiteSpace(a.Path)).Select(
+                            a => new ItemContainerStreamCustom(a.Title, a.Path, root)));
+
+                    //Uprava existujucich zaznamov
+                    foreach (StreamSourcesItem item in toUpdate.Where(a => a.Id.HasValue))
+                    {
+                        ItemContainerStreamCustom updItem = root.Children.OfType<ItemContainerStreamCustom>().FirstOrDefault(a => a.Id == item.Id.Value);
+                        if (updItem == null)
+                            continue;
+
+                        if (item.Path != updItem.Path)
+                            updItem.Path = item.Path;
+
+                        if (item.Title != updItem.Title)
+                        {
+                            //Pre aktualizaciu nazvu je potrebne potomkov odstranit - pri refresh sa pridaju so spravnym nazvom
+                            updItem.RemoveMe(context, this);
+
+                            updItem.Title = item.Title;
+                        }
+                    }
+
+                    //Mazanie zaznamov
+                    foreach (StreamSourcesItem item in toDelete.Where(a => a.Id.HasValue))
+                    {
+                        ItemContainerStreamCustom delItem = root.Children.OfType<ItemContainerStreamCustom>().FirstOrDefault(a => a.Id == item.Id.Value);
+                        if (delItem == null)
+                            continue;
+
+                        context.GetTable<Item>().DeleteOnSubmit(delItem);
+                        delItem.RemoveMe(context, this);
+                    }
+
+                    context.SubmitChanges();
+                }
+            }
+
+            BuildDatabaseAsync("Stream", true);
         }
 
         internal void Start()
@@ -696,7 +753,7 @@ namespace HomeMediaCenter
                 Item item = context.GetTable<Item>().FirstOrDefault(a => a.Id == id);
                 if (item != null)
                 {
-                    item.GetWebPlayer(xmlWriter, urlParams);
+                    item.GetWebPlayer(xmlWriter, this, urlParams);
                 }
             }
         }
