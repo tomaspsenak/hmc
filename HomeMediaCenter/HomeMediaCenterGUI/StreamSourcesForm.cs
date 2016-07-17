@@ -25,8 +25,14 @@ namespace HomeMediaCenterGUI
             this.applyButton.Text = LanguageResource.Apply;
             this.streamsDataGrid.Columns[0].HeaderText = LanguageResource.Title;
             this.streamsDataGrid.Columns[1].HeaderText = LanguageResource.URLAddress;
+            this.streamsDataGrid.Columns[2].HeaderText = LanguageResource.Type;
             this.mainToolTip.SetToolTip(this.addButton, LanguageResource.Add);
             this.mainToolTip.SetToolTip(this.removeButton, LanguageResource.Remove);
+            this.mainToolTip.SetToolTip(this.typeComboBox, LanguageResource.Type);
+
+            this.typeComboBox.Items.Add(LanguageResource.Stream);
+            this.typeComboBox.Items.Add(LanguageResource.Dreambox);
+            this.typeComboBox.SelectedIndex = 0;
 
             this.streamsDataGrid.AutoGenerateColumns = false;
             this.streamsDataGrid.DataSource = source;
@@ -43,6 +49,11 @@ namespace HomeMediaCenterGUI
             {
                 this.source.Remove((StreamSourcesItem)row.DataBoundItem);
             }
+        }
+
+        private void typeComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            this.source.ActualType = (this.typeComboBox.SelectedIndex == 0) ? StreamSourcesItemType.Stream : StreamSourcesItemType.Dreambox;
         }
     }
 }

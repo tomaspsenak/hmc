@@ -11,6 +11,7 @@ namespace HomeMediaCenter
         private readonly Interfaces.IItemManager manager;
         private List<StreamSourcesItem> removedItems = new List<StreamSourcesItem>();
         private HashSet<StreamSourcesItem> updatedItems = new HashSet<StreamSourcesItem>();
+        private StreamSourcesItemType actualType = StreamSourcesItemType.Stream;
 
         public StreamSourcesBindingList() : base() { }
 
@@ -18,6 +19,11 @@ namespace HomeMediaCenter
             : base(manager.GetStreamSources())
         {
             this.manager = manager;
+        }
+
+        public StreamSourcesItemType ActualType
+        {
+            set { this.actualType = value; }
         }
 
         public void SubmitChanges()
@@ -30,7 +36,14 @@ namespace HomeMediaCenter
 
         protected override void OnListChanged(ListChangedEventArgs e)
         {
-            if (e.ListChangedType == ListChangedType.ItemChanged)
+            if (e.ListChangedType == ListChangedType.ItemAdded)
+            {
+                StreamSourcesItem item = this.Items[e.NewIndex];
+                item.Type = this.actualType;
+                if (this.actualType == StreamSourcesItemType.Dreambox)
+                    item.Path = "http://DREAMBOXIP:80";
+            }
+            else if (e.ListChangedType == ListChangedType.ItemChanged)
             {
                 StreamSourcesItem item = this.Items[e.NewIndex];
                 if (item.Id.HasValue)

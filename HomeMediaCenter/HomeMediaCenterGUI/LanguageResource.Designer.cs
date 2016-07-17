@@ -304,6 +304,15 @@ namespace HomeMediaCenterGUI {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Dreambox.
+        /// </summary>
+        internal static string Dreambox {
+            get {
+                return ResourceManager.GetString("Dreambox", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
         internal static string Edit {
@@ -822,6 +831,15 @@ namespace HomeMediaCenterGUI {
         internal static string TryToRestartApp {
             get {
                 return ResourceManager.GetString("TryToRestartApp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Type.
+        /// </summary>
+        internal static string Type {
+            get {
+                return ResourceManager.GetString("Type", resourceCulture);
             }
         }
         

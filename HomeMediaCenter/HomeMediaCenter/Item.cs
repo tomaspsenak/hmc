@@ -19,6 +19,8 @@ namespace HomeMediaCenter
     [InheritanceMapping(Code = 7, Type = typeof(ItemStream))]
     [InheritanceMapping(Code = 8, Type = typeof(ItemContainerStreamRoot))]
     [InheritanceMapping(Code = 9, Type = typeof(ItemContainerStreamCustom))]
+    [InheritanceMapping(Code = 10, Type = typeof(ItemContainerDreamboxRoot))]
+    [InheritanceMapping(Code = 11, Type = typeof(ItemContainerDreambox))]
     public abstract class Item
     {
         public const string AudioIndex = "1";
