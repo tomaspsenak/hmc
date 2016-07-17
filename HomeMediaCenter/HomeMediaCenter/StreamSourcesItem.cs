@@ -8,18 +8,29 @@ using System.ComponentModel;
 namespace HomeMediaCenter
 {
     [DataContract]
+    public enum StreamSourcesItemType
+    {
+        [EnumMember]
+        Stream,
+        [EnumMember]
+        Dreambox
+    }
+
+    [DataContract]
     public class StreamSourcesItem : INotifyPropertyChanged
     {
         private string title;
         private string path;
+        private StreamSourcesItemType type;
 
         public StreamSourcesItem() { }
 
-        public StreamSourcesItem(int id, string title, string path)
+        public StreamSourcesItem(int id, string title, string path, StreamSourcesItemType type)
         {
             this.Id = id;
             this.title = title;
             this.path = path;
+            this.type = type;
         }
 
         [DataMember]
@@ -52,6 +63,33 @@ namespace HomeMediaCenter
                 {
                     this.path = value;
                     NotifyPropertyChanged("Path");
+                }
+            }
+        }
+
+        [DataMember]
+        public StreamSourcesItemType Type
+        {
+            get { return this.type; }
+            set
+            {
+                if (this.type != value)
+                {
+                    this.type = value;
+                    NotifyPropertyChanged("Type");
+                }
+            }
+        }
+
+        public string TypeStr
+        {
+            get
+            {
+                switch (this.type)
+                {
+                    case StreamSourcesItemType.Stream: return LanguageResource.Stream;
+                    case StreamSourcesItemType.Dreambox: return LanguageResource.Dreambox;
+                    default: return string.Empty;
                 }
             }
         }

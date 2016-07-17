@@ -135,6 +135,9 @@
   <data name="Download" xml:space="preserve">
     <value>Download</value>
   </data>
+  <data name="Dreambox" xml:space="preserve">
+    <value>dreambox</value>
+  </data>
   <data name="Duration" xml:space="preserve">
     <value>duration</value>
   </data>

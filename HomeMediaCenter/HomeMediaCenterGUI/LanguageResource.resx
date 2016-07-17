@@ -387,4 +387,10 @@
   <data name="ApplicationWillBeClosed" xml:space="preserve">
     <value>The application will be closed</value>
   </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Dreambox" xml:space="preserve">
+    <value>Dreambox</value>
+  </data>
 </root>

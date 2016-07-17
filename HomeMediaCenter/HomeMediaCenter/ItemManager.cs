@@ -287,9 +287,14 @@ namespace HomeMediaCenter
                 using (SqlCeConnection conn = new SqlCeConnection(this.dbConnectionString))
                 using (DataContext context = new DataContext(conn))
                 {
-                    return context.GetTable<Item>().OfType<ItemContainerStreamCustom>().Select(delegate(ItemContainerStreamCustom a) {
-                        return new StreamSourcesItem(a.Id, a.Title, a.Path);
-                    }).ToList();
+                    ItemContainerStreamRoot root = context.GetTable<Item>().OfType<ItemContainerStreamRoot>().Single();
+
+                    return root.Children.Where(
+                        a => a.GetType() == typeof(ItemContainerStreamCustom) || a.GetType() == typeof(ItemContainerDreamboxRoot)).Select(
+                        delegate(Item a) {
+                            return new StreamSourcesItem(a.Id, a.Title, a.Path,
+                                (a.GetType() == typeof(ItemContainerStreamCustom)) ? StreamSourcesItemType.Stream : StreamSourcesItemType.Dreambox);
+                        }).ToList();
                 }
             }
             catch
@@ -313,32 +318,37 @@ namespace HomeMediaCenter
 
                     //Pridavanie zaznamov a odstranit nevyplnene polozky
                     context.GetTable<Item>().InsertAllOnSubmit(
-                        toAdd.Where(a => !string.IsNullOrWhiteSpace(a.Title) && !string.IsNullOrWhiteSpace(a.Path)).Select(
-                            a => new ItemContainerStreamCustom(a.Title, a.Path, root)));
+                        toAdd.Where(a => !string.IsNullOrWhiteSpace(a.Title) && !string.IsNullOrWhiteSpace(a.Path)).Select(delegate(StreamSourcesItem a) {
+                            if (a.Type == StreamSourcesItemType.Stream)
+                                return (Item)(new ItemContainerStreamCustom(a.Title, a.Path, root));
+                            else
+                                return (Item)(new ItemContainerDreamboxRoot(a.Title, a.Path, root));
+                        }));
 
                     //Uprava existujucich zaznamov
                     foreach (StreamSourcesItem item in toUpdate.Where(a => a.Id.HasValue))
                     {
-                        ItemContainerStreamCustom updItem = root.Children.OfType<ItemContainerStreamCustom>().FirstOrDefault(a => a.Id == item.Id.Value);
+                        Item updItem = root.Children.FirstOrDefault(a => a.Id == item.Id.Value);
                         if (updItem == null)
                             continue;
 
                         if (item.Path != updItem.Path)
                             updItem.Path = item.Path;
 
-                        if (item.Title != updItem.Title)
+                        if (updItem.GetType() == typeof(ItemContainerStreamCustom) && item.Title != updItem.Title)
                         {
                             //Pre aktualizaciu nazvu je potrebne potomkov odstranit - pri refresh sa pridaju so spravnym nazvom
+                            //Plati iba pre ItemContainerStreamCustom
                             updItem.RemoveMe(context, this);
-
-                            updItem.Title = item.Title;
                         }
+
+                        updItem.Title = item.Title;
                     }
 
                     //Mazanie zaznamov
                     foreach (StreamSourcesItem item in toDelete.Where(a => a.Id.HasValue))
                     {
-                        ItemContainerStreamCustom delItem = root.Children.OfType<ItemContainerStreamCustom>().FirstOrDefault(a => a.Id == item.Id.Value);
+                        Item delItem = root.Children.FirstOrDefault(a => a.Id == item.Id.Value);
                         if (delItem == null)
                             continue;
 

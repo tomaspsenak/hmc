@@ -33,11 +33,13 @@
             this.streamsDataGrid = new System.Windows.Forms.DataGridView();
             this.titleColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.urlColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.typeColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.addButton = new System.Windows.Forms.Button();
             this.removeButton = new System.Windows.Forms.Button();
             this.cancelButton = new System.Windows.Forms.Button();
             this.applyButton = new System.Windows.Forms.Button();
             this.mainToolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.typeComboBox = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.streamsDataGrid)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,7 +52,8 @@
             this.streamsDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.streamsDataGrid.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.titleColumn,
-            this.urlColumn});
+            this.urlColumn,
+            this.typeColumn});
             this.streamsDataGrid.Location = new System.Drawing.Point(12, 12);
             this.streamsDataGrid.Name = "streamsDataGrid";
             this.streamsDataGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
@@ -72,6 +75,14 @@
             this.urlColumn.FillWeight = 98.47716F;
             this.urlColumn.HeaderText = "URL Address";
             this.urlColumn.Name = "urlColumn";
+            // 
+            // typeColumn
+            // 
+            this.typeColumn.DataPropertyName = "TypeStr";
+            this.typeColumn.HeaderText = "Type";
+            this.typeColumn.Name = "typeColumn";
+            this.typeColumn.ReadOnly = true;
+            this.typeColumn.Width = 80;
             // 
             // addButton
             // 
@@ -117,11 +128,23 @@
             this.applyButton.Text = "Apply";
             this.applyButton.UseVisualStyleBackColor = true;
             // 
+            // typeComboBox
+            // 
+            this.typeComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.typeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.typeComboBox.FormattingEnabled = true;
+            this.typeComboBox.Location = new System.Drawing.Point(82, 419);
+            this.typeComboBox.Name = "typeComboBox";
+            this.typeComboBox.Size = new System.Drawing.Size(121, 21);
+            this.typeComboBox.TabIndex = 6;
+            this.typeComboBox.SelectedIndexChanged += new System.EventHandler(this.typeComboBox_SelectedIndexChanged);
+            // 
             // StreamSourcesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(624, 452);
+            this.Controls.Add(this.typeComboBox);
             this.Controls.Add(this.applyButton);
             this.Controls.Add(this.cancelButton);
             this.Controls.Add(this.removeButton);
@@ -140,12 +163,14 @@
         #endregion
 
         private System.Windows.Forms.DataGridView streamsDataGrid;
-        private System.Windows.Forms.DataGridViewTextBoxColumn titleColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn urlColumn;
         private System.Windows.Forms.Button addButton;
         private System.Windows.Forms.Button removeButton;
         private System.Windows.Forms.Button cancelButton;
         private System.Windows.Forms.Button applyButton;
         private System.Windows.Forms.ToolTip mainToolTip;
+        private System.Windows.Forms.DataGridViewTextBoxColumn titleColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn urlColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn typeColumn;
+        private System.Windows.Forms.ComboBox typeComboBox;
     }
 }

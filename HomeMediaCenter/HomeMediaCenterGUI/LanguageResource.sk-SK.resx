@@ -384,4 +384,7 @@
   <data name="ApplicationWillBeClosed" xml:space="preserve">
     <value>Aplikácia bude uzavretá</value>
   </data>
+  <data name="Type" xml:space="preserve">
+    <value>Typ</value>
+  </data>
 </root>

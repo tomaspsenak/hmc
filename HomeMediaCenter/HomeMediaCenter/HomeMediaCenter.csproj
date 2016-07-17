@@ -99,6 +99,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ItemContainerDreambox.cs" />
+    <Compile Include="ItemContainerDreamboxRoot.cs" />
     <Compile Include="StreamSourcesBindingList.cs" />
     <Compile Include="BufferedAsyncStream.cs" />
     <Compile Include="ChunkedStream.cs" />
